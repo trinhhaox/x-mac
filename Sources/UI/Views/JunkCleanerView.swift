@@ -1,0 +1,216 @@
+import SwiftUI
+
+public struct JunkCleanerView: View {
+    @ObservedObject var cleaner = CleanerEngine.shared
+    @ObservedObject var vm = JunkCleanerViewModel.shared
+    
+    public init() {}
+    
+    public var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Header
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Dọn rác Hệ thống")
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                        Text("Quét và làm sạch bộ nhớ đệm, file log, crash report và tệp rác để giải phóng dung lượng ổ cứng.")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Button(action: {
+                        cleaner.startScan()
+                    }) {
+                        Label(cleaner.isScanning ? "Đang quét..." : "Quét lại", systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(cleaner.isScanning || cleaner.isCleaning)
+                }
+                
+                // Result Banner
+                if let res = vm.cleanResultText {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text(res)
+                            .font(.system(size: 13, weight: .medium))
+                        Spacer()
+                        Button("Đóng") {
+                            vm.cleanResultText = nil
+                        }
+                        .buttonStyle(.link)
+                    }
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.green.opacity(0.12)))
+                }
+                
+                // Total Junk Found Card
+                ModernCard {
+                    HStack(alignment: .center) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 36))
+                            .foregroundColor(.blue)
+                            .padding(12)
+                            .background(Circle().fill(Color.blue.opacity(0.12)))
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Tổng tệp rác sẵn sàng dọn dẹp")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Text(cleaner.formattedTotalSelectedSize)
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundColor(.primary)
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            cleaner.cleanSelectedJunk { freedBytes in
+                                let formatted = ByteCountFormatter.string(fromByteCount: freedBytes, countStyle: .file)
+                                self.vm.cleanResultText = "Đã dọn dẹp thành công \(formatted) dung lượng ổ cứng!"
+                            }
+                        }) {
+                            Label(cleaner.isCleaning ? "Đang dọn..." : "Dọn dẹp ngay", systemImage: "trash.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
+                        .disabled(cleaner.totalSelectedSize == 0 || cleaner.isCleaning || cleaner.isScanning)
+                    }
+                }
+                
+                // Memory Purge Action Card
+                ModernCard {
+                    HStack {
+                        Image(systemName: "bolt.fill")
+                            .foregroundColor(.purple)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Tối ưu & Giải phóng RAM")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Giải phóng bộ nhớ đệm Inactive Memory giúp máy tính phản hồi nhanh và mượt mà hơn.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Button("Giải phóng RAM") {
+                            cleaner.purgeMemory()
+                            vm.cleanResultText = "Đã giải phóng bộ nhớ RAM đệm thành công!"
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.purple)
+                    }
+                }
+                
+                // Danh mục rác chi tiết
+                VStack(spacing: 12) {
+                    if cleaner.isScanning {
+                        ModernCard {
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Đang quét phân tích các tệp tin trong hệ thống...")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.vertical, 16)
+                            .frame(maxWidth: .infinity)
+                        }
+                    } else if cleaner.categories.isEmpty {
+                        ModernCard {
+                            VStack(spacing: 8) {
+                                Text("Chưa có dữ liệu quét")
+                                    .font(.system(size: 14, weight: .semibold))
+                                Button("Bắt đầu quét rác") {
+                                    cleaner.startScan()
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                        }
+                    } else {
+                        ForEach($cleaner.categories) { $category in
+                            CategoryRow(category: $category, vm: vm)
+                        }
+                    }
+                }
+            }
+            .padding(24)
+        }
+        .onAppear {
+            if cleaner.categories.isEmpty {
+                cleaner.startScan()
+            }
+        }
+    }
+}
+
+struct CategoryRow: View {
+    @Binding var category: JunkCategory
+    @ObservedObject var vm: JunkCleanerViewModel
+    
+    var body: some View {
+        ModernCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Toggle("", isOn: $category.isSelected)
+                        .labelsHidden()
+                        .onChange(of: category.isSelected) { newValue in
+                            for i in 0..<category.items.count {
+                                category.items[i].isSelected = newValue
+                            }
+                        }
+                    
+                    Image(systemName: category.iconName)
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(category.name)
+                            .font(.system(size: 14, weight: .semibold))
+                        Text(category.description)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Text(category.formattedTotalSize)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(category.totalSize > 0 ? .primary : .secondary)
+                    
+                    Button(action: {
+                        vm.toggleExpand(categoryName: category.name)
+                    }) {
+                        Image(systemName: vm.isExpanded(categoryName: category.name) ? "chevron.up" : "chevron.down")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                
+                if vm.isExpanded(categoryName: category.name) && !category.items.isEmpty {
+                    Divider()
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach($category.items) { $item in
+                            HStack {
+                                Toggle("", isOn: $item.isSelected)
+                                    .labelsHidden()
+                                Text(item.name)
+                                    .font(.system(size: 12))
+                                    .lineLimit(1)
+                                Spacer()
+                                Text(item.formattedSize)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.leading, 36)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
