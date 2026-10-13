@@ -2,111 +2,50 @@ import Cocoa
 
 public class EventTapManager {
     public static let shared = EventTapManager()
-    
-    private var eventTap: CFMachPort?
-    private var runLoopSource: CFRunLoopSource?
-    
+
     private init() {}
-    
+
     public func start() {
-        guard eventTap == nil else { return }
-        
-        let mask = (1 << CGEventType.keyDown.rawValue)
-        
-        let callback: CGEventTapCallBack = { proxy, type, event, refcon in
-            if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-                if let refcon = refcon {
-                    let manager = Unmanaged<EventTapManager>.fromOpaque(refcon).takeUnretainedValue()
-                    manager.reenableTap()
-                }
-                return Unmanaged.passRetained(event)
-            }
-            
-            guard type == .keyDown else {
-                return Unmanaged.passRetained(event)
-            }
-            
-            let flags = event.flags
-            let isCommand = flags.contains(.maskCommand)
-            let isControl = flags.contains(.maskControl)
-            let isOption = flags.contains(.maskAlternate)
-            let isShift = flags.contains(.maskShift)
-            
-            // Chỉ can thiệp khi có Command và không có Control / Option
-            guard isCommand && !isControl && !isOption else {
-                return Unmanaged.passRetained(event)
-            }
-            
-            let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-            
-            // 7: X, 9: V, 6: Z, 8: C
-            if keyCode == 7 || keyCode == 9 || keyCode == 6 || keyCode == 8 {
-                // Kiểm tra Finder có đang active không
-                if FinderBridge.isFinderActive() {
-                    // Nếu đang đổi tên file, để Finder xử lý text mặc định
-                    if FinderBridge.isRenamingFile() {
-                        return Unmanaged.passRetained(event)
-                    }
-                    
-                    let cutPaste = FinderCutPasteManager.shared
-                    
-                    if keyCode == 7 && !isShift { // ⌘X: Cut
-                        if cutPaste.handleCut() {
-                            return nil // Nuốt sự kiện vì Finder không có ⌘X cho file
-                        }
-                    } else if keyCode == 9 && !isShift { // ⌘V: Paste
-                        if cutPaste.handlePaste() {
-                            return nil // Nuốt sự kiện nếu paste file cut thành công
-                        }
-                    } else if keyCode == 6 && !isShift { // ⌘Z: Undo
-                        if cutPaste.handleUndo() {
-                            return nil
-                        }
-                    } else if keyCode == 8 && !isShift { // ⌘C: Copy bình thường
-                        cutPaste.handleCopy()
-                    }
-                }
-            }
-            
-            return Unmanaged.passRetained(event)
-        }
-        
-        let selfPtr = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
-        eventTap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: CGEventMask(mask),
-            callback: callback,
-            userInfo: selfPtr
-        )
-        
-        guard let tap = eventTap else {
-            NSLog("Xmac: Không thể tạo CGEvent tap. Vui lòng cấp quyền Accessibility.")
-            return
-        }
-        
-        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        if let source = runLoopSource {
-            CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-            CGEvent.tapEnable(tap: tap, enable: true)
-        }
+        GlobalEventTap.shared.start()
     }
-    
+
     public func stop() {
-        if let tap = eventTap {
-            CGEvent.tapEnable(tap: tap, enable: false)
-            if let source = runLoopSource {
-                CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
-            }
-            eventTap = nil
-            runLoopSource = nil
-        }
+        // Cut/Paste off must not tear down the shared IME tap.
     }
-    
-    private func reenableTap() {
-        if let tap = eventTap {
-            CGEvent.tapEnable(tap: tap, enable: true)
+
+    /// Returns true when the event was consumed as a Finder cut/paste/undo shortcut.
+    static func handleIfNeeded(type: CGEventType, event: CGEvent) -> Bool {
+        guard type == .keyDown else { return false }
+        guard FinderCutPasteManager.shared.isEnabled else { return false }
+
+        let flags = event.flags
+        let isCommand = flags.contains(.maskCommand)
+        let isControl = flags.contains(.maskControl)
+        let isOption = flags.contains(.maskAlternate)
+        let isShift = flags.contains(.maskShift)
+
+        guard isCommand && !isControl && !isOption else { return false }
+
+        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+        guard keyCode == 7 || keyCode == 9 || keyCode == 6 || keyCode == 8 else {
+            return false
         }
+        guard FinderBridge.isFinderActive() else { return false }
+        if FinderBridge.isRenamingFile() { return false }
+
+        let cutPaste = FinderCutPasteManager.shared
+        if keyCode == 7 && !isShift {
+            return cutPaste.handleCut()
+        }
+        if keyCode == 9 && !isShift {
+            return cutPaste.handlePaste()
+        }
+        if keyCode == 6 && !isShift {
+            return cutPaste.handleUndo()
+        }
+        if keyCode == 8 && !isShift {
+            cutPaste.handleCopy()
+        }
+        return false
     }
 }

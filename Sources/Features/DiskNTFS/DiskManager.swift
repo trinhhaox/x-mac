@@ -71,45 +71,10 @@ public class DiskManager: ObservableObject {
         } catch {
             NSLog("Xmac scan external disks error: \(error)")
         }
-        
-        // Nếu không có ổ external nào, quét thêm ổ local để hiển thị demo/thông tin
-        if results.isEmpty {
-            let internalVols = scanInternalVolumes()
-            results.append(contentsOf: internalVols)
-        }
-        
+
         return results
     }
-    
-    private func scanInternalVolumes() -> [DiskVolume] {
-        var list: [DiskVolume] = []
-        let fm = FileManager.default
-        let mountedURLs = fm.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeNameKey, .volumeTotalCapacityKey, .volumeAvailableCapacityKey, .volumeIsReadOnlyKey, .volumeIsInternalKey], options: [.skipHiddenVolumes]) ?? []
-        
-        for url in mountedURLs {
-            let res = try? url.resourceValues(forKeys: [.volumeNameKey, .volumeTotalCapacityKey, .volumeAvailableCapacityKey, .volumeIsReadOnlyKey, .volumeIsInternalKey])
-            let name = res?.volumeName ?? url.lastPathComponent
-            let total = Int64(res?.volumeTotalCapacity ?? 0)
-            let free = Int64(res?.volumeAvailableCapacity ?? 0)
-            let isReadOnly = res?.volumeIsReadOnly ?? false
-            let isInternal = res?.volumeIsInternal ?? true
-            
-            let vol = DiskVolume(
-                name: name,
-                bsdName: url.lastPathComponent,
-                mountPoint: url.path,
-                fileSystem: "APFS/Native",
-                totalSize: total,
-                freeSize: free,
-                isExternal: !isInternal,
-                isWritable: !isReadOnly,
-                isMounted: true
-            )
-            list.append(vol)
-        }
-        return list
-    }
-    
+
     public func getVolumeInfo(bsdName: String) -> DiskVolume? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/sbin/diskutil")

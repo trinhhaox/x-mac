@@ -8,11 +8,6 @@ public class FinderCutPasteManager: ObservableObject {
     @Published public var isEnabled: Bool = true {
         didSet {
             UserDefaults.standard.set(isEnabled, forKey: "CutPasteEnabled")
-            if isEnabled {
-                EventTapManager.shared.start()
-            } else {
-                EventTapManager.shared.stop()
-            }
         }
     }
     
