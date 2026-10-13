@@ -10,6 +10,8 @@ APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$PROJECT_DIR/Resources/Info.plist" 2>/dev/null || echo "1.0.0")"
 
 SWIFT_SOURCES=(
+    "$PROJECT_DIR/Sources/Core/GlobalEventTap.swift"
+    "$PROJECT_DIR/Sources/Core/POSIXShell.swift"
     "$PROJECT_DIR/Sources/Core/PermissionsManager.swift"
     "$PROJECT_DIR/Sources/Core/LaunchAtLoginManager.swift"
     "$PROJECT_DIR/Sources/Core/SoundEffectManager.swift"

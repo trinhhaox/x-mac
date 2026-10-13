@@ -108,6 +108,8 @@ public struct DiskNTFSView: View {
                 self.vm.mountStatusMessage = "Cần quyền administrator: \(cmd)"
             case .failure(let err):
                 self.vm.mountStatusMessage = "Lỗi kích hoạt NTFS: \(err)"
+            case .helperMissing(let message):
+                self.vm.mountStatusMessage = message
             }
         }
     }

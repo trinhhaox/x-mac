@@ -67,6 +67,14 @@ chmod +x Scripts/build.sh
 ```
 Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.0.0.dmg` sẽ được tạo trong thư mục `build/`.
 
+### 3. Chạy kiểm thử
+
+```bash
+./Scripts/test.sh
+```
+
+Script sử dụng Swift Testing từ toolchain đang active và tự nạp macro plugin khi chỉ cài Command Line Tools.
+
 ---
 
 ## 🔐 Cấp Quyền Hệ Thống (Privacy & Security)

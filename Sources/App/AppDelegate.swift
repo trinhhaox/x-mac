@@ -17,8 +17,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         StatusBarController.shared.setup()
         
         // 2. Khởi động các Engine nền
-        EventTapManager.shared.start()
-        InputHookManager.shared.start()
+        GlobalEventTap.shared.start()
         
         // 3. Yêu cầu quyền thông báo
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
@@ -79,7 +78,6 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     
     public func applicationWillTerminate(_ notification: Notification) {
-        EventTapManager.shared.stop()
-        InputHookManager.shared.stop()
+        GlobalEventTap.shared.stop()
     }
 }

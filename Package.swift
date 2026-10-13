@@ -13,6 +13,11 @@ let package = Package(
         .executableTarget(
             name: "Xmac",
             path: "Sources"
+        ),
+        .testTarget(
+            name: "XmacTests",
+            dependencies: ["Xmac"],
+            path: "Tests"
         )
     ]
 )

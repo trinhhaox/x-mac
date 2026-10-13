@@ -13,10 +13,12 @@ public protocol FileMoving {
 
 public class FileMover: FileMoving {
     public static let shared = FileMover()
-    private let fileManager = FileManager.default
+    private let fileManager: FileManager
     private var lastMoves: [MoveRecord] = []
 
-    private init() {}
+    init(fileManager: FileManager = .default) {
+        self.fileManager = fileManager
+    }
 
     public func moveFiles(sources: [String], destinationFolder: String) -> [MoveRecord] {
         var completedMoves: [MoveRecord] = []
@@ -25,7 +27,10 @@ public class FileMover: FileMoving {
         for sourcePath in sources {
             let sourceURL = URL(fileURLWithPath: sourcePath)
 
-            if destinationFolder.hasPrefix(sourcePath) && destinationFolder != sourcePath {
+            let normalizedSource = sourceURL.standardizedFileURL.resolvingSymlinksInPath()
+            let normalizedDestination = destURL.standardizedFileURL.resolvingSymlinksInPath()
+            if normalizedDestination.pathComponents.starts(with: normalizedSource.pathComponents),
+               normalizedDestination != normalizedSource {
                 continue
             }
 

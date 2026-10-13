@@ -98,7 +98,7 @@ public class NTFSMountHelper: DiskMounter {
                 return
             }
 
-            let appleScriptSource = "do shell script \(appleScriptStringLiteral(innerCommand)) with administrator privileges"
+            let appleScriptSource = "do shell script \(self.appleScriptStringLiteral(innerCommand)) with administrator privileges"
             var error: NSDictionary?
             guard let appleScript = NSAppleScript(source: appleScriptSource) else {
                 DispatchQueue.main.async {

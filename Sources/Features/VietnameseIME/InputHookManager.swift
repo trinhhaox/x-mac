@@ -28,8 +28,6 @@ public class InputHookManager: ObservableObject {
         "com.apple.dt.Xcode"
     ]
     
-    private var eventTap: CFMachPort?
-    private var runLoopSource: CFRunLoopSource?
     private var currentBuffer: String = ""
     private var isSimulating: Bool = false
     
@@ -53,81 +51,35 @@ public class InputHookManager: ObservableObject {
     }
     
     public func start() {
-        guard eventTap == nil else { return }
-        
-        let mask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.flagsChanged.rawValue)
-        
-        let callback: CGEventTapCallBack = { proxy, type, event, refcon in
-            guard let refcon = refcon else {
-                return Unmanaged.passRetained(event)
-            }
-            let manager = Unmanaged<InputHookManager>.fromOpaque(refcon).takeUnretainedValue()
-            
-            if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-                manager.reenableTap()
-                return Unmanaged.passRetained(event)
-            }
-            
-            // Nếu đây là phím ảo do chính Xmac giả lập gửi ra, bỏ qua để không lặp vô tận
-            if manager.isSimulating {
-                return Unmanaged.passRetained(event)
-            }
-            
-            // Xử lý phím tắt chuyển nhanh E/V (Control + Shift)
-            if type == .flagsChanged {
-                let flags = event.flags
-                if flags.contains(.maskControl) && flags.contains(.maskShift) {
-                    DispatchQueue.main.async {
-                        manager.toggleLanguage()
-                    }
-                }
-                return Unmanaged.passRetained(event)
-            }
-            
-            guard type == .keyDown else {
-                return Unmanaged.passRetained(event)
-            }
-            
-            return manager.handleKeyDown(event: event)
-        }
-        
-        let selfPtr = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
-        eventTap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: CGEventMask(mask),
-            callback: callback,
-            userInfo: selfPtr
-        )
-        
-        guard let tap = eventTap else {
-            NSLog("Xmac IME: Không thể tạo CGEvent tap. Cần cấp quyền Accessibility.")
-            return
-        }
-        
-        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        if let source = runLoopSource {
-            CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-            CGEvent.tapEnable(tap: tap, enable: true)
-        }
+        GlobalEventTap.shared.start()
     }
     
     public func stop() {
-        if let tap = eventTap {
-            CGEvent.tapEnable(tap: tap, enable: false)
-            if let source = runLoopSource {
-                CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
-            }
-            eventTap = nil
-            runLoopSource = nil
-        }
+        // The shared tap lives for the application lifetime.
     }
-    
-    private func reenableTap() {
-        if let tap = eventTap {
-            CGEvent.tapEnable(tap: tap, enable: true)
+
+    func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+        // Nếu đây là phím ảo do chính Xmac giả lập gửi ra, bỏ qua để không lặp vô tận
+        if isSimulating {
+            return Unmanaged.passUnretained(event)
         }
+
+        // Xử lý phím tắt chuyển nhanh E/V (Control + Shift)
+        if type == .flagsChanged {
+            let flags = event.flags
+            if flags.contains(.maskControl) && flags.contains(.maskShift) {
+                DispatchQueue.main.async {
+                    self.toggleLanguage()
+                }
+            }
+            return Unmanaged.passUnretained(event)
+        }
+
+        guard type == .keyDown else {
+            return Unmanaged.passUnretained(event)
+        }
+
+        return handleKeyDown(event: event)
     }
     
     private func handleKeyDown(event: CGEvent) -> Unmanaged<CGEvent>? {
@@ -135,14 +87,14 @@ public class InputHookManager: ObservableObject {
         // Nếu có Command, Option hoặc Control -> Phím tắt ứng dụng, reset buffer và bỏ qua
         if flags.contains(.maskCommand) || flags.contains(.maskAlternate) || flags.contains(.maskControl) {
             currentBuffer = ""
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
         
         // Kiểm tra App đang active
         if let frontApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier {
             if excludedApps.contains(frontApp) {
                 currentBuffer = ""
-                return Unmanaged.passRetained(event)
+                return Unmanaged.passUnretained(event)
             }
         }
         
@@ -153,7 +105,7 @@ public class InputHookManager: ObservableObject {
             if !currentBuffer.isEmpty {
                 currentBuffer.removeLast()
             }
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
         
         // Lấy ký tự Unicode
@@ -163,7 +115,7 @@ public class InputHookManager: ObservableObject {
         
         guard length > 0, let scalar = UnicodeScalar(chars[0]) else {
             currentBuffer = ""
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
         
         let char = Character(scalar)
@@ -180,13 +132,13 @@ public class InputHookManager: ObservableObject {
                 }
             }
             currentBuffer = ""
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
         
         // Nếu đang ở chế độ Tiếng Anh (E), chỉ lưu buffer cơ bản và cho qua
         guard isVietnameseMode else {
             currentBuffer.append(char)
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
         
         // Xử lý Tiếng Việt qua Engine
@@ -204,7 +156,7 @@ public class InputHookManager: ObservableObject {
             return nil // Nuốt sự kiện gốc
         } else {
             currentBuffer.append(char)
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
     }
     
