@@ -1,5 +1,21 @@
 import Cocoa
 
+struct DiskCommandResult {
+    let status: Int32
+    let output: String
+}
+
+enum MountOutputVerifier {
+    static func isReadWriteMount(output: String, mountPoint: String) -> Bool {
+        output.split(separator: "\n").contains { rawLine in
+            let line = String(rawLine)
+            guard line.contains(" on \(mountPoint) (") else { return false }
+            let lowercased = line.lowercased()
+            return !lowercased.contains("read-only") && !lowercased.contains("rdonly")
+        }
+    }
+}
+
 public protocol DiskMounter {
     var canEnableNTFSWrite: Bool { get }
     var writeHelperDescription: String { get }
@@ -24,6 +40,14 @@ public class NTFSMountHelper: DiskMounter {
         case unavailable
     }
 
+    private enum RollbackOutcome {
+        case notNeeded
+        case restored
+        case failed(String)
+    }
+
+    private let operationQueue = DispatchQueue(label: "vn.xmac.ntfs-mount", qos: .userInitiated)
+
     private init() {}
 
     public var canEnableNTFSWrite: Bool {
@@ -43,7 +67,7 @@ public class NTFSMountHelper: DiskMounter {
     }
 
     public func mountNTFSReadWrite(volume: DiskVolume, completion: @escaping (MountResult) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async {
+        operationQueue.async {
             guard volume.isNTFS else {
                 DispatchQueue.main.async {
                     completion(.failure(error: "Phân vùng không phải NTFS."))
@@ -75,17 +99,28 @@ public class NTFSMountHelper: DiskMounter {
             let deviceNode = "/dev/\(volume.bsdName)"
             let targetMountPoint = "/Volumes/Xmac_\(volume.bsdName)"
 
-            self.executeCommand("/usr/sbin/diskutil", arguments: ["unmount", deviceNode])
-            try? FileManager.default.createDirectory(
-                atPath: targetMountPoint,
-                withIntermediateDirectories: true,
-                attributes: nil
-            )
+            var didUnmountOriginalVolume = false
+            if volume.isMounted {
+                let unmount = self.executeCommand(
+                    "/usr/sbin/diskutil",
+                    arguments: ["unmount", deviceNode]
+                )
+                guard unmount.status == 0 else {
+                    self.complete(
+                        .failure(error: "Không thể unmount phân vùng an toàn: \(unmount.output)"),
+                        completion: completion
+                    )
+                    return
+                }
+                didUnmountOriginalVolume = true
+            }
 
             let innerCommand: String
             switch backend {
             case .anylinuxfs:
                 innerCommand = POSIXShell.join([
+                    "/bin/mkdir", "-p", targetMountPoint
+                ]) + " && " + POSIXShell.join([
                     mountBinary.path, "mount", deviceNode, targetMountPoint
                 ])
             case .ntfs3g:
@@ -101,22 +136,34 @@ public class NTFSMountHelper: DiskMounter {
             let appleScriptSource = "do shell script \(self.appleScriptStringLiteral(innerCommand)) with administrator privileges"
             var error: NSDictionary?
             guard let appleScript = NSAppleScript(source: appleScriptSource) else {
-                DispatchQueue.main.async {
-                    completion(.failure(error: "Không tạo được lệnh mount."))
-                }
+                let rollback = self.rollbackReadOnlyIfNeeded(
+                    deviceNode: deviceNode,
+                    targetMountPoint: targetMountPoint,
+                    shouldRollback: didUnmountOriginalVolume
+                )
+                self.complete(
+                    .failure(error: self.failureMessage("Không tạo được lệnh mount.", rollback: rollback)),
+                    completion: completion
+                )
                 return
             }
 
             _ = appleScript.executeAndReturnError(&error)
             if let err = error {
                 let errMsg = err["NSAppleScriptErrorMessage"] as? String ?? "Lỗi không xác định"
-                DispatchQueue.main.async {
-                    completion(.failure(error: errMsg))
-                }
+                let rollback = self.rollbackReadOnlyIfNeeded(
+                    deviceNode: deviceNode,
+                    targetMountPoint: targetMountPoint,
+                    shouldRollback: didUnmountOriginalVolume
+                )
+                self.complete(
+                    .failure(error: self.failureMessage(errMsg, rollback: rollback)),
+                    completion: completion
+                )
                 return
             }
 
-            if FileManager.default.fileExists(atPath: targetMountPoint) {
+            if self.verifyReadWriteMount(targetMountPoint: targetMountPoint) {
                 SoundEffectManager.shared.play(.mount)
                 NSWorkspace.shared.open(URL(fileURLWithPath: targetMountPoint))
                 DispatchQueue.main.async {
@@ -124,9 +171,18 @@ public class NTFSMountHelper: DiskMounter {
                     completion(.success(mountPath: targetMountPoint))
                 }
             } else {
-                DispatchQueue.main.async {
-                    completion(.failure(error: "Không tìm thấy điểm mount sau khi chạy helper."))
-                }
+                let rollback = self.rollbackReadOnlyIfNeeded(
+                    deviceNode: deviceNode,
+                    targetMountPoint: targetMountPoint,
+                    shouldRollback: didUnmountOriginalVolume
+                )
+                self.complete(
+                    .failure(error: self.failureMessage(
+                        "Helper đã chạy nhưng phân vùng chưa được xác minh ở chế độ đọc-ghi.",
+                        rollback: rollback
+                    )),
+                    completion: completion
+                )
             }
         }
     }
@@ -194,17 +250,73 @@ public class NTFSMountHelper: DiskMounter {
         return "\"\(escaped)\""
     }
 
+    private func verifyReadWriteMount(targetMountPoint: String) -> Bool {
+        let mountResult = executeCommand("/sbin/mount", arguments: [])
+        guard mountResult.status == 0 else { return false }
+        return MountOutputVerifier.isReadWriteMount(
+            output: mountResult.output,
+            mountPoint: targetMountPoint
+        )
+    }
+
+    private func rollbackReadOnlyIfNeeded(
+        deviceNode: String,
+        targetMountPoint: String,
+        shouldRollback: Bool
+    ) -> RollbackOutcome {
+        _ = executeCommand("/usr/sbin/diskutil", arguments: ["unmount", targetMountPoint])
+        cleanupEmptyMountPoint(targetMountPoint)
+        guard shouldRollback else { return .notNeeded }
+
+        let remount = executeCommand("/usr/sbin/diskutil", arguments: ["mount", deviceNode])
+        return remount.status == 0 ? .restored : .failed(remount.output)
+    }
+
+    private func cleanupEmptyMountPoint(_ path: String) {
+        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: path),
+              contents.isEmpty else { return }
+        try? FileManager.default.removeItem(atPath: path)
+    }
+
+    private func failureMessage(_ message: String, rollback: RollbackOutcome) -> String {
+        let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch rollback {
+        case .notNeeded:
+            return trimmedMessage
+        case .restored:
+            return "\(trimmedMessage) Ổ đĩa đã được khôi phục về chế độ mặc định."
+        case .failed(let details):
+            let trimmedDetails = details.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmedDetails.isEmpty
+                ? "\(trimmedMessage) Không thể tự khôi phục ổ đĩa."
+                : "\(trimmedMessage) Không thể tự khôi phục ổ đĩa: \(trimmedDetails)"
+        }
+    }
+
+    private func complete(_ result: MountResult, completion: @escaping (MountResult) -> Void) {
+        DispatchQueue.main.async {
+            completion(result)
+        }
+    }
+
     @discardableResult
-    private func executeCommand(_ launchPath: String, arguments: [String]) -> String {
+    private func executeCommand(_ launchPath: String, arguments: [String]) -> DiskCommandResult {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: launchPath)
         process.arguments = arguments
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
-        try? process.run()
-        process.waitUntilExit()
+        do {
+            try process.run()
+        } catch {
+            return DiskCommandResult(status: -1, output: error.localizedDescription)
+        }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: data, encoding: .utf8) ?? ""
+        process.waitUntilExit()
+        return DiskCommandResult(
+            status: process.terminationStatus,
+            output: String(data: data, encoding: .utf8) ?? ""
+        )
     }
 }

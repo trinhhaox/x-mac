@@ -19,6 +19,7 @@ public class JunkCleanerViewModel: ObservableObject {
     public static let shared = JunkCleanerViewModel()
     @Published public var cleanResultText: String? = nil
     @Published public var expandedCategories: Set<String> = []
+    @Published public var showCleanConfirmation: Bool = false
     
     private init() {}
     

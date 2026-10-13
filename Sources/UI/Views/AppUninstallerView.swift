@@ -21,7 +21,7 @@ public struct AppUninstallerView: View {
             // Header bar
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Gỡ ứng dụng Triệt để")
+                    Text("Gỡ ứng dụng có kiểm soát")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                     Text("Tìm và xoá toàn bộ file thừa, cache, preferences của ứng dụng khi gỡ cài đặt.")
                         .font(.system(size: 12))
@@ -95,9 +95,11 @@ public struct AppUninstallerView: View {
                     
                     // Chi tiết bên phải
                     if let app = vm.selectedApp {
-                        AppDetailView(app: app, onUninstall: {
+                        AppDetailView(app: app, onUninstall: { configuredApp in
+                            vm.selectedApp = configuredApp
                             vm.showConfirmAlert = true
                         })
+                        .id(app.id)
                         .frame(minWidth: 320)
                     } else {
                         VStack(spacing: 12) {
@@ -122,13 +124,13 @@ public struct AppUninstallerView: View {
             Alert(
                 title: Text("Xác nhận gỡ bỏ \(vm.selectedApp?.name ?? "")?"),
                 message: Text("Ứng dụng và các file phụ trợ đã chọn sẽ được chuyển an toàn vào Thùng rác (Trash)."),
-                primaryButton: .destructive(Text("Gỡ bỏ triệt để")) {
+                primaryButton: .destructive(Text("Chuyển vào Thùng rác")) {
                     if let app = vm.selectedApp {
                         uninstaller.uninstallApp(app) { success in
-                            if success {
-                                self.vm.uninstallResultText = "Đã chuyển \(app.name) và toàn bộ file thừa vào Thùng rác!"
-                                self.vm.selectedApp = nil
-                            }
+                            self.vm.uninstallResultText = success
+                                ? "Đã chuyển các mục đã chọn của \(app.name) vào Thùng rác."
+                                : "Không thể gỡ bỏ đầy đủ \(app.name). App bundle được giữ lại nếu file phụ trợ gặp lỗi."
+                            self.vm.selectedApp = nil
                         }
                     }
                 },
@@ -167,9 +169,26 @@ struct AppListItemRow: View {
     }
 }
 
+private final class AppDetailSelection: ObservableObject {
+    @Published var app: InstalledAppItem
+
+    init(app: InstalledAppItem) {
+        self.app = app
+    }
+}
+
 struct AppDetailView: View {
-    let app: InstalledAppItem
-    let onUninstall: () -> Void
+    @StateObject private var selection: AppDetailSelection
+    let onUninstall: (InstalledAppItem) -> Void
+
+    init(app: InstalledAppItem, onUninstall: @escaping (InstalledAppItem) -> Void) {
+        _selection = StateObject(wrappedValue: AppDetailSelection(app: app))
+        self.onUninstall = onUninstall
+    }
+
+    private var app: InstalledAppItem {
+        selection.app
+    }
     
     var body: some View {
         ScrollView {
@@ -194,11 +213,12 @@ struct AppDetailView: View {
                     Spacer()
                     
                     if !app.isSystemApp {
-                        Button(action: onUninstall) {
-                            Label("Gỡ bỏ triệt để", systemImage: "trash.fill")
+                        Button(action: { onUninstall(app) }) {
+                            Label("Gỡ các mục đã chọn", systemImage: "trash.fill")
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.red)
+                        .disabled(app.selectedSize == 0)
                     } else {
                         Text("Ứng dụng hệ thống")
                             .font(.system(size: 11, weight: .medium))
@@ -216,8 +236,11 @@ struct AppDetailView: View {
                     .font(.system(size: 13, weight: .bold))
                 
                 VStack(spacing: 8) {
-                    ForEach(app.associatedFiles) { file in
+                    ForEach($selection.app.associatedFiles) { $file in
                         HStack {
+                            Toggle("", isOn: $file.isSelected)
+                                .labelsHidden()
+
                             Image(systemName: iconForType(file.fileType))
                                 .foregroundColor(.blue)
                                 .frame(width: 20)
@@ -229,6 +252,16 @@ struct AppDetailView: View {
                                     Text("(\(file.fileType))")
                                         .font(.system(size: 10))
                                         .foregroundColor(.secondary)
+                                    Text(file.confidence.rawValue)
+                                        .font(.system(size: 9, weight: .medium))
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 2)
+                                        .background(Capsule().fill(
+                                            file.confidence == .verified
+                                                ? Color.green.opacity(0.12)
+                                                : Color.orange.opacity(0.15)
+                                        ))
+                                        .foregroundColor(file.confidence == .verified ? .green : .orange)
                                 }
                                 Text(file.path)
                                     .font(.system(size: 10, design: .monospaced))

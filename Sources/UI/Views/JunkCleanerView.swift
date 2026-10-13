@@ -66,10 +66,7 @@ public struct JunkCleanerView: View {
                         Spacer()
                         
                         Button(action: {
-                            cleaner.cleanSelectedJunk { freedBytes in
-                                let formatted = ByteCountFormatter.string(fromByteCount: freedBytes, countStyle: .file)
-                                self.vm.cleanResultText = "Đã dọn dẹp thành công \(formatted) dung lượng ổ cứng!"
-                            }
+                            vm.showCleanConfirmation = true
                         }) {
                             Label(cleaner.isCleaning ? "Đang dọn..." : "Dọn dẹp ngay", systemImage: "trash.fill")
                                 .font(.system(size: 14, weight: .semibold))
@@ -96,8 +93,11 @@ public struct JunkCleanerView: View {
                         }
                         Spacer()
                         Button("Giải phóng RAM") {
-                            cleaner.purgeMemory()
-                            vm.cleanResultText = "Đã giải phóng bộ nhớ RAM đệm thành công!"
+                            cleaner.purgeMemory { success in
+                                vm.cleanResultText = success
+                                    ? "Đã giải phóng bộ nhớ RAM đệm thành công!"
+                                    : "Không thể giải phóng RAM trên hệ thống hiện tại."
+                            }
                         }
                         .buttonStyle(.bordered)
                         .tint(.purple)
@@ -144,6 +144,24 @@ public struct JunkCleanerView: View {
             if cleaner.categories.isEmpty {
                 cleaner.startScan()
             }
+        }
+        .alert(isPresented: $vm.showCleanConfirmation) {
+            Alert(
+                title: Text("Xác nhận xóa dữ liệu đã chọn?"),
+                message: Text("Các mục đã chọn sẽ bị xóa vĩnh viễn. Hãy đóng ứng dụng đang sử dụng các cache này trước khi tiếp tục."),
+                primaryButton: .destructive(Text("Xóa vĩnh viễn")) {
+                    cleaner.cleanSelectedJunk { result in
+                        let formatted = ByteCountFormatter.string(
+                            fromByteCount: result.deletedBytes,
+                            countStyle: .file
+                        )
+                        vm.cleanResultText = result.failedCount == 0
+                            ? "Đã xóa \(result.deletedCount) mục, giải phóng \(formatted)."
+                            : "Đã xóa \(result.deletedCount) mục (\(formatted)); \(result.failedCount) mục thất bại hoặc bị từ chối."
+                    }
+                },
+                secondaryButton: .cancel(Text("Huỷ"))
+            )
         }
     }
 }

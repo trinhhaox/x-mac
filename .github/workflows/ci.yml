@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        run: ./Scripts/test.sh
+
+      - name: Build universal app and DMG
+        run: ./Scripts/build.sh
+
+      - name: Verify release artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          lipo build/Xmac.app/Contents/MacOS/Xmac -verify_arch arm64
+          lipo build/Xmac.app/Contents/MacOS/Xmac -verify_arch x86_64
+          codesign --verify --deep --strict build/Xmac.app
+          dmg_path="$(find build -maxdepth 1 -name 'Xmac-*.dmg' -print -quit)"
+          test -n "$dmg_path"
+          hdiutil verify "$dmg_path"
+
+      - name: Upload ad-hoc signed artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Xmac-universal-ad-hoc
+          path: |
+            build/Xmac.app
+            build/Xmac-*.dmg
+          if-no-files-found: error

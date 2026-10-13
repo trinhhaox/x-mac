@@ -230,26 +230,11 @@ public class VietnameseEngine {
         
         guard !vowelIndices.isEmpty else { return (word, false) }
         
-        // Tìm nguyên âm đích nhận dấu thanh
-        let targetIndex: Int
-        if vowelIndices.count == 1 {
-            targetIndex = vowelIndices[0]
-        } else if vowelIndices.count == 2 {
-            // Quy tắc đặt dấu với 2 nguyên âm:
-            // Nếu có phụ âm cuối: đặt vào nguyên âm thứ hai (ví dụ: toán, hoàn, biến)
-            // Nếu không có phụ âm cuối:
-            //   - Chuẩn mới (modern): hòa, thúy, hỏa -> đặt vào nguyên âm thứ hai (oà hay òa: modern là òa, thúy là úy)
-            //   - Chuẩn cũ: hoà, thuý -> đặt vào nguyên âm thứ nhất
-            let hasFinalConsonant = (vowelIndices.last! < chars.count - 1)
-            if hasFinalConsonant {
-                targetIndex = vowelIndices[1]
-            } else {
-                targetIndex = modern ? vowelIndices[1] : vowelIndices[0]
-            }
-        } else {
-            // Có 3 nguyên âm: ví dụ khuya, quyên -> thường ở giữa
-            targetIndex = vowelIndices[1]
-        }
+        let targetIndex = toneTargetIndex(
+            chars: chars,
+            vowelIndices: vowelIndices,
+            modern: modern
+        )
         
         // Gỡ bỏ dấu thanh cũ của tất cả nguyên âm trong từ trước
         var modified = false
@@ -271,6 +256,61 @@ public class VietnameseEngine {
         }
         
         return (String(chars), modified)
+    }
+
+    private func toneTargetIndex(
+        chars: [Character],
+        vowelIndices: [Int],
+        modern: Bool
+    ) -> Int {
+        guard vowelIndices.count > 1 else { return vowelIndices[0] }
+
+        // A shaped vowel (ă, â, ê, ô, ơ, ư) owns the tone. In clusters such
+        // as "ươ", Vietnamese places it on the last shaped vowel.
+        let shapedVowels: Set<Character> = ["ă", "â", "ê", "ô", "ơ", "ư"]
+        let shapedIndices = vowelIndices.filter {
+            shapedVowels.contains(Character(String(stripTone(chars[$0])).lowercased()))
+        }
+        if let shapedIndex = shapedIndices.last {
+            return shapedIndex
+        }
+
+        if vowelIndices.count == 2 {
+            let first = vowelIndices[0]
+            let second = vowelIndices[1]
+            let pair = String([
+                Character(String(stripTone(chars[first])).lowercased()),
+                Character(String(stripTone(chars[second])).lowercased())
+            ])
+
+            // After q/g, u/i is a glide rather than the tone-bearing vowel.
+            if first > 0 {
+                let preceding = Character(String(chars[first - 1]).lowercased())
+                if (preceding == "q" && pair.first == "u")
+                    || (preceding == "g" && pair.first == "i") {
+                    return second
+                }
+            }
+
+            let hasFinalConsonant = second < chars.count - 1
+            if hasFinalConsonant {
+                return second
+            }
+
+            // The modern/traditional setting only changes these open vowel
+            // clusters: hòa/hoà, hòe/hoè, thúy/thuý.
+            if ["oa", "oe", "uy"].contains(pair) {
+                return modern ? first : second
+            }
+
+            // Other open diphthongs carry the tone on the first vowel:
+            // múa, méo, đói, etc.
+            return first
+        }
+
+        // Three-vowel clusters without a shaped vowel normally carry the
+        // tone in the middle (for example khuya).
+        return vowelIndices[1]
     }
     
     private func isVowel(_ ch: Character) -> Bool {

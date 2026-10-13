@@ -14,6 +14,7 @@ public protocol FileMoving {
 public class FileMover: FileMoving {
     public static let shared = FileMover()
     private let fileManager: FileManager
+    private let stateLock = NSLock()
     private var lastMoves: [MoveRecord] = []
 
     init(fileManager: FileManager = .default) {
@@ -51,17 +52,24 @@ public class FileMover: FileMoving {
         }
 
         if !completedMoves.isEmpty {
+            stateLock.lock()
             self.lastMoves = completedMoves
+            stateLock.unlock()
         }
 
         return completedMoves
     }
 
     public func undoLastMove() -> Int {
-        guard !lastMoves.isEmpty else { return 0 }
-        var undoneCount = 0
+        stateLock.lock()
+        let movesToUndo = lastMoves
+        stateLock.unlock()
+        guard !movesToUndo.isEmpty else { return 0 }
 
-        for record in lastMoves.reversed() {
+        var undoneCount = 0
+        var failedMoves: [MoveRecord] = []
+
+        for record in movesToUndo.reversed() {
             let currentURL = URL(fileURLWithPath: record.destinationPath)
             let originalURL = URL(fileURLWithPath: record.originalPath)
 
@@ -72,15 +80,20 @@ public class FileMover: FileMoving {
                     undoneCount += 1
                 } catch {
                     NSLog("Xmac Undo error: \(error)")
+                    failedMoves.append(record)
                 }
             }
         }
 
-        lastMoves.removeAll()
+        stateLock.lock()
+        lastMoves = failedMoves.reversed()
+        stateLock.unlock()
         return undoneCount
     }
 
     public var canUndo: Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
         return !lastMoves.isEmpty
     }
 

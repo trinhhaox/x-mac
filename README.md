@@ -1,7 +1,7 @@
 # Xmac - Tiện Ích Thiết Yếu Tất Cả Trong Một Cho macOS 
 
 <p align="center">
-  <b>Phần mềm giải quyết trọn vẹn những điểm thiếu sót lớn nhất trên macOS dành cho người dùng Mac: Cắt/Dán file Finder, Ghi ổ NTFS, Bộ gõ Tiếng Việt, Dọn rác & Gỡ ứng dụng triệt để.</b>
+  <b>Bộ tiện ích macOS hỗ trợ Cắt/Dán file Finder, gắn ổ NTFS đọc-ghi qua helper bên ngoài, gõ Tiếng Việt, dọn rác và gỡ ứng dụng có kiểm soát.</b>
 </p>
 
 ---
@@ -17,31 +17,32 @@
 
 ### 2. 💽 Quản Lý Ổ Đĩa Ngoại Vi & Đọc / Ghi Ổ NTFS (Windows)
 - **Tự động nhận diện ổ đĩa**: Nhận diện tất cả USB, thẻ nhớ, ổ cứng di động SSD/HDD cắm vào máy.
-- **Kích hoạt Ghi NTFS (Read-Write)**: Vượt qua rào cản chỉ đọc của macOS, cho phép ghi dữ liệu, sao chép file lớn vào ổ cứng NTFS của Windows.
+- **Kích hoạt Ghi NTFS (Read-Write)**: Sử dụng AnyLinuxFS hoặc `ntfs-3g`/macFUSE đã cài trên máy, xác minh trạng thái đọc-ghi sau khi mount và tự khôi phục cách mount mặc định nếu thao tác thất bại.
 - **Đồ họa dung lượng trực quan**: Hiển thị chính xác dung lượng tổng, đã dùng, còn trống và định dạng phân vùng.
 - **Ngắt kết nối an toàn (Safe Eject)**: Nút ngắt kết nối an toàn 1 chạm giúp bảo vệ dữ liệu không bị hỏng khi rút cáp.
 - **Mở nhanh trong Finder**: Truy cập ngay ổ đĩa chỉ với 1 click.
 
 ### 3. 🇻🇳 Bộ Gõ Tiếng Việt Thông Minh Xmac
 - **Hỗ trợ đầy đủ kiểu gõ**: Telex, VNI và Simple Telex.
-- **Bảng mã chuẩn Unicode**: Tương thích hoàn hảo với mọi trình duyệt, Word, Excel, ghi chú, ứng dụng chat.
+- **Bảng mã Unicode**: Hoạt động qua Accessibility event tap; mức tương thích phụ thuộc cách từng ứng dụng xử lý nhập liệu và secure input.
 - **Quy tắc bỏ dấu linh hoạt**: Tùy chọn kiểu bỏ dấu mới (`hòa`, `thúy`) hoặc chuẩn truyền thống (`hoà`, `thuý`).
 - **Phím tắt chuyển đổi nhanh (V / E)**: Chuyển đổi ngôn ngữ gõ tức thì bằng tổ hợp phím `Control + Shift` hoặc nhấn trực tiếp trên thanh Menu Bar.
 - **Bảng gõ tắt (Macro)**: Tự động mở rộng từ viết tắt (ví dụ: `vn` ➔ `Việt Nam`, `dc` ➔ `được`, `ko` ➔ `không`).
 - **Danh sách loại trừ (Excluded Apps)**: Tự động tắt tiếng Việt khi làm việc trong Terminal, iTerm, Xcode để tránh gõ nhầm lệnh.
 
-### 4. 🧹 Dọn Rác Hệ Thống & Gỡ Ứng Dụng Triệt Để
+### 4. 🧹 Dọn Rác Hệ Thống & Gỡ Ứng Dụng Có Kiểm Soát
 - **Dọn rác hệ thống (System Junk Cleaner)**:
   - Quét sạch bộ nhớ đệm người dùng (User Caches `~/Library/Caches`).
   - Dọn dẹp tệp nhật ký hệ thống (System & User Logs `~/Library/Logs`).
-  - Xoá báo cáo lỗi tự động (Diagnostic & Crash Reports).
+  - Cho phép chọn riêng báo cáo lỗi (Diagnostic & Crash Reports).
   - Quét dữ liệu biên dịch khổng lồ của lập trình viên (Xcode DerivedData).
   - Làm sạch Thùng rác (Trash).
 - **Giải phóng bộ nhớ RAM (Purge Memory)**: Nút giải phóng RAM Inactive tức thì giúp máy tính nhẹ và mượt mà hơn.
-- **Gỡ ứng dụng triệt để (App Uninstaller)**:
+- **Gỡ ứng dụng có kiểm soát (App Uninstaller)**:
   - Tự động dò tìm toàn bộ các file phụ trợ nằm ẩn sâu trong thư viện: `Application Support`, `Caches`, `Preferences .plist`, `Saved State`, `WebKit`, `Sandbox Containers`.
   - Tính toán tổng dung lượng thực tế của ứng dụng.
-  - Chuyển ứng dụng và toàn bộ file rác vào Thùng rác một cách an toàn (dễ dàng khôi phục nếu muốn).
+  - Mặc định chọn các đường dẫn xác định bằng bundle identifier; đường dẫn suy đoán theo tên ứng dụng phải được người dùng chọn thủ công.
+  - Chuyển các mục đã chọn vào Thùng rác; chỉ chuyển app bundle sau khi các file phụ trợ đã xử lý thành công.
 
 ---
 
@@ -60,12 +61,22 @@
 
 ### 2. Tự biên dịch từ mã nguồn (Build from source)
 ```bash
-git clone https://github.com/trinhhao/Xmac.git
-cd Xmac
+git clone https://github.com/trinhhaox/x-mac.git
+cd x-mac
 chmod +x Scripts/build.sh
 ./Scripts/build.sh
 ```
 Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.0.0.dmg` sẽ được tạo trong thư mục `build/`.
+
+Mặc định script ký ad-hoc để kiểm thử local. Nếu máy đã có sẵn chứng thư và hồ sơ notarization trong Keychain, có thể tạo bản phát hành bằng:
+
+```bash
+CODE_SIGN_IDENTITY="Developer ID Application: ..." \
+NOTARY_PROFILE="xmac-notary" \
+./Scripts/build.sh
+```
+
+Script không tạo hoặc thay đổi chứng thư/thông tin xác thực. Khi đặt `NOTARY_PROFILE`, quá trình build sẽ dừng nếu notarization hoặc stapling thất bại.
 
 ### 3. Chạy kiểm thử
 
@@ -74,6 +85,8 @@ Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.0.0.dmg` sẽ được tạo tr
 ```
 
 Script sử dụng Swift Testing từ toolchain đang active và tự nạp macro plugin khi chỉ cài Command Line Tools.
+
+GitHub Actions chạy kiểm thử, dựng Universal Binary (`arm64` + `x86_64`), xác minh chữ ký ad-hoc và DMG trên mỗi push/pull request. Artifact CI không phải bản phân phối notarized.
 
 ---
 

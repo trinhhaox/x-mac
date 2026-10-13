@@ -63,6 +63,7 @@ public class AppUninstallerEngine: ObservableObject {
             path: bundlePath,
             fileType: "Application Bundle",
             size: bundleSize,
+            confidence: .verified,
             isSelected: true
         ))
         
@@ -73,38 +74,38 @@ public class AppUninstallerEngine: ObservableObject {
             // Application Support
             let appSupport1 = "\(libraryPath)/Application Support/\(bundleId)"
             let appSupport2 = "\(libraryPath)/Application Support/\(appName)"
-            addAssociatedIfExists(path: appSupport1, type: "Application Support", to: &associatedFiles)
+            addAssociatedIfExists(path: appSupport1, type: "Application Support", confidence: .verified, to: &associatedFiles)
             if appSupport1 != appSupport2 {
-                addAssociatedIfExists(path: appSupport2, type: "Application Support", to: &associatedFiles)
+                addAssociatedIfExists(path: appSupport2, type: "Application Support", confidence: .inferred, to: &associatedFiles)
             }
             
             // Caches
             let cache1 = "\(libraryPath)/Caches/\(bundleId)"
             let cache2 = "\(libraryPath)/Caches/\(appName)"
-            addAssociatedIfExists(path: cache1, type: "Caches", to: &associatedFiles)
+            addAssociatedIfExists(path: cache1, type: "Caches", confidence: .verified, to: &associatedFiles)
             if cache1 != cache2 {
-                addAssociatedIfExists(path: cache2, type: "Caches", to: &associatedFiles)
+                addAssociatedIfExists(path: cache2, type: "Caches", confidence: .inferred, to: &associatedFiles)
             }
             
             // Preferences .plist
             let prefPath = "\(libraryPath)/Preferences/\(bundleId).plist"
-            addAssociatedIfExists(path: prefPath, type: "Preferences", to: &associatedFiles)
+            addAssociatedIfExists(path: prefPath, type: "Preferences", confidence: .verified, to: &associatedFiles)
             
             // Saved Application State
             let savedState = "\(libraryPath)/Saved Application State/\(bundleId).savedState"
-            addAssociatedIfExists(path: savedState, type: "Saved State", to: &associatedFiles)
+            addAssociatedIfExists(path: savedState, type: "Saved State", confidence: .verified, to: &associatedFiles)
             
             // Containers (Sandbox)
             let containerPath = "\(libraryPath)/Containers/\(bundleId)"
-            addAssociatedIfExists(path: containerPath, type: "Sandbox Container", to: &associatedFiles)
+            addAssociatedIfExists(path: containerPath, type: "Sandbox Container", confidence: .verified, to: &associatedFiles)
             
             // WebKit data
             let webKitPath = "\(libraryPath)/WebKit/\(bundleId)"
-            addAssociatedIfExists(path: webKitPath, type: "WebKit Data", to: &associatedFiles)
+            addAssociatedIfExists(path: webKitPath, type: "WebKit Data", confidence: .verified, to: &associatedFiles)
             
             // HTTPStorages
             let httpStorage = "\(libraryPath)/HTTPStorages/\(bundleId)"
-            addAssociatedIfExists(path: httpStorage, type: "HTTP Storages", to: &associatedFiles)
+            addAssociatedIfExists(path: httpStorage, type: "HTTP Storages", confidence: .verified, to: &associatedFiles)
         }
         
         return InstalledAppItem(
@@ -118,32 +119,84 @@ public class AppUninstallerEngine: ObservableObject {
         )
     }
     
-    private func addAssociatedIfExists(path: String, type: String, to list: inout [AppAssociatedFile]) {
-        guard fileManager.fileExists(atPath: path) else { return }
+    private func addAssociatedIfExists(
+        path: String,
+        type: String,
+        confidence: AssociationConfidence,
+        to list: inout [AppAssociatedFile]
+    ) {
+        guard fileManager.fileExists(atPath: path),
+              !list.contains(where: { $0.path == path }) else { return }
         let size = getFileSize(atPath: path)
         list.append(AppAssociatedFile(
             name: (path as NSString).lastPathComponent,
             path: path,
             fileType: type,
             size: size,
-            isSelected: true
+            confidence: confidence,
+            isSelected: confidence == .verified
         ))
     }
     
     public func uninstallApp(_ app: InstalledAppItem, completion: @escaping (Bool) -> Void) {
-        guard !isUninstalling, !app.isSystemApp else { return }
+        guard !isUninstalling, !app.isSystemApp else {
+            completion(false)
+            return
+        }
+        guard let currentBundle = Bundle(path: app.bundlePath),
+              app.bundleIdentifier.isEmpty || currentBundle.bundleIdentifier == app.bundleIdentifier else {
+            completion(false)
+            return
+        }
         self.isUninstalling = true
         
         DispatchQueue.global(qos: .userInitiated).async {
             var allSucceeded = true
-            
-            for file in app.associatedFiles where file.isSelected {
+            let selectedFiles = app.associatedFiles.filter(\.isSelected)
+            guard !selectedFiles.isEmpty else {
+                DispatchQueue.main.async {
+                    self.isUninstalling = false
+                    completion(false)
+                }
+                return
+            }
+            let auxiliaryFiles = selectedFiles.filter { $0.path != app.bundlePath }
+            let applicationBundle = selectedFiles.first { $0.path == app.bundlePath }
+
+            for file in auxiliaryFiles {
+                guard UninstallPathPolicy.isAllowed(path: file.path, bundlePath: app.bundlePath) else {
+                    NSLog("Xmac Uninstall rejected unsafe path: \(file.path)")
+                    allSucceeded = false
+                    continue
+                }
                 let url = URL(fileURLWithPath: file.path)
                 do {
                     // Chuyển vào Thùng rác để đảm bảo an toàn
                     try self.fileManager.trashItem(at: url, resultingItemURL: nil)
                 } catch {
                     NSLog("Xmac Uninstall error moving \(file.path) to Trash: \(error)")
+                    allSucceeded = false
+                }
+            }
+
+            if allSucceeded, let applicationBundle {
+                guard UninstallPathPolicy.isAllowed(
+                    path: applicationBundle.path,
+                    bundlePath: app.bundlePath
+                ) else {
+                    DispatchQueue.main.async {
+                        self.isUninstalling = false
+                        completion(false)
+                    }
+                    return
+                }
+                do {
+                    try self.fileManager.trashItem(
+                        at: URL(fileURLWithPath: applicationBundle.path),
+                        resultingItemURL: nil
+                    )
+                } catch {
+                    NSLog("Xmac Uninstall error moving app bundle to Trash: \(error)")
                     allSucceeded = false
                 }
             }

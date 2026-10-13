@@ -53,6 +53,28 @@ import Testing
         #expect(!mover.canUndo)
     }
 
+    @Test func failedUndoRemainsAvailableForRetry() throws {
+        let (fileManager, rootURL, mover) = try makeFixture()
+        defer { try? fileManager.removeItem(at: rootURL) }
+        let sourceDirectory = rootURL.appendingPathComponent("source", isDirectory: true)
+        let destinationDirectory = rootURL.appendingPathComponent("destination", isDirectory: true)
+        try fileManager.createDirectory(at: sourceDirectory, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
+
+        let source = sourceDirectory.appendingPathComponent("retry.txt")
+        try Data("payload".utf8).write(to: source)
+        #expect(mover.moveFiles(sources: [source.path], destinationFolder: destinationDirectory.path).count == 1)
+
+        try fileManager.removeItem(at: sourceDirectory)
+        #expect(mover.undoLastMove() == 0)
+        #expect(mover.canUndo)
+
+        try fileManager.createDirectory(at: sourceDirectory, withIntermediateDirectories: true)
+        #expect(mover.undoLastMove() == 1)
+        #expect(!mover.canUndo)
+        #expect(fileManager.fileExists(atPath: source.path))
+    }
+
     private func makeFixture() throws -> (FileManager, URL, FileMover) {
         let fileManager = FileManager.default
         let rootURL = fileManager.temporaryDirectory

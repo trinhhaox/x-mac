@@ -1,11 +1,13 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BUILD_DIR="$PROJECT_DIR/build"
 APP_NAME="Xmac"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
+CODE_SIGN_IDENTITY="${CODE_SIGN_IDENTITY:--}"
+NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$PROJECT_DIR/Resources/Info.plist" 2>/dev/null || echo "1.0.0")"
 
@@ -100,9 +102,18 @@ fi
 
 rm "$BUILD_DIR/$APP_NAME"
 
-# 5. Ký mã (Code Signing ad-hoc)
-echo "Signing app bundle..."
-codesign --force --sign - "$APP_BUNDLE"
+# 5. Ký mã. Mặc định dùng ad-hoc cho bản local; bản phát hành có thể truyền
+# CODE_SIGN_IDENTITY đã tồn tại trong Keychain.
+if [[ "$CODE_SIGN_IDENTITY" == "-" ]]; then
+    echo "Signing app bundle ad-hoc..."
+    codesign --force --deep --sign - "$APP_BUNDLE"
+else
+    echo "Signing app bundle with configured Developer ID..."
+    codesign --force --deep --options runtime --timestamp \
+        --sign "$CODE_SIGN_IDENTITY" "$APP_BUNDLE"
+fi
+
+codesign --verify --deep --strict "$APP_BUNDLE"
 
 echo "App bundle created at: $APP_BUNDLE"
 
@@ -118,9 +129,30 @@ ln -s /Applications "$DMG_DIR/Applications"
 hdiutil create -volname "Xmac" \
     -srcfolder "$DMG_DIR" \
     -ov -format UDZO \
-    "$DMG_PATH" >/dev/null || echo "Bỏ qua tạo DMG nếu có lỗi hdiutil"
+    "$DMG_PATH" >/dev/null
 
 rm -rf "$DMG_DIR"
+
+if [[ "$CODE_SIGN_IDENTITY" != "-" ]]; then
+    echo "Signing DMG with configured Developer ID..."
+    codesign --force --timestamp --sign "$CODE_SIGN_IDENTITY" "$DMG_PATH"
+    codesign --verify --strict "$DMG_PATH"
+fi
+
+if [[ -n "$NOTARY_PROFILE" ]]; then
+    if [[ "$CODE_SIGN_IDENTITY" == "-" ]]; then
+        echo "NOTARY_PROFILE yêu cầu CODE_SIGN_IDENTITY không phải ad-hoc (-)." >&2
+        exit 1
+    fi
+    echo "Submitting DMG for notarization with configured Keychain profile..."
+    xcrun notarytool submit "$DMG_PATH" \
+        --keychain-profile "$NOTARY_PROFILE" \
+        --wait
+    xcrun stapler staple "$DMG_PATH"
+    xcrun stapler validate "$DMG_PATH"
+fi
+
+hdiutil verify "$DMG_PATH" >/dev/null
 
 echo ""
 echo "=== Build Complete Successfully! ==="

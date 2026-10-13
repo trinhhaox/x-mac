@@ -30,6 +30,7 @@ public class InputHookManager: ObservableObject {
     
     private var currentBuffer: String = ""
     private var isSimulating: Bool = false
+    private var activeProcessIdentifier: pid_t?
     
     private init() {
         if UserDefaults.standard.object(forKey: "XmacIME_VietnameseMode") != nil {
@@ -59,6 +60,11 @@ public class InputHookManager: ObservableObject {
     }
 
     func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+        if type == .leftMouseDown || type == .rightMouseDown || type == .otherMouseDown {
+            resetComposition()
+            return Unmanaged.passUnretained(event)
+        }
+
         // Nếu đây là phím ảo do chính Xmac giả lập gửi ra, bỏ qua để không lặp vô tận
         if isSimulating {
             return Unmanaged.passUnretained(event)
@@ -83,6 +89,8 @@ public class InputHookManager: ObservableObject {
     }
     
     private func handleKeyDown(event: CGEvent) -> Unmanaged<CGEvent>? {
+        syncActiveApplication()
+
         let flags = event.flags
         // Nếu có Command, Option hoặc Control -> Phím tắt ứng dụng, reset buffer và bỏ qua
         if flags.contains(.maskCommand) || flags.contains(.maskAlternate) || flags.contains(.maskControl) {
@@ -99,6 +107,25 @@ public class InputHookManager: ObservableObject {
         }
         
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+
+        // Di chuyển caret/focus làm buffer hiện tại không còn an toàn để thay thế.
+        let contextChangingKeyCodes: Set<Int64> = [
+            48,  // Tab
+            53,  // Escape
+            115, // Home
+            116, // Page Up
+            117, // Forward Delete
+            119, // End
+            121, // Page Down
+            123, // Left Arrow
+            124, // Right Arrow
+            125, // Down Arrow
+            126  // Up Arrow
+        ]
+        if contextChangingKeyCodes.contains(keyCode) {
+            resetComposition()
+            return Unmanaged.passUnretained(event)
+        }
         
         // Phím Delete / Backspace (keyCode = 51)
         if keyCode == 51 {
@@ -187,5 +214,18 @@ public class InputHookManager: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             self.isSimulating = false
         }
+    }
+
+    private func syncActiveApplication() {
+        let processIdentifier = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        if let activeProcessIdentifier, activeProcessIdentifier != processIdentifier {
+            currentBuffer = ""
+        }
+        activeProcessIdentifier = processIdentifier
+    }
+
+    private func resetComposition() {
+        currentBuffer = ""
+        activeProcessIdentifier = NSWorkspace.shared.frontmostApplication?.processIdentifier
     }
 }

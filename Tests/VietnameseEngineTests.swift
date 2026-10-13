@@ -19,6 +19,20 @@ import Testing
         #expect(type("a61", method: .vni) == "ấ")
     }
 
+    @Test func modernAndTraditionalOpenVowelPlacement() {
+        #expect(type("hoaf", method: .telex) == "hòa")
+        #expect(type("hoaf", method: .telex, modernOrthography: false) == "hoà")
+        #expect(type("thuys", method: .telex) == "thúy")
+        #expect(type("thuys", method: .telex, modernOrthography: false) == "thuý")
+    }
+
+    @Test func openDiphthongsAndGlidesUseCorrectToneVowel() {
+        #expect(type("muas", method: .telex) == "múa")
+        #expect(type("meos", method: .telex) == "méo")
+        #expect(type("quaf", method: .telex) == "quà")
+        #expect(type("gias", method: .telex) == "giá")
+    }
+
     private func type(
         _ input: String,
         method: TypingMethod,
