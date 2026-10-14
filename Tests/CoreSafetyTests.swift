@@ -1,3 +1,4 @@
+import CoreGraphics
 import Testing
 @testable import Xmac
 
@@ -26,6 +27,45 @@ import Testing
         #expect(MountOutputVerifier.isReadWriteMount(output: output, mountPoint: "/Volumes/Xmac_disk4s1"))
         #expect(!MountOutputVerifier.isReadWriteMount(output: output, mountPoint: "/Volumes/ReadOnly"))
         #expect(!MountOutputVerifier.isReadWriteMount(output: output, mountPoint: "/Volumes/Missing"))
+    }
+
+    @Test func staleUnmountFailureContinuesOnlyWhenDiskIsNowUnmounted() {
+        #expect(NTFSMountHelper.canContinueAfterUnmountFailure(currentlyMounted: false))
+        #expect(!NTFSMountHelper.canContinueAfterUnmountFailure(currentlyMounted: true))
+        #expect(!NTFSMountHelper.canContinueAfterUnmountFailure(currentlyMounted: nil))
+    }
+
+    @Test func simulatedIMEEventsAreIdentifiedWithoutARealKeySuppressionWindow() throws {
+        let simulated = try #require(CGEvent(
+            keyboardEventSource: nil,
+            virtualKey: 0,
+            keyDown: true
+        ))
+        let physical = try #require(CGEvent(
+            keyboardEventSource: nil,
+            virtualKey: 0,
+            keyDown: true
+        ))
+
+        InputHookManager.markAsSimulated(simulated)
+
+        #expect(InputHookManager.isSimulatedEvent(simulated))
+        #expect(!InputHookManager.isSimulatedEvent(physical))
+    }
+
+    @Test func unmountedDiskDoesNotReportReliableCapacity() {
+        let unmounted = DiskVolume(
+            name: "Test",
+            bsdName: "disk4s3",
+            mountPoint: nil,
+            fileSystem: "NTFS",
+            totalSize: 644_245_094_400,
+            freeSize: 0,
+            isExternal: true,
+            isWritable: false,
+            isMounted: false
+        )
+        #expect(!unmounted.hasReliableCapacity)
     }
 
     @Test func cleanerPathPolicyAllowsOnlyDescendantsOfKnownRoots() {

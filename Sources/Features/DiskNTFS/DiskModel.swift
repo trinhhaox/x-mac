@@ -24,6 +24,10 @@ public struct DiskVolume: Identifiable, Hashable {
         guard totalSize > 0 else { return 0 }
         return Double(usedSize) / Double(totalSize)
     }
+
+    public var hasReliableCapacity: Bool {
+        isMounted && totalSize > 0
+    }
     
     public var formattedTotalSize: String {
         return ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)

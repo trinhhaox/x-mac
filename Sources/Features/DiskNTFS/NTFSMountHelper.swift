@@ -100,19 +100,24 @@ public class NTFSMountHelper: DiskMounter {
             let targetMountPoint = "/Volumes/Xmac_\(volume.bsdName)"
 
             var didUnmountOriginalVolume = false
-            if volume.isMounted {
+            let isCurrentlyMounted = self.currentMountState(bsdName: volume.bsdName)
+                ?? volume.isMounted
+            if isCurrentlyMounted {
                 let unmount = self.executeCommand(
                     "/usr/sbin/diskutil",
                     arguments: ["unmount", deviceNode]
                 )
-                guard unmount.status == 0 else {
+                if unmount.status == 0 {
+                    didUnmountOriginalVolume = true
+                } else if !Self.canContinueAfterUnmountFailure(
+                    currentlyMounted: self.currentMountState(bsdName: volume.bsdName)
+                ) {
                     self.complete(
                         .failure(error: "Không thể unmount phân vùng an toàn: \(unmount.output)"),
                         completion: completion
                     )
                     return
                 }
-                didUnmountOriginalVolume = true
             }
 
             let innerCommand: String
@@ -257,6 +262,27 @@ public class NTFSMountHelper: DiskMounter {
             output: mountResult.output,
             mountPoint: targetMountPoint
         )
+    }
+
+    static func canContinueAfterUnmountFailure(currentlyMounted: Bool?) -> Bool {
+        currentlyMounted == false
+    }
+
+    private func currentMountState(bsdName: String) -> Bool? {
+        let info = executeCommand(
+            "/usr/sbin/diskutil",
+            arguments: ["info", "-plist", bsdName]
+        )
+        guard info.status == 0,
+              let data = info.output.data(using: .utf8),
+              let plist = try? PropertyListSerialization.propertyList(
+                from: data,
+                options: [],
+                format: nil
+              ) as? [String: Any] else {
+            return nil
+        }
+        return plist["Mounted"] as? Bool
     }
 
     private func rollbackReadOnlyIfNeeded(

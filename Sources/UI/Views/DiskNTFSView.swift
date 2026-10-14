@@ -183,6 +183,7 @@ struct DiskVolumeCard: View {
                         
                         Button("Mở trong Finder", action: onOpen)
                             .buttonStyle(BrandSecondaryButtonStyle())
+                            .disabled(!volume.isMounted)
                         
                         if volume.isExternal {
                             Button(action: onEject) {
@@ -195,7 +196,7 @@ struct DiskVolumeCard: View {
                 }
                 
                 // Dung lượng đĩa
-                if volume.totalSize > 0 {
+                if volume.hasReliableCapacity {
                     VStack(alignment: .leading, spacing: 6) {
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
@@ -218,6 +219,16 @@ struct DiskVolumeCard: View {
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(.secondary)
                         }
+                    }
+                } else if volume.totalSize > 0 {
+                    HStack {
+                        Text("Dung lượng chưa khả dụng khi phân vùng chưa được gắn kết")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text("Tổng: \(volume.formattedTotalSize)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
                     }
                 }
             }
