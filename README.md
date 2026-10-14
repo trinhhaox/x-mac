@@ -1,28 +1,42 @@
 # Xmac - Tiện Ích Thiết Yếu Tất Cả Trong Một Cho macOS 
 
 <p align="center">
-  <b>Bộ tiện ích macOS hỗ trợ Cắt/Dán file Finder, gắn ổ NTFS đọc-ghi qua helper bên ngoài, gõ Tiếng Việt, dọn rác và gỡ ứng dụng có kiểm soát.</b>
+  <b>Bộ tiện ích macOS hỗ trợ tải tệp, tìm tệp nhanh, Cắt/Dán file Finder, gắn ổ NTFS đọc-ghi qua helper bên ngoài, gõ Tiếng Việt, dọn rác và gỡ ứng dụng có kiểm soát.</b>
 </p>
 
 ---
 
 ## 🌟 Tính Năng Nổi Bật
 
-### 1. ✂︎ True Cut & Paste cho Finder (⌘X & ⌘V)
+### 1. ⬇️ Trung Tâm Tải Xuống Native
+- **HTTP/HTTPS**: Thêm tối đa 20 liên kết mỗi lần mà không cần engine hoặc extension bên ngoài.
+- **Kiểm soát tác vụ**: Theo dõi dung lượng, tạm dừng, tiếp tục, hủy và thử lại.
+- **An toàn tệp**: Chuẩn hóa tên do máy chủ trả về và tự tăng hậu tố khi trùng tên, không ghi đè tệp đã có.
+- **Tích hợp macOS**: Chọn thư mục lưu, mở tệp trong Finder, lưu lịch sử và nhận thông báo hoàn tất/lỗi.
+
+### 2. 🔎 Tìm Tệp Nhanh Bằng Spotlight
+- **Tìm native**: Tìm theo tên hoặc nội dung đã được Spotlight lập chỉ mục, không cần daemon nền.
+- **Bộ lọc thực dụng**: Chọn phạm vi, loại tệp; dùng `ext:pdf`, `type:image`, `mtime:<7d`, `^prefix`, `suffix$` và `!exclude`.
+- **Thao tác trực tiếp**: Mở tệp, hiện trong Finder hoặc sao chép đường dẫn ngay trên kết quả.
+- **Thiết kế độc lập**: Tham khảo trải nghiệm truy vấn của [FSearch](https://github.com/noahdunnagan/fsearch), không đóng gói binary/daemon của dự án ngoài.
+
+Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
+
+### 3. ✂︎ True Cut & Paste cho Finder (⌘X & ⌘V)
 - **⌘X**: Cắt tệp tin hoặc thư mục đang chọn trong Finder (thay thế thao tác rườm rà ⌘C rồi ⌥⌘V của macOS).
 - **⌘V**: Dán di chuyển tức thì vào thư mục đích đang mở (hỗ trợ cả Desktop và nhiều cửa sổ Finder).
 - **⌘Z**: Hoàn tác (Undo) đưa tệp tin trở lại vị trí ban đầu an toàn nếu paste nhầm.
 - **Không chiếm phím khi sửa tên**: Tự động nhận diện khi người dùng đang đổi tên file để ⌘X, ⌘C, ⌘V thao tác trên chữ bình thường.
 - **Âm thanh và thông báo**: Phản hồi âm thanh nhẹ nhàng và banner thông báo số lượng tệp đã di chuyển.
 
-### 2. 💽 Quản Lý Ổ Đĩa Ngoại Vi & Đọc / Ghi Ổ NTFS (Windows)
+### 4. 💽 Quản Lý Ổ Đĩa Ngoại Vi & Đọc / Ghi Ổ NTFS (Windows)
 - **Tự động nhận diện ổ đĩa**: Nhận diện tất cả USB, thẻ nhớ, ổ cứng di động SSD/HDD cắm vào máy.
 - **Kích hoạt Ghi NTFS (Read-Write)**: Sử dụng AnyLinuxFS hoặc `ntfs-3g`/macFUSE đã cài trên máy, xác minh trạng thái đọc-ghi sau khi mount và tự khôi phục cách mount mặc định nếu thao tác thất bại.
 - **Đồ họa dung lượng trực quan**: Hiển thị chính xác dung lượng tổng, đã dùng, còn trống và định dạng phân vùng.
 - **Ngắt kết nối an toàn (Safe Eject)**: Nút ngắt kết nối an toàn 1 chạm giúp bảo vệ dữ liệu không bị hỏng khi rút cáp.
 - **Mở nhanh trong Finder**: Truy cập ngay ổ đĩa chỉ với 1 click.
 
-### 3. 🇻🇳 Bộ Gõ Tiếng Việt Thông Minh Xmac
+### 5. 🇻🇳 Bộ Gõ Tiếng Việt Thông Minh Xmac
 - **Hỗ trợ đầy đủ kiểu gõ**: Telex, VNI và Simple Telex.
 - **Bảng mã Unicode**: Hoạt động qua Accessibility event tap; mức tương thích phụ thuộc cách từng ứng dụng xử lý nhập liệu và secure input.
 - **Quy tắc bỏ dấu linh hoạt**: Tùy chọn kiểu bỏ dấu mới (`hòa`, `thúy`) hoặc chuẩn truyền thống (`hoà`, `thuý`).
@@ -30,7 +44,7 @@
 - **Bảng gõ tắt (Macro)**: Tự động mở rộng từ viết tắt (ví dụ: `vn` ➔ `Việt Nam`, `dc` ➔ `được`, `ko` ➔ `không`).
 - **Danh sách loại trừ (Excluded Apps)**: Tự động tắt tiếng Việt khi làm việc trong Terminal, iTerm, Xcode để tránh gõ nhầm lệnh.
 
-### 4. 🧹 Dọn Rác Hệ Thống & Gỡ Ứng Dụng Có Kiểm Soát
+### 6. 🧹 Dọn Rác Hệ Thống & Gỡ Ứng Dụng Có Kiểm Soát
 - **Dọn rác hệ thống (System Junk Cleaner)**:
   - Quét sạch bộ nhớ đệm người dùng (User Caches `~/Library/Caches`).
   - Dọn dẹp tệp nhật ký hệ thống (System & User Logs `~/Library/Logs`).
@@ -55,7 +69,7 @@
 ## 🚀 Cài Đặt & Sử Dụng
 
 ### 1. Cài đặt từ DMG (Khuyến nghị)
-1. Tải file `Xmac-1.0.0.dmg` từ thư mục `build/`.
+1. Tải file `Xmac-1.1.0.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
 2. Kéo thả `Xmac.app` vào thư mục `Applications`.
 3. Mở ứng dụng và làm theo hướng dẫn cấp quyền.
 
@@ -66,7 +80,7 @@ cd x-mac
 chmod +x Scripts/build.sh
 ./Scripts/build.sh
 ```
-Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.0.0.dmg` sẽ được tạo trong thư mục `build/`.
+Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.1.0.dmg` sẽ được tạo trong thư mục `build/`.
 
 Mặc định script ký ad-hoc để kiểm thử local. Nếu máy đã có sẵn chứng thư và hồ sơ notarization trong Keychain, có thể tạo bản phát hành bằng:
 
@@ -117,6 +131,10 @@ Xmac/
 │   │   ├── PermissionsManager.swift   # Kiểm tra và cấp quyền hệ thống
 │   │   └── SoundEffectManager.swift   # Hiệu ứng âm thanh tương tác
 │   ├── Features/
+│   │   ├── Downloads/
+│   │   │   └── DownloadManager.swift      # HTTP/HTTPS download engine, lịch sử & an toàn tên tệp
+│   │   ├── FileSearch/
+│   │   │   └── FileSearchEngine.swift      # Truy vấn Spotlight, bộ lọc và xếp hạng kết quả
 │   │   ├── Cleaner/
 │   │   │   ├── AppUninstallerEngine.swift # Engine gỡ triệt để ứng dụng
 │   │   │   ├── CleanerEngine.swift        # Engine quét và dọn rác hệ thống
@@ -145,6 +163,8 @@ Xmac/
 │           ├── AppUninstallerView.swift   # Giao diện gỡ ứng dụng
 │           ├── CutPasteView.swift         # Giao diện Finder Cut & Paste
 │           ├── DiskNTFSView.swift         # Giao diện Ổ đĩa & NTFS
+│           ├── DownloadsView.swift        # Giao diện quản lý tác vụ tải xuống
+│           ├── FileSearchView.swift       # Giao diện tìm tệp nhanh
 │           ├── JunkCleanerView.swift      # Giao diện Dọn rác hệ thống
 │           ├── MainView.swift             # Khung cửa sổ chính với Sidebar
 │           ├── OverviewView.swift         # Tổng quan Control Center

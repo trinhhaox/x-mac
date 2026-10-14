@@ -43,16 +43,23 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let contentView = MainView()
         let hostingController = NSHostingController(rootView: contentView)
         
+        let visibleSize = NSScreen.main?.visibleFrame.size ?? NSSize(width: 1060, height: 700)
+        let contentSize = NSSize(
+            width: min(1060, max(900, visibleSize.width - 24)),
+            height: min(700, max(600, visibleSize.height - 24))
+        )
+
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1060, height: 700),
+            contentRect: NSRect(origin: .zero, size: contentSize),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         
-        window.center()
         window.minSize = NSSize(width: 900, height: 600)
         window.setFrameAutosaveName("XmacMainWindow")
+        window.setContentSize(contentSize)
+        window.center()
         window.contentViewController = hostingController
         window.title = "Xmac"
         window.titleVisibility = .hidden

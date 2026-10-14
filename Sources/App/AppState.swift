@@ -3,6 +3,8 @@ import SwiftUI
 
 public enum NavigationTab: String, CaseIterable, Identifiable {
     case overview = "Tổng quan"
+    case downloads = "Tải xuống"
+    case fileSearch = "Tìm tệp nhanh"
     case cutPaste = "Finder Cut & Paste"
     case diskNTFS = "Ổ đĩa & NTFS"
     case vietnameseIME = "Bộ gõ Tiếng Việt"
@@ -15,6 +17,8 @@ public enum NavigationTab: String, CaseIterable, Identifiable {
     public var iconName: String {
         switch self {
         case .overview: return "gauge.medium"
+        case .downloads: return "arrow.down.circle.fill"
+        case .fileSearch: return "doc.text.magnifyingglass"
         case .cutPaste: return "scissors"
         case .diskNTFS: return "externaldrive.fill.badge.plus"
         case .vietnameseIME: return "character.bubble.fill"

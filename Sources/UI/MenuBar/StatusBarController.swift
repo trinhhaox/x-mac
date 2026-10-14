@@ -52,6 +52,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         let ime = InputHookManager.shared
         let cutPaste = FinderCutPasteManager.shared
         let diskManager = DiskManager.shared
+        let downloads = DownloadManager.shared
         
         // 1. Chuyển đổi ngôn ngữ gõ
         let langTitle = ime.isVietnameseMode ? "🇻🇳 Đang gõ: Tiếng Việt (Nhấn để đổi E)" : "🇺🇸 Đang gõ: Tiếng Anh (Nhấn để đổi V)"
@@ -72,6 +73,20 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         typingItem.submenu = methodMenu
         menu.addItem(typingItem)
         
+        menu.addItem(NSMenuItem.separator())
+
+        let downloadTitle = downloads.activeCount > 0
+            ? "↓ Tải xuống: \(downloads.activeCount) tác vụ đang chạy"
+            : "↓ Mở Trung tâm tải xuống"
+        let downloadItem = NSMenuItem(title: downloadTitle, action: #selector(openDownloads), keyEquivalent: "")
+        downloadItem.target = self
+        menu.addItem(downloadItem)
+
+        let searchItem = NSMenuItem(title: "⌕ Tìm tệp nhanh", action: #selector(openFileSearch), keyEquivalent: "f")
+        searchItem.keyEquivalentModifierMask = [.command, .option]
+        searchItem.target = self
+        menu.addItem(searchItem)
+
         menu.addItem(NSMenuItem.separator())
         
         // 2. Finder Cut & Paste
@@ -155,6 +170,16 @@ public class StatusBarController: NSObject, NSMenuDelegate {
     
     @objc private func purgeMemoryAction() {
         CleanerEngine.shared.purgeMemory()
+    }
+
+    @objc private func openDownloads() {
+        AppState.shared.selectedTab = .downloads
+        openMainWindow()
+    }
+
+    @objc private func openFileSearch() {
+        AppState.shared.selectedTab = .fileSearch
+        openMainWindow()
     }
     
     @objc private func openMainWindow() {

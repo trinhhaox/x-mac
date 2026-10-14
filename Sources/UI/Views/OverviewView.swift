@@ -6,6 +6,7 @@ public struct OverviewView: View {
     @ObservedObject var ime = InputHookManager.shared
     @ObservedObject var diskManager = DiskManager.shared
     @ObservedObject var cleaner = CleanerEngine.shared
+    @ObservedObject var downloads = DownloadManager.shared
     @ObservedObject var permissions = PermissionsManager.shared
 
     public init() {}
@@ -94,9 +95,14 @@ public struct OverviewView: View {
                             }
                         )
                         quickAction(
-                            title: ime.isVietnameseMode ? "Chuyển sang E" : "Chuyển sang V",
-                            icon: "globe.asia.australia.fill",
-                            action: ime.toggleLanguage
+                            title: "Tải xuống",
+                            icon: "arrow.down.circle.fill",
+                            action: { appState.selectedTab = .downloads }
+                        )
+                        quickAction(
+                            title: "Tìm tệp",
+                            icon: "doc.text.magnifyingglass",
+                            action: { appState.selectedTab = .fileSearch }
                         )
                     }
                 }
@@ -106,6 +112,30 @@ public struct OverviewView: View {
                         "Tiện ích đang quản lý",
                         subtitle: "Bật, tắt hoặc mở nhanh từng công cụ."
                     )
+
+                    moduleRow(
+                        icon: "doc.text.magnifyingglass",
+                        title: "Tìm tệp nhanh",
+                        subtitle: "Tên, nội dung, loại tệp và phạm vi bằng chỉ mục Spotlight"
+                    ) {
+                        Button("Mở tìm kiếm") { appState.selectedTab = .fileSearch }
+                            .buttonStyle(BrandSecondaryButtonStyle())
+                    }
+
+                    Divider().opacity(0.55)
+
+                    moduleRow(
+                        icon: "arrow.down.circle.fill",
+                        title: "Trung tâm tải xuống",
+                        subtitle: downloads.activeCount > 0
+                            ? "\(downloads.activeCount) tác vụ đang tải"
+                            : "HTTP/HTTPS, tạm dừng và tiếp tục tải"
+                    ) {
+                        Button("Mở tải xuống") { appState.selectedTab = .downloads }
+                            .buttonStyle(BrandSecondaryButtonStyle())
+                    }
+
+                    Divider().opacity(0.55)
 
                     moduleRow(
                         icon: "scissors",

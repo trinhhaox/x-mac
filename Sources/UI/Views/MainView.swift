@@ -13,6 +13,8 @@ public struct MainView: View {
             Group {
                 switch appState.selectedTab {
                 case .overview: OverviewView()
+                case .downloads: DownloadsView()
+                case .fileSearch: FileSearchView()
                 case .cutPaste: CutPasteView()
                 case .diskNTFS: DiskNTFSView()
                 case .vietnameseIME: VietnameseIMEView()

@@ -1,0 +1,408 @@
+import AppKit
+import SwiftUI
+
+private enum DownloadFilter: String, CaseIterable, Identifiable {
+    case all = "Tất cả"
+    case active = "Đang tải"
+    case paused = "Tạm dừng"
+    case completed = "Hoàn tất"
+    case failed = "Lỗi"
+
+    var id: String { rawValue }
+}
+
+private final class DownloadsViewState: ObservableObject {
+    @Published var filter: DownloadFilter = .all
+    @Published var searchText = ""
+    @Published var showingNewTask = false
+    @Published var links = ""
+    @Published var destinationDirectory = DownloadManager.shared.defaultDirectory
+    @Published var validationMessage: String?
+}
+
+public struct DownloadsView: View {
+    @ObservedObject private var manager = DownloadManager.shared
+    @StateObject private var viewState = DownloadsViewState()
+
+    public init() {}
+
+    private var visibleItems: [ManagedDownload] {
+        manager.items.filter { item in
+            let matchesFilter: Bool
+            switch viewState.filter {
+            case .all:
+                matchesFilter = true
+            case .active:
+                matchesFilter = item.status == .downloading
+            case .paused:
+                matchesFilter = item.status == .paused
+            case .completed:
+                matchesFilter = item.status == .completed
+            case .failed:
+                matchesFilter = item.status == .failed || item.status == .cancelled
+            }
+
+            let query = viewState.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let matchesSearch = query.isEmpty
+                || item.fileName.localizedCaseInsensitiveContains(query)
+                || item.sourceURL.localizedCaseInsensitiveContains(query)
+            return matchesFilter && matchesSearch
+        }
+    }
+
+    public var body: some View {
+        VStack(spacing: 0) {
+            header
+                .padding(.horizontal, 26)
+                .padding(.top, 24)
+                .padding(.bottom, 18)
+
+            Divider().opacity(0.45)
+
+            VStack(spacing: 14) {
+                controls
+
+                if manager.items.isEmpty {
+                    emptyState
+                } else if visibleItems.isEmpty {
+                    noResults
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(visibleItems) { item in
+                                downloadRow(item)
+                                    .transition(.move(edge: .top).combined(with: .opacity))
+                            }
+                        }
+                        .padding(.bottom, 24)
+                        .animation(.easeOut(duration: 0.24), value: visibleItems.map(\.id))
+                    }
+                }
+            }
+            .padding(.horizontal, 26)
+            .padding(.top, 16)
+        }
+        .sheet(isPresented: $viewState.showingNewTask) {
+            newTaskSheet
+        }
+        .xmacPage()
+    }
+
+    private var header: some View {
+        BrandPageHeader(
+            eyebrow: "DOWNLOAD CENTER",
+            title: "Tải xuống",
+            subtitle: "Quản lý tải tệp HTTP/HTTPS bằng engine native của macOS."
+        ) {
+            Button(action: openNewTask) {
+                Label("Tác vụ mới", systemImage: "plus")
+            }
+            .buttonStyle(BrandPrimaryButtonStyle())
+        }
+    }
+
+    private var controls: some View {
+        VStack(spacing: 10) {
+            Picker("Trạng thái", selection: $viewState.filter) {
+                ForEach(DownloadFilter.allCases) { option in
+                    Text(option.rawValue).tag(option)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: .infinity)
+
+            HStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(XmacTheme.blue)
+                    TextField("Tìm tệp hoặc liên kết", text: $viewState.searchText)
+                        .textFieldStyle(.plain)
+                }
+                .padding(.horizontal, 11)
+                .frame(maxWidth: .infinity, minHeight: 34)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(XmacTheme.cardBackground)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(XmacTheme.cardStroke, lineWidth: 1)
+                )
+
+                Button("Xóa lịch sử") {
+                    manager.clearFinished()
+                }
+                .buttonStyle(BrandSecondaryButtonStyle())
+                .disabled(!manager.items.contains { $0.status != .downloading && $0.status != .paused })
+            }
+        }
+    }
+
+    private var emptyState: some View {
+        ModernCard {
+            VStack(spacing: 14) {
+                BrandIconTile(iconName: "arrow.down.circle.fill", size: 62)
+                Text("Chưa có tác vụ tải xuống")
+                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                Text("Thêm tối đa 20 liên kết mỗi lần. Xmac sẽ lưu vào thư mục Downloads hoặc thư mục bạn chọn.")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 460)
+                Button("Thêm tác vụ đầu tiên", action: openNewTask)
+                    .buttonStyle(BrandPrimaryButtonStyle())
+            }
+            .frame(maxWidth: .infinity, minHeight: 290)
+        }
+    }
+
+    private var noResults: some View {
+        ModernCard {
+            VStack(spacing: 10) {
+                Image(systemName: "line.3.horizontal.decrease.circle")
+                    .font(.system(size: 34))
+                    .foregroundColor(XmacTheme.blue)
+                Text("Không có tác vụ phù hợp")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                Text("Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 220)
+        }
+    }
+
+    private func downloadRow(_ item: ManagedDownload) -> some View {
+        ModernCard {
+            HStack(spacing: 14) {
+                BrandIconTile(iconName: statusIcon(item.status), color: statusColor(item.status), size: 46)
+
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack(spacing: 8) {
+                        Text(item.fileName)
+                            .font(.system(size: 14, weight: .semibold))
+                            .lineLimit(1)
+                        statusBadge(item.status)
+                        Spacer()
+                        Text(progressLabel(item))
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+
+                    if item.status == .downloading || item.status == .paused {
+                        ProgressView(value: item.progress)
+                            .tint(XmacTheme.blue)
+                            .animation(.easeOut(duration: 0.2), value: item.progress)
+                    }
+
+                    Text(item.errorMessage ?? item.sourceURL)
+                        .font(.system(size: 11))
+                        .foregroundColor(item.errorMessage == nil ? .secondary : .red)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                actions(for: item)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func actions(for item: ManagedDownload) -> some View {
+        HStack(spacing: 6) {
+            switch item.status {
+            case .downloading:
+                Button(action: { manager.pause(item.id) }) {
+                    Image(systemName: "pause.fill")
+                }
+                .help("Tạm dừng")
+                Button(action: { manager.cancel(item.id) }) {
+                    Image(systemName: "xmark")
+                }
+                .help("Hủy")
+            case .paused, .failed:
+                Button(action: { manager.resume(item.id) }) {
+                    Image(systemName: "play.fill")
+                }
+                .help("Tiếp tục")
+                Button(action: { manager.remove(item.id) }) {
+                    Image(systemName: "trash")
+                }
+                .help("Xóa khỏi lịch sử")
+            case .completed:
+                Button(action: { manager.reveal(item.id) }) {
+                    Image(systemName: "folder")
+                }
+                .help("Hiển thị trong Finder")
+                Button(action: { manager.remove(item.id) }) {
+                    Image(systemName: "trash")
+                }
+                .help("Xóa khỏi lịch sử")
+            case .cancelled:
+                Button(action: { manager.resume(item.id) }) {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .help("Tải lại")
+                Button(action: { manager.remove(item.id) }) {
+                    Image(systemName: "trash")
+                }
+                .help("Xóa khỏi lịch sử")
+            }
+        }
+        .buttonStyle(BrandSecondaryButtonStyle())
+    }
+
+    private var newTaskSheet: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Tác vụ tải xuống mới")
+                        .font(.system(size: 21, weight: .bold, design: .rounded))
+                    Text("Mỗi dòng một liên kết HTTP hoặc HTTPS, tối đa 20 liên kết.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                BrandIconTile(iconName: "arrow.down.circle.fill", size: 44)
+            }
+
+            VStack(alignment: .leading, spacing: 7) {
+                Text("Liên kết")
+                    .font(.system(size: 12, weight: .semibold))
+                TextEditor(text: $viewState.links)
+                    .font(.system(size: 12, design: .monospaced))
+                    .frame(minHeight: 120)
+                    .padding(8)
+                    .scrollContentBackground(.hidden)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(XmacTheme.workspaceBackground)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(XmacTheme.cardStroke, lineWidth: 1)
+                    )
+            }
+
+            VStack(alignment: .leading, spacing: 7) {
+                Text("Lưu vào")
+                    .font(.system(size: 12, weight: .semibold))
+                HStack {
+                    Text(viewState.destinationDirectory.path)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer()
+                    Button("Chọn thư mục…", action: chooseDirectory)
+                        .buttonStyle(BrandSecondaryButtonStyle())
+                }
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(XmacTheme.workspaceBackground)
+                )
+            }
+
+            if let validationMessage = viewState.validationMessage {
+                Label(validationMessage, systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.orange)
+            }
+
+            HStack {
+                Spacer()
+                Button("Hủy") {
+                    viewState.showingNewTask = false
+                }
+                .buttonStyle(BrandSecondaryButtonStyle())
+                Button("Bắt đầu tải") {
+                    submitDownloads()
+                }
+                .buttonStyle(BrandPrimaryButtonStyle())
+                .disabled(viewState.links.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 560)
+        .background(XmacTheme.cardBackground)
+    }
+
+    private func openNewTask() {
+        viewState.links = ""
+        viewState.validationMessage = nil
+        viewState.destinationDirectory = manager.defaultDirectory
+        viewState.showingNewTask = true
+    }
+
+    private func chooseDirectory() {
+        let panel = NSOpenPanel()
+        panel.title = "Chọn thư mục lưu tệp"
+        panel.directoryURL = viewState.destinationDirectory
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            viewState.destinationDirectory = url
+        }
+    }
+
+    private func submitDownloads() {
+        let rejected = manager.enqueue(rawLinks: viewState.links, directory: viewState.destinationDirectory)
+        if rejected.isEmpty {
+            viewState.showingNewTask = false
+            viewState.links = ""
+            viewState.validationMessage = nil
+        } else {
+            viewState.validationMessage = "Không thể thêm: \(rejected.joined(separator: ", "))"
+            viewState.links = rejected.filter { $0.contains("://") }.joined(separator: "\n")
+        }
+    }
+
+    private func statusBadge(_ status: ManagedDownloadStatus) -> some View {
+        Text(statusLabel(status))
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundColor(statusColor(status))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(statusColor(status).opacity(0.12)))
+    }
+
+    private func statusLabel(_ status: ManagedDownloadStatus) -> String {
+        switch status {
+        case .downloading: return "Đang tải"
+        case .paused: return "Tạm dừng"
+        case .completed: return "Hoàn tất"
+        case .failed: return "Lỗi"
+        case .cancelled: return "Đã hủy"
+        }
+    }
+
+    private func statusIcon(_ status: ManagedDownloadStatus) -> String {
+        switch status {
+        case .downloading: return "arrow.down"
+        case .paused: return "pause.fill"
+        case .completed: return "checkmark"
+        case .failed: return "exclamationmark"
+        case .cancelled: return "xmark"
+        }
+    }
+
+    private func statusColor(_ status: ManagedDownloadStatus) -> Color {
+        switch status {
+        case .downloading: return XmacTheme.blue
+        case .paused: return .orange
+        case .completed: return .green
+        case .failed: return .red
+        case .cancelled: return .secondary
+        }
+    }
+
+    private func progressLabel(_ item: ManagedDownload) -> String {
+        let received = ByteCountFormatter.string(fromByteCount: item.receivedBytes, countStyle: .file)
+        guard item.expectedBytes > 0 else { return received }
+        let expected = ByteCountFormatter.string(fromByteCount: item.expectedBytes, countStyle: .file)
+        return "\(received) / \(expected)"
+    }
+}
