@@ -35,7 +35,10 @@ public struct FinderBridge {
     }
     
     public static func isRenamingFile() -> Bool {
-        // Kiểm tra xem Finder có đang focus vào text field (đổi tên file) hay không
+        // Finder exposes the selected filename itself as an AXTextField even when
+        // it is not being edited. That element carries the file URL; the inline
+        // rename editor does not. Checking the role alone therefore blocks every
+        // normal Cmd-X in list view.
         guard let app = NSWorkspace.shared.frontmostApplication,
               app.bundleIdentifier == "com.apple.finder" else {
             return false
@@ -61,13 +64,25 @@ public struct FinderBridge {
             &roleValue
         )
         
-        if roleResult == .success, let role = roleValue as? String {
-            if role == (kAXTextFieldRole as String) || role == (kAXTextAreaRole as String) {
-                return true
-            }
+        guard roleResult == .success, let role = roleValue as? String else {
+            return false
         }
-        
-        return false
+
+        var urlValue: CFTypeRef?
+        let urlResult = AXUIElementCopyAttributeValue(
+            axElement,
+            kAXURLAttribute as CFString,
+            &urlValue
+        )
+        let hasFileURL = urlResult == .success && urlValue != nil
+
+        return isRenameEditor(role: role, hasFileURL: hasFileURL)
+    }
+
+    static func isRenameEditor(role: String, hasFileURL: Bool) -> Bool {
+        let isTextInput = role == (kAXTextFieldRole as String)
+            || role == (kAXTextAreaRole as String)
+        return isTextInput && !hasFileURL
     }
     
     private static func runAppleScript(_ source: String) -> [String] {

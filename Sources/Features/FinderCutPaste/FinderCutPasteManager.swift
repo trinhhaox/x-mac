@@ -29,27 +29,24 @@ public class FinderCutPasteManager: ObservableObject {
         cutSessionID = sessionID
         cutFiles.removeAll()
 
-        operationQueue.async {
-            let selected = FinderBridge.getSelectedFiles()
-
-            DispatchQueue.main.async {
-                guard self.cutSessionID == sessionID else { return }
-                guard !selected.isEmpty else {
-                    self.cutSessionID = nil
-                    self.cutFiles.removeAll()
-                    return
-                }
-                self.cutFiles = selected
-                SoundEffectManager.shared.play(.cut)
-
-                let count = selected.count
-                let title = "Đã cắt \(count) mục"
-                let subtitle = count == 1
-                    ? (selected.first as NSString?)?.lastPathComponent ?? ""
-                    : "Sẵn sàng để dán (⌘V)"
-                self.sendNotification(title: title, body: subtitle)
-            }
+        // NSAppleScript is not thread-safe. Query Finder on the event tap's main
+        // run loop, then reserve the operation queue for actual file I/O.
+        let selected = FinderBridge.getSelectedFiles()
+        guard cutSessionID == sessionID else { return true }
+        guard !selected.isEmpty else {
+            cutSessionID = nil
+            cutFiles.removeAll()
+            return true
         }
+        cutFiles = selected
+        SoundEffectManager.shared.play(.cut)
+
+        let count = selected.count
+        let title = "Đã cắt \(count) mục"
+        let subtitle = count == 1
+            ? (selected.first as NSString?)?.lastPathComponent ?? ""
+            : "Sẵn sàng để dán (⌘V)"
+        sendNotification(title: title, body: subtitle)
         return true
     }
     
@@ -57,22 +54,19 @@ public class FinderCutPasteManager: ObservableObject {
         guard isEnabled, !cutFiles.isEmpty else { return false }
         if isMoveInProgress { return true }
 
+        guard let currentFolder = FinderBridge.getCurrentFolder() else {
+            sendNotification(
+                title: "Không thể dán",
+                body: "Không xác định được thư mục đích trong Finder."
+            )
+            return true
+        }
+
         let filesToMove = cutFiles
         let sessionID = cutSessionID
         isMoveInProgress = true
 
         operationQueue.async {
-            guard let currentFolder = FinderBridge.getCurrentFolder() else {
-                DispatchQueue.main.async {
-                    self.isMoveInProgress = false
-                    self.sendNotification(
-                        title: "Không thể dán",
-                        body: "Không xác định được thư mục đích trong Finder."
-                    )
-                }
-                return
-            }
-
             let moved = FileMover.shared.moveFiles(
                 sources: filesToMove,
                 destinationFolder: currentFolder

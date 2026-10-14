@@ -53,4 +53,11 @@ import Testing
         ])
         #expect(numberedBuild.settingsDescription == "Phiên bản 1.2.0 (Build 42)")
     }
+
+    @Test func finderFilenameFieldIsNotMistakenForRenameEditor() {
+        #expect(!FinderBridge.isRenameEditor(role: "AXTextField", hasFileURL: true))
+        #expect(FinderBridge.isRenameEditor(role: "AXTextField", hasFileURL: false))
+        #expect(FinderBridge.isRenameEditor(role: "AXTextArea", hasFileURL: false))
+        #expect(!FinderBridge.isRenameEditor(role: "AXRow", hasFileURL: false))
+    }
 }
