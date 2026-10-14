@@ -14,8 +14,12 @@ public struct CutPasteView: View {
                     title: "Cut & Paste",
                     subtitle: "Di chuyển tệp trong Finder bằng phím tắt quen thuộc, có thể hoàn tác an toàn."
                 ) {
-                    Toggle("Kích hoạt", isOn: $cutPaste.isEnabled)
+                    Toggle(
+                        permissions.isAccessibilityGranted ? "Kích hoạt" : "Cần quyền Trợ năng",
+                        isOn: $cutPaste.isEnabled
+                    )
                         .toggleStyle(.switch)
+                        .disabled(!permissions.isAccessibilityGranted)
                 }
                 
                 // Keyboard Shortcuts Guide Card

@@ -10,16 +10,26 @@ public class MacroManager: ObservableObject {
     public static let shared = MacroManager()
     
     @Published public var macros: [MacroItem] = []
-    @Published public var isMacroEnabled: Bool = true
+    @Published public var isMacroEnabled: Bool = true {
+        didSet {
+            defaults.set(isMacroEnabled, forKey: macroEnabledKey)
+        }
+    }
     
     private let storageKey = "XmacSavedMacros"
+    private let macroEnabledKey = "XmacMacroEnabled"
+    private let defaults: UserDefaults
     
-    private init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        if defaults.object(forKey: macroEnabledKey) != nil {
+            self.isMacroEnabled = defaults.bool(forKey: macroEnabledKey)
+        }
         loadMacros()
     }
     
     public func loadMacros() {
-        if let data = UserDefaults.standard.data(forKey: storageKey),
+        if let data = defaults.data(forKey: storageKey),
            let saved = try? JSONDecoder().decode([MacroItem].self, from: data) {
             self.macros = saved
         } else {
@@ -58,7 +68,7 @@ public class MacroManager: ObservableObject {
     
     private func saveMacros() {
         if let data = try? JSONEncoder().encode(macros) {
-            UserDefaults.standard.set(data, forKey: storageKey)
+            defaults.set(data, forKey: storageKey)
         }
     }
 }

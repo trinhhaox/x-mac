@@ -132,7 +132,7 @@ public struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Xmac")
                                 .font(.system(size: 16, weight: .bold))
-                            Text("Phiên bản 1.0.0 (Build 1)")
+                            Text(AppVersionInfo.current.settingsDescription)
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                             Text("Một bảng điều khiển cho những tiện ích macOS thiết yếu.")

@@ -20,13 +20,15 @@ public struct JunkCategory: Identifiable, Hashable {
     public var items: [JunkItem]
     public var isSelected: Bool
     
-    public var totalSize: Int64 {
+    public var selectedSize: Int64 {
         return items.filter { $0.isSelected }.reduce(0) { $0 + $1.size }
     }
     
-    public var rawTotalSize: Int64 {
+    public var totalSize: Int64 {
         return items.reduce(0) { $0 + $1.size }
     }
+
+    public var rawTotalSize: Int64 { totalSize }
     
     public var formattedTotalSize: String {
         return ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)

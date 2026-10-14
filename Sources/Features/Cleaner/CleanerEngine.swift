@@ -11,13 +11,35 @@ public class CleanerEngine: ObservableObject {
     private let fileManager = FileManager.default
     
     private init() {}
+
+    static func selectedSize(in categories: [JunkCategory]) -> Int64 {
+        categories.reduce(0) { $0 + $1.selectedSize }
+    }
+
+    static func discoveredSize(in categories: [JunkCategory]) -> Int64 {
+        categories.reduce(0) { $0 + $1.totalSize }
+    }
+
+    static func selectedItems(in categories: [JunkCategory]) -> [JunkItem] {
+        categories.flatMap { category in
+            category.items.filter(\.isSelected)
+        }
+    }
     
     public var totalSelectedSize: Int64 {
-        return categories.filter { $0.isSelected }.reduce(0) { $0 + $1.totalSize }
+        return Self.selectedSize(in: categories)
     }
     
     public var formattedTotalSelectedSize: String {
         return ByteCountFormatter.string(fromByteCount: totalSelectedSize, countStyle: .file)
+    }
+
+    public var totalDiscoveredSize: Int64 {
+        Self.discoveredSize(in: categories)
+    }
+
+    public var formattedTotalDiscoveredSize: String {
+        ByteCountFormatter.string(fromByteCount: totalDiscoveredSize, countStyle: .file)
     }
     
     public func startScan() {
@@ -125,22 +147,19 @@ public class CleanerEngine: ObservableObject {
             var deletedCount = 0
             var failedCount = 0
             
-            for category in selectedCategories {
-                guard category.isSelected else { continue }
-                for item in category.items where item.isSelected {
-                    guard CleanerPathPolicy.isAllowed(itemPath: item.path) else {
-                        NSLog("Xmac Cleaner rejected unsafe path: \(item.path)")
-                        failedCount += 1
-                        continue
-                    }
-                    do {
-                        try self.fileManager.removeItem(atPath: item.path)
-                        freedBytes += item.size
-                        deletedCount += 1
-                    } catch {
-                        NSLog("Xmac Cleaner delete error: \(error)")
-                        failedCount += 1
-                    }
+            for item in Self.selectedItems(in: selectedCategories) {
+                guard CleanerPathPolicy.isAllowed(itemPath: item.path) else {
+                    NSLog("Xmac Cleaner rejected unsafe path: \(item.path)")
+                    failedCount += 1
+                    continue
+                }
+                do {
+                    try self.fileManager.removeItem(atPath: item.path)
+                    freedBytes += item.size
+                    deletedCount += 1
+                } catch {
+                    NSLog("Xmac Cleaner delete error: \(error)")
+                    failedCount += 1
                 }
             }
             

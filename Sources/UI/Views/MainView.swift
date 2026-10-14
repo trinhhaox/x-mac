@@ -3,6 +3,7 @@ import SwiftUI
 public struct MainView: View {
     @ObservedObject var appState = AppState.shared
     @ObservedObject var ime = InputHookManager.shared
+    @ObservedObject var permissions = PermissionsManager.shared
 
     public init() {}
 
@@ -74,14 +75,18 @@ public struct MainView: View {
                     HStack(spacing: 10) {
                         ZStack {
                             Circle().fill(XmacTheme.cyan.opacity(0.16))
-                            Text(ime.isVietnameseMode ? "V" : "E")
+                            Text(permissions.isAccessibilityGranted ? (ime.isVietnameseMode ? "V" : "E") : "!")
                                 .font(.system(size: 11, weight: .bold, design: .rounded))
                                 .foregroundColor(XmacTheme.cyan)
                         }
                         .frame(width: 28, height: 28)
 
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(ime.isVietnameseMode ? "Tiếng Việt" : "English")
+                            Text(
+                                permissions.isAccessibilityGranted
+                                    ? (ime.isVietnameseMode ? "Tiếng Việt" : "English")
+                                    : "Cần Trợ năng"
+                            )
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.white)
                             Text("Control + Shift")
@@ -94,9 +99,10 @@ public struct MainView: View {
                     .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.white.opacity(0.07)))
                 }
                 .buttonStyle(.plain)
+                .disabled(!permissions.isAccessibilityGranted)
 
                 HStack {
-                    Text("Xmac 1.0")
+                    Text("Xmac \(AppVersionInfo.current.version)")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.white.opacity(0.38))
                     Spacer()

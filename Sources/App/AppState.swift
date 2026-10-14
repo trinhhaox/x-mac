@@ -1,6 +1,24 @@
 import Cocoa
 import SwiftUI
 
+public struct AppVersionInfo: Equatable {
+    public let version: String
+    public let build: String
+
+    public static let current = from(infoDictionary: Bundle.main.infoDictionary ?? [:])
+
+    public static func from(infoDictionary: [String: Any]) -> AppVersionInfo {
+        let version = infoDictionary["CFBundleShortVersionString"] as? String ?? "Không xác định"
+        let build = infoDictionary["CFBundleVersion"] as? String ?? ""
+        return AppVersionInfo(version: version, build: build)
+    }
+
+    public var settingsDescription: String {
+        guard !build.isEmpty, build != version else { return "Phiên bản \(version)" }
+        return "Phiên bản \(version) (Build \(build))"
+    }
+}
+
 public enum NavigationTab: String, CaseIterable, Identifiable {
     case overview = "Tổng quan"
     case downloads = "Tải xuống"

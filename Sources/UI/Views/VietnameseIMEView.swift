@@ -4,6 +4,7 @@ public struct VietnameseIMEView: View {
     @ObservedObject var ime = InputHookManager.shared
     @ObservedObject var macroManager = MacroManager.shared
     @ObservedObject var vm = VietnameseIMEViewModel.shared
+    @ObservedObject var permissions = PermissionsManager.shared
     
     public init() {}
     
@@ -15,8 +16,14 @@ public struct VietnameseIMEView: View {
                     title: "Bộ gõ Tiếng Việt",
                     subtitle: "Telex, VNI và gõ tắt với quy tắc dấu linh hoạt."
                 ) {
-                    Toggle(ime.isVietnameseMode ? "Đang bật (V)" : "Đang tắt (E)", isOn: $ime.isVietnameseMode)
+                    Toggle(
+                        permissions.isAccessibilityGranted
+                            ? (ime.isVietnameseMode ? "Đang bật (V)" : "Đang tắt (E)")
+                            : "Cần quyền Trợ năng",
+                        isOn: $ime.isVietnameseMode
+                    )
                         .toggleStyle(.switch)
+                        .disabled(!permissions.isAccessibilityGranted)
                 }
                 
                 // Typing Method & Orthography Settings

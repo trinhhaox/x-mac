@@ -38,7 +38,9 @@ public struct OverviewView: View {
                 ) {
                     MetricCard(
                         title: "Finder Cut & Paste",
-                        value: cutPaste.isEnabled ? "Đang hoạt động" : "Đang tắt",
+                        value: permissions.isAccessibilityGranted
+                            ? (cutPaste.isEnabled ? "Đang hoạt động" : "Đang tắt")
+                            : "Cần quyền Trợ năng",
                         subtitle: "\(cutPaste.cutFiles.count) mục đang chờ di chuyển",
                         iconName: "scissors",
                         accentColor: XmacTheme.blue
@@ -46,7 +48,9 @@ public struct OverviewView: View {
 
                     MetricCard(
                         title: "Bộ gõ Tiếng Việt",
-                        value: ime.isVietnameseMode ? "Tiếng Việt · V" : "English · E",
+                        value: permissions.isAccessibilityGranted
+                            ? (ime.isVietnameseMode ? "Tiếng Việt · V" : "English · E")
+                            : "Cần quyền Trợ năng",
                         subtitle: "Kiểu gõ \(ime.typingMethod.rawValue)",
                         iconName: "character.bubble.fill",
                         accentColor: XmacTheme.cyan
@@ -143,6 +147,7 @@ public struct OverviewView: View {
                         subtitle: "⌘X để cắt · ⌘V để di chuyển · ⌘Z để hoàn tác"
                     ) {
                         Toggle("", isOn: $cutPaste.isEnabled).labelsHidden()
+                            .disabled(!permissions.isAccessibilityGranted)
                     }
 
                     Divider().opacity(0.55)
@@ -153,6 +158,7 @@ public struct OverviewView: View {
                         subtitle: "Telex, VNI và gõ tắt trong một engine nhẹ"
                     ) {
                         Toggle("", isOn: $ime.isVietnameseMode).labelsHidden()
+                            .disabled(!permissions.isAccessibilityGranted)
                     }
 
                     Divider().opacity(0.55)

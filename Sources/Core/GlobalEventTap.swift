@@ -10,8 +10,11 @@ public final class GlobalEventTap {
 
     private init() {}
 
-    public func start() {
-        guard eventTap == nil else { return }
+    public var isRunning: Bool { eventTap != nil }
+
+    @discardableResult
+    public func start() -> Bool {
+        guard eventTap == nil else { return true }
 
         let mask =
             (1 << CGEventType.keyDown.rawValue) |
@@ -49,7 +52,7 @@ public final class GlobalEventTap {
 
         guard let tap = eventTap else {
             NSLog("Xmac: Không thể tạo CGEvent tap. Cần cấp quyền Accessibility.")
-            return
+            return false
         }
 
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
@@ -57,6 +60,7 @@ public final class GlobalEventTap {
             CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
             CGEvent.tapEnable(tap: tap, enable: true)
         }
+        return true
     }
 
     public func stop() {

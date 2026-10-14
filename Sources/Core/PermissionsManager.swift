@@ -12,14 +12,24 @@ public class PermissionsManager: ObservableObject {
     }
     
     public func checkPermissions() {
-        self.isAccessibilityGranted = AXIsProcessTrusted()
+        let accessibilityGranted = AXIsProcessTrusted()
+        self.isAccessibilityGranted = accessibilityGranted
         self.isFullDiskAccessGranted = checkFullDiskAccess()
+
+        if accessibilityGranted {
+            GlobalEventTap.shared.start()
+        } else {
+            GlobalEventTap.shared.stop()
+        }
     }
     
     public func requestAccessibility() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         let trusted = AXIsProcessTrustedWithOptions(options)
         self.isAccessibilityGranted = trusted
+        if trusted {
+            GlobalEventTap.shared.start()
+        }
     }
     
     public func openAccessibilitySettings() {

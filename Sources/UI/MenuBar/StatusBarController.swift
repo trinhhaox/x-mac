@@ -36,8 +36,11 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         
         let ime = InputHookManager.shared
         let cutPaste = FinderCutPasteManager.shared
+        let hasAccessibility = PermissionsManager.shared.isAccessibilityGranted
         
-        var title = ime.isVietnameseMode ? "🇻🇳 V" : "🇺🇸 E"
+        var title = hasAccessibility
+            ? (ime.isVietnameseMode ? "🇻🇳 V" : "🇺🇸 E")
+            : "⚠︎ Xmac"
         if !cutPaste.cutFiles.isEmpty {
             title += " [✂︎\(cutPaste.cutFiles.count)]"
         }
@@ -53,11 +56,15 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         let cutPaste = FinderCutPasteManager.shared
         let diskManager = DiskManager.shared
         let downloads = DownloadManager.shared
+        let hasAccessibility = PermissionsManager.shared.isAccessibilityGranted
         
         // 1. Chuyển đổi ngôn ngữ gõ
-        let langTitle = ime.isVietnameseMode ? "🇻🇳 Đang gõ: Tiếng Việt (Nhấn để đổi E)" : "🇺🇸 Đang gõ: Tiếng Anh (Nhấn để đổi V)"
+        let langTitle = hasAccessibility
+            ? (ime.isVietnameseMode ? "🇻🇳 Đang gõ: Tiếng Việt (Nhấn để đổi E)" : "🇺🇸 Đang gõ: Tiếng Anh (Nhấn để đổi V)")
+            : "⚠ Bộ gõ cần quyền Trợ năng"
         let langItem = NSMenuItem(title: langTitle, action: #selector(toggleLanguage), keyEquivalent: "")
         langItem.target = self
+        langItem.isEnabled = hasAccessibility
         menu.addItem(langItem)
         
         // Submenu chọn kiểu gõ
@@ -90,10 +97,13 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         menu.addItem(NSMenuItem.separator())
         
         // 2. Finder Cut & Paste
-        let cutPasteTitle = cutPaste.isEnabled ? "✂︎ Finder Cut & Paste: Đang bật" : "✂︎ Finder Cut & Paste: Đã tắt"
+        let cutPasteTitle = hasAccessibility
+            ? (cutPaste.isEnabled ? "✂︎ Finder Cut & Paste: Đang bật" : "✂︎ Finder Cut & Paste: Đã tắt")
+            : "✂︎ Finder Cut & Paste: Cần quyền Trợ năng"
         let cutPasteItem = NSMenuItem(title: cutPasteTitle, action: #selector(toggleCutPaste), keyEquivalent: "")
         cutPasteItem.target = self
-        cutPasteItem.state = cutPaste.isEnabled ? .on : .off
+        cutPasteItem.state = hasAccessibility && cutPaste.isEnabled ? .on : .off
+        cutPasteItem.isEnabled = hasAccessibility
         menu.addItem(cutPasteItem)
         
         if !cutPaste.cutFiles.isEmpty {

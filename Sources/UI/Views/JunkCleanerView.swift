@@ -48,10 +48,10 @@ public struct JunkCleanerView: View {
                         BrandIconTile(iconName: "sparkles", color: XmacTheme.cyan, size: 58)
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Tổng tệp rác sẵn sàng dọn dẹp")
+                            Text("Tổng tệp rác đã phát hiện")
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
-                            Text(cleaner.formattedTotalSelectedSize)
+                            Text(cleaner.formattedTotalDiscoveredSize)
                                 .font(.system(size: 28, weight: .bold, design: .rounded))
                                 .foregroundColor(.primary)
                         }
@@ -61,7 +61,14 @@ public struct JunkCleanerView: View {
                         Button(action: {
                             vm.showCleanConfirmation = true
                         }) {
-                            Label(cleaner.isCleaning ? "Đang dọn..." : "Dọn dẹp ngay", systemImage: "trash.fill")
+                            Label(
+                                cleaner.isCleaning
+                                    ? "Đang dọn..."
+                                    : (cleaner.totalSelectedSize > 0
+                                        ? "Dọn \(cleaner.formattedTotalSelectedSize)"
+                                        : "Chọn mục để dọn"),
+                                systemImage: "trash.fill"
+                            )
                                 .font(.system(size: 14, weight: .semibold))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)

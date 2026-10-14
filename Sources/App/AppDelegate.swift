@@ -16,8 +16,8 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // 1. Cấu hình Menu Bar
         StatusBarController.shared.setup()
         
-        // 2. Khởi động các Engine nền
-        GlobalEventTap.shared.start()
+        // 2. Kiểm tra quyền và chỉ khởi động event tap khi được phép.
+        PermissionsManager.shared.checkPermissions()
         
         // 3. Yêu cầu quyền thông báo
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
@@ -29,8 +29,12 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // 4. Mở cửa sổ chính khi lần đầu khởi động
         createMainWindow()
         
-        // 5. Kiểm tra quyền Accessibility
+    }
+
+    public func applicationDidBecomeActive(_ notification: Notification) {
+        // Người dùng có thể vừa cấp/thu hồi quyền trong System Settings.
         PermissionsManager.shared.checkPermissions()
+        StatusBarController.shared.updateStatusBarTitle()
     }
     
     public func createMainWindow() {
