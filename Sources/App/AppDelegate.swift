@@ -44,13 +44,14 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let hostingController = NSHostingController(rootView: contentView)
         
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 880, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 1060, height: 700),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         
         window.center()
+        window.minSize = NSSize(width: 900, height: 600)
         window.setFrameAutosaveName("XmacMainWindow")
         window.contentViewController = hostingController
         window.title = "Xmac"

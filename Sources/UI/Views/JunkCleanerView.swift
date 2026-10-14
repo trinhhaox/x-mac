@@ -9,22 +9,17 @@ public struct JunkCleanerView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Header
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Dọn rác Hệ thống")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                        Text("Quét và làm sạch bộ nhớ đệm, file log, crash report và tệp rác để giải phóng dung lượng ổ cứng.")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
+                BrandPageHeader(
+                    eyebrow: "System care",
+                    title: "Dọn rác hệ thống",
+                    subtitle: "Xem trước, chọn lọc và làm sạch cache, log cùng dữ liệu tạm."
+                ) {
                     Button(action: {
                         cleaner.startScan()
                     }) {
                         Label(cleaner.isScanning ? "Đang quét..." : "Quét lại", systemImage: "arrow.clockwise")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(BrandSecondaryButtonStyle())
                     .disabled(cleaner.isScanning || cleaner.isCleaning)
                 }
                 
@@ -42,17 +37,15 @@ public struct JunkCleanerView: View {
                         .buttonStyle(.link)
                     }
                     .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.green.opacity(0.12)))
+                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.green.opacity(0.1)))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.green.opacity(0.18), lineWidth: 1))
+                    .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 
                 // Total Junk Found Card
                 ModernCard {
                     HStack(alignment: .center) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 36))
-                            .foregroundColor(.blue)
-                            .padding(12)
-                            .background(Circle().fill(Color.blue.opacity(0.12)))
+                        BrandIconTile(iconName: "sparkles", color: XmacTheme.cyan, size: 58)
                         
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Tổng tệp rác sẵn sàng dọn dẹp")
@@ -73,17 +66,15 @@ public struct JunkCleanerView: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.blue)
+                        .buttonStyle(BrandPrimaryButtonStyle())
                         .disabled(cleaner.totalSelectedSize == 0 || cleaner.isCleaning || cleaner.isScanning)
                     }
                 }
                 
                 // Memory Purge Action Card
                 ModernCard {
-                    HStack {
-                        Image(systemName: "bolt.fill")
-                            .foregroundColor(.purple)
+                    HStack(spacing: 12) {
+                        BrandIconTile(iconName: "bolt.fill", color: XmacTheme.violet, size: 38)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Tối ưu & Giải phóng RAM")
                                 .font(.system(size: 13, weight: .semibold))
@@ -99,8 +90,7 @@ public struct JunkCleanerView: View {
                                     : "Không thể giải phóng RAM trên hệ thống hiện tại."
                             }
                         }
-                        .buttonStyle(.bordered)
-                        .tint(.purple)
+                        .buttonStyle(BrandSecondaryButtonStyle())
                     }
                 }
                 
@@ -126,7 +116,7 @@ public struct JunkCleanerView: View {
                                 Button("Bắt đầu quét rác") {
                                     cleaner.startScan()
                                 }
-                                .buttonStyle(.borderedProminent)
+                                .buttonStyle(BrandPrimaryButtonStyle())
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 20)
@@ -138,8 +128,9 @@ public struct JunkCleanerView: View {
                     }
                 }
             }
-            .padding(24)
+            .padding(26)
         }
+        .xmacPage()
         .onAppear {
             if cleaner.categories.isEmpty {
                 cleaner.startScan()
@@ -183,7 +174,7 @@ struct CategoryRow: View {
                         }
                     
                     Image(systemName: category.iconName)
-                        .foregroundColor(.blue)
+                        .foregroundColor(XmacTheme.blue)
                         .frame(width: 24)
                     
                     VStack(alignment: .leading, spacing: 2) {
@@ -229,6 +220,7 @@ struct CategoryRow: View {
                     }
                 }
             }
+            .animation(.easeOut(duration: 0.24), value: vm.isExpanded(categoryName: category.name))
         }
     }
 }

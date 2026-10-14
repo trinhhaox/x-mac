@@ -9,24 +9,18 @@ public struct CutPasteView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Header
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Finder Cut & Paste")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                        Text("Di chuyển tệp và thư mục nhanh chóng trong Finder bằng phím tắt ⌘X và ⌘V tương tự Windows Explorer.")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
+                BrandPageHeader(
+                    eyebrow: "Finder workflow",
+                    title: "Cut & Paste",
+                    subtitle: "Di chuyển tệp trong Finder bằng phím tắt quen thuộc, có thể hoàn tác an toàn."
+                ) {
                     Toggle("Kích hoạt", isOn: $cutPaste.isEnabled)
                         .toggleStyle(.switch)
                 }
                 
                 // Keyboard Shortcuts Guide Card
                 ModernCard {
-                    Text("Phím tắt thao tác")
-                        .font(.system(size: 15, weight: .bold))
+                    BrandSectionTitle("Phím tắt", subtitle: "Bốn thao tác cốt lõi trong Finder.")
                     
                     VStack(spacing: 12) {
                         ShortcutRow(key: "⌘X", title: "Cắt tệp / thư mục", desc: "Chọn các file trong Finder và nhấn ⌘X để đưa vào danh sách di chuyển.")
@@ -54,12 +48,12 @@ public struct CutPasteView: View {
                             Button("Huỷ bỏ cắt") {
                                 cutPaste.handleCopy()
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(BrandSecondaryButtonStyle())
                             
                             Button("Dán ngay (⌘V)") {
                                 _ = cutPaste.handlePaste()
                             }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(BrandPrimaryButtonStyle())
                         }
                     }
                     
@@ -101,13 +95,14 @@ public struct CutPasteView: View {
                         }) {
                             Label("Hoàn tác (⌘Z)", systemImage: "arrow.uturn.backward")
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(BrandSecondaryButtonStyle())
                         .disabled(!FileMover.shared.canUndo)
                     }
                 }
             }
-            .padding(24)
+            .padding(26)
         }
+        .xmacPage()
     }
 }
 
@@ -118,12 +113,8 @@ struct ShortcutRow: View {
     
     var body: some View {
         HStack(spacing: 14) {
-            Text(key)
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.08)))
-                .frame(width: 50)
+            BrandKeycap(key)
+                .frame(width: 56)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)

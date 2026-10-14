@@ -9,29 +9,23 @@ public struct DiskNTFSView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Header
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Quản lý Ổ đĩa & NTFS")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                        Text("Đọc và ghi dữ liệu trên các ổ cứng định dạng NTFS của Windows, hỗ trợ ngắt kết nối an toàn.")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
+                BrandPageHeader(
+                    eyebrow: "Storage",
+                    title: "Ổ đĩa & NTFS",
+                    subtitle: "Theo dõi dung lượng, bật ghi NTFS và ngắt kết nối thiết bị an toàn."
+                ) {
                     Button(action: {
                         diskManager.refreshVolumes()
                     }) {
                         Label("Quét lại ổ đĩa", systemImage: "arrow.clockwise")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(BrandSecondaryButtonStyle())
                 }
                 
                 // Banner thông báo nếu có
                 if let msg = vm.mountStatusMessage {
                     HStack {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundColor(.blue)
+                        BrandIconTile(iconName: "info.circle.fill", color: XmacTheme.blue, size: 34)
                         Text(msg)
                             .font(.system(size: 12))
                         Spacer()
@@ -41,7 +35,9 @@ public struct DiskNTFSView: View {
                         .buttonStyle(.link)
                     }
                     .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.blue.opacity(0.1)))
+                    .background(RoundedRectangle(cornerRadius: 14).fill(XmacTheme.blue.opacity(0.08)))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(XmacTheme.blue.opacity(0.16), lineWidth: 1))
+                    .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 
                 // Danh sách ổ đĩa
@@ -76,8 +72,7 @@ public struct DiskNTFSView: View {
                 
                 // NTFS Tips & Guide Card
                 ModernCard {
-                    Text("Thông tin về định dạng NTFS trên macOS")
-                        .font(.system(size: 15, weight: .bold))
+                    BrandSectionTitle("Lưu ý khi dùng NTFS", subtitle: "Ba nguyên tắc để bảo vệ dữ liệu trên ổ ngoài.")
                     
                     VStack(alignment: .leading, spacing: 8) {
                         Text("• Mặc định hệ điều hành macOS chỉ cho phép ĐỌC (Read-Only) các ổ cứng được định dạng NTFS từ Windows.")
@@ -92,8 +87,9 @@ public struct DiskNTFSView: View {
                     }
                 }
             }
-            .padding(24)
+            .padding(26)
         }
+        .xmacPage()
     }
     
     private func mountVolume(_ volume: DiskVolume) {
@@ -140,9 +136,9 @@ struct DiskVolumeCard: View {
                 HStack(alignment: .top) {
                     Image(systemName: volume.isExternal ? "externaldrive.fill" : "internaldrive.fill")
                         .font(.system(size: 32))
-                        .foregroundColor(volume.isNTFS ? .indigo : .blue)
+                        .foregroundColor(volume.isNTFS ? XmacTheme.violet : XmacTheme.blue)
                         .padding(10)
-                        .background(RoundedRectangle(cornerRadius: 10).fill((volume.isNTFS ? Color.indigo : Color.blue).opacity(0.12)))
+                        .background(RoundedRectangle(cornerRadius: 12).fill((volume.isNTFS ? XmacTheme.violet : XmacTheme.blue).opacity(0.12)))
                     
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
@@ -154,8 +150,8 @@ struct DiskVolumeCard: View {
                                     .font(.system(size: 10, weight: .bold))
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
-                                    .background(Capsule().fill(Color.indigo.opacity(0.15)))
-                                    .foregroundColor(.indigo)
+                                    .background(Capsule().fill(XmacTheme.violet.opacity(0.13)))
+                                    .foregroundColor(XmacTheme.violet)
                             } else {
                                 Text(volume.fileSystem)
                                     .font(.system(size: 10, weight: .bold))
@@ -182,18 +178,17 @@ struct DiskVolumeCard: View {
                     HStack(spacing: 8) {
                         if volume.isNTFS && !volume.isWritable {
                             Button("Bật Ghi NTFS", action: onMountRW)
-                                .buttonStyle(.borderedProminent)
-                                .tint(.indigo)
+                                .buttonStyle(BrandPrimaryButtonStyle())
                         }
                         
                         Button("Mở trong Finder", action: onOpen)
-                            .buttonStyle(.bordered)
+                            .buttonStyle(BrandSecondaryButtonStyle())
                         
                         if volume.isExternal {
                             Button(action: onEject) {
                                 Image(systemName: "eject.fill")
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(BrandSecondaryButtonStyle())
                             .help("Ngắt kết nối an toàn")
                         }
                     }
@@ -208,7 +203,7 @@ struct DiskVolumeCard: View {
                                     .fill(Color.primary.opacity(0.08))
                                     .frame(height: 8)
                                 RoundedRectangle(cornerRadius: 4)
-                                    .fill(volume.isNTFS ? Color.indigo : Color.blue)
+                                    .fill(volume.isNTFS ? XmacTheme.violet : XmacTheme.blue)
                                     .frame(width: geo.size.width * CGFloat(min(1.0, max(0.0, volume.usedPercentage))), height: 8)
                             }
                         }

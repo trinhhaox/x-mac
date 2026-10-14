@@ -18,40 +18,34 @@ public struct AppUninstallerView: View {
     
     public var body: some View {
         VStack(spacing: 0) {
-            // Header bar
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Gỡ ứng dụng có kiểm soát")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                    Text("Tìm và xoá toàn bộ file thừa, cache, preferences của ứng dụng khi gỡ cài đặt.")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+            BrandPageHeader(
+                eyebrow: "Application care",
+                title: "Gỡ ứng dụng",
+                subtitle: "Kiểm tra từng tệp liên quan trước khi chuyển ứng dụng vào Thùng rác."
+            ) {
+                HStack(spacing: 10) {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(XmacTheme.blue)
+                        TextField("Tìm ứng dụng...", text: $vm.searchText)
+                            .textFieldStyle(.plain)
+                            .frame(width: 150)
+                    }
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 8)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(XmacTheme.cardBackground))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(XmacTheme.cardStroke, lineWidth: 1))
+
+                    Button(action: { uninstaller.scanApps() }) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(BrandSecondaryButtonStyle())
+                    .disabled(uninstaller.isScanning)
                 }
-                Spacer()
-                
-                // Ô tìm kiếm
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                    TextField("Tìm ứng dụng...", text: $vm.searchText)
-                        .textFieldStyle(.plain)
-                        .frame(width: 160)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.06)))
-                
-                Button(action: {
-                    uninstaller.scanApps()
-                }) {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .buttonStyle(.bordered)
-                .disabled(uninstaller.isScanning)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 20)
-            .padding(.bottom, 14)
+            .padding(.horizontal, 26)
+            .padding(.top, 24)
+            .padding(.bottom, 16)
             
             Divider()
             
@@ -68,7 +62,8 @@ public struct AppUninstallerView: View {
                     .buttonStyle(.link)
                 }
                 .padding(10)
-                .background(Color.green.opacity(0.12))
+                .background(Color.green.opacity(0.1))
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
             
             // Content: Danh sách chia đôi (Master - Detail)
@@ -91,6 +86,8 @@ public struct AppUninstallerView: View {
                             }
                     }
                     .listStyle(.inset)
+                    .scrollContentBackground(.hidden)
+                    .background(XmacTheme.workspaceBackground)
                     .frame(minWidth: 280, maxWidth: 360)
                     
                     // Chi tiết bên phải
@@ -137,6 +134,7 @@ public struct AppUninstallerView: View {
                 secondaryButton: .cancel(Text("Huỷ"))
             )
         }
+        .xmacPage()
     }
 }
 
@@ -216,8 +214,7 @@ struct AppDetailView: View {
                         Button(action: { onUninstall(app) }) {
                             Label("Gỡ các mục đã chọn", systemImage: "trash.fill")
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.red)
+                        .buttonStyle(BrandPrimaryButtonStyle())
                         .disabled(app.selectedSize == 0)
                     } else {
                         Text("Ứng dụng hệ thống")
@@ -228,8 +225,9 @@ struct AppDetailView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.primary.opacity(0.04)))
+                .padding(18)
+                .background(RoundedRectangle(cornerRadius: 18).fill(XmacTheme.cardBackground))
+                .overlay(RoundedRectangle(cornerRadius: 18).stroke(XmacTheme.cardStroke, lineWidth: 1))
                 
                 // Danh sách file phụ trợ
                 Text("Tệp phụ trợ phát hiện được (\(app.associatedFiles.count) mục):")
@@ -242,7 +240,7 @@ struct AppDetailView: View {
                                 .labelsHidden()
 
                             Image(systemName: iconForType(file.fileType))
-                                .foregroundColor(.blue)
+                                .foregroundColor(XmacTheme.blue)
                                 .frame(width: 20)
                             
                             VStack(alignment: .leading, spacing: 1) {
@@ -277,7 +275,7 @@ struct AppDetailView: View {
                                 .foregroundColor(.secondary)
                         }
                         .padding(8)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.02)))
+                        .background(RoundedRectangle(cornerRadius: 10).fill(XmacTheme.blue.opacity(0.035)))
                     }
                 }
             }

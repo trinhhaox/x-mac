@@ -10,19 +10,17 @@ public struct SettingsView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Header
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Cài đặt Xmac")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                    Text("Quản lý tuỳ chọn khởi động, quyền truy cập hệ thống và trải nghiệm người dùng.")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
+                BrandPageHeader(
+                    eyebrow: "Preferences",
+                    title: "Cài đặt Xmac",
+                    subtitle: "Quản lý khởi động, phản hồi và quyền hệ thống."
+                ) {
+                    EmptyView()
                 }
                 
                 // General Settings Card
                 ModernCard {
-                    Text("Cài đặt Chung")
-                        .font(.system(size: 15, weight: .bold))
+                    BrandSectionTitle("Cài đặt chung", subtitle: "Các hành vi áp dụng trên toàn ứng dụng.")
                     
                     VStack(spacing: 12) {
                         HStack {
@@ -60,8 +58,7 @@ public struct SettingsView: View {
                 
                 // Permissions Card
                 ModernCard {
-                    Text("Quyền hạn Hệ thống (Privacy & Security)")
-                        .font(.system(size: 15, weight: .bold))
+                    BrandSectionTitle("Quyền hệ thống", subtitle: "Xmac chỉ yêu cầu quyền cho những tính năng bạn sử dụng.")
                     
                     VStack(spacing: 12) {
                         HStack {
@@ -80,7 +77,7 @@ public struct SettingsView: View {
                             Button("Mở Cài đặt") {
                                 permissions.openAccessibilitySettings()
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(BrandSecondaryButtonStyle())
                         }
                         
                         Divider()
@@ -101,7 +98,7 @@ public struct SettingsView: View {
                             Button("Mở Cài đặt") {
                                 permissions.openFullDiskAccessSettings()
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(BrandSecondaryButtonStyle())
                         }
                         
                         Divider()
@@ -118,7 +115,7 @@ public struct SettingsView: View {
                             Button("Mở Cài đặt") {
                                 permissions.openAutomationSettings()
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(BrandSecondaryButtonStyle())
                         }
                     }
                 }
@@ -128,7 +125,9 @@ public struct SettingsView: View {
                     HStack(spacing: 14) {
                         Image(nsImage: NSApp.applicationIconImage)
                             .resizable()
-                            .frame(width: 48, height: 48)
+                            .interpolation(.high)
+                            .frame(width: 58, height: 58)
+                            .shadow(color: XmacTheme.blue.opacity(0.22), radius: 10, y: 5)
                         
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Xmac")
@@ -136,7 +135,7 @@ public struct SettingsView: View {
                             Text("Phiên bản 1.0.0 (Build 1)")
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
-                            Text("Phần mềm tiện ích tất cả trong một thiết yếu dành riêng cho macOS.")
+                            Text("Một bảng điều khiển cho những tiện ích macOS thiết yếu.")
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }
@@ -145,7 +144,8 @@ public struct SettingsView: View {
                     }
                 }
             }
-            .padding(24)
+            .padding(26)
         }
+        .xmacPage()
     }
 }

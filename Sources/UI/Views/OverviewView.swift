@@ -7,188 +7,249 @@ public struct OverviewView: View {
     @ObservedObject var diskManager = DiskManager.shared
     @ObservedObject var cleaner = CleanerEngine.shared
     @ObservedObject var permissions = PermissionsManager.shared
-    
+
     public init() {}
-    
+
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Header
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Xmac Control Center")
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                        Text("Bộ công cụ thiết yếu và tối ưu toàn diện cho máy Mac của bạn")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    Button(action: {
-                        appState.updateSystemStats()
-                        diskManager.refreshVolumes()
-                        permissions.checkPermissions()
-                    }) {
+            VStack(alignment: .leading, spacing: 22) {
+                BrandPageHeader(
+                    eyebrow: "System overview",
+                    title: "Trung tâm điều khiển",
+                    subtitle: "Theo dõi và điều khiển các tiện ích thiết yếu trên máy Mac của bạn."
+                ) {
+                    Button(action: refresh) {
                         Label("Làm mới", systemImage: "arrow.clockwise")
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(BrandSecondaryButtonStyle())
                 }
-                
-                // Status Warning nếu thiếu quyền
+
+                heroPanel
+
                 if !permissions.isAccessibilityGranted {
-                    HStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.orange)
-                            .font(.title2)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Cần cấp quyền Accessibility")
-                                .font(.system(size: 13, weight: .semibold))
-                            Text("Xmac cần quyền trợ năng để hỗ trợ tính năng ⌘X/⌘V trong Finder và bộ gõ tiếng Việt.")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        Button("Cấp quyền ngay") {
-                            permissions.requestAccessibility()
-                            permissions.openAccessibilitySettings()
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                    .padding(14)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.orange.opacity(0.12)))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange.opacity(0.3), lineWidth: 1))
+                    permissionBanner
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
-                
-                // Metric Cards Grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
+
+                LazyVGrid(
+                    columns: [GridItem(.flexible()), GridItem(.flexible())],
+                    spacing: 14
+                ) {
                     MetricCard(
-                        title: "FINDER CUT & PASTE",
-                        value: cutPaste.isEnabled ? "Đang bật" : "Đã tắt",
-                        subtitle: "\(cutPaste.cutFiles.count) mục đang trong clipboard",
+                        title: "Finder Cut & Paste",
+                        value: cutPaste.isEnabled ? "Đang hoạt động" : "Đang tắt",
+                        subtitle: "\(cutPaste.cutFiles.count) mục đang chờ di chuyển",
                         iconName: "scissors",
-                        accentColor: .blue
+                        accentColor: XmacTheme.blue
                     )
-                    
+
                     MetricCard(
-                        title: "BỘ GÕ TIẾNG VIỆT",
-                        value: ime.isVietnameseMode ? "Tiếng Việt (V)" : "Tiếng Anh (E)",
-                        subtitle: "Kiểu gõ: \(ime.typingMethod.rawValue)",
+                        title: "Bộ gõ Tiếng Việt",
+                        value: ime.isVietnameseMode ? "Tiếng Việt · V" : "English · E",
+                        subtitle: "Kiểu gõ \(ime.typingMethod.rawValue)",
                         iconName: "character.bubble.fill",
-                        accentColor: .green
+                        accentColor: XmacTheme.cyan
                     )
-                    
+
                     MetricCard(
-                        title: "QUẢN LÝ Ổ ĐĨA & NTFS",
-                        value: "\(diskManager.volumes.count) Ổ đĩa",
+                        title: "Ổ đĩa & NTFS",
+                        value: "\(diskManager.volumes.count) ổ đĩa",
                         subtitle: "\(diskManager.volumes.filter { $0.isNTFS }.count) phân vùng NTFS",
-                        iconName: "externaldrive.fill.badge.plus",
-                        accentColor: .indigo
+                        iconName: "externaldrive.fill",
+                        accentColor: XmacTheme.indigo
                     )
-                    
+
                     MetricCard(
-                        title: "TÀI NGUYÊN HỆ THỐNG",
+                        title: "Tài nguyên hệ thống",
                         value: appState.systemRAMUsage,
                         subtitle: appState.diskFreeSpace,
                         iconName: "cpu",
-                        accentColor: .purple
+                        accentColor: XmacTheme.violet
                     )
                 }
-                
-                // Quick Actions Card
+
                 ModernCard {
-                    Text("Thao tác nhanh")
-                        .font(.system(size: 15, weight: .bold))
-                    
-                    HStack(spacing: 12) {
-                        Button(action: {
-                            cleaner.purgeMemory()
-                            appState.updateSystemStats()
-                        }) {
-                            Label("Giải phóng RAM", systemImage: "bolt.fill")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.purple)
-                        
-                        Button(action: {
-                            appState.selectedTab = .junkCleaner
-                            cleaner.startScan()
-                        }) {
-                            Label("Quét rác hệ thống", systemImage: "sparkles")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.blue)
-                        
-                        Button(action: {
-                            ime.toggleLanguage()
-                        }) {
-                            Label(ime.isVietnameseMode ? "Chuyển sang Tiếng Anh (E)" : "Chuyển sang Tiếng Việt (V)", systemImage: "globe")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.green)
+                    HStack(alignment: .center) {
+                        BrandSectionTitle(
+                            "Thao tác nhanh",
+                            subtitle: "Những tác vụ thường dùng, luôn trong một chạm."
+                        )
+                        Spacer()
+                    }
+
+                    HStack(spacing: 10) {
+                        quickAction(
+                            title: "Giải phóng RAM",
+                            icon: "bolt.fill",
+                            action: {
+                                cleaner.purgeMemory { _ in appState.updateSystemStats() }
+                            }
+                        )
+                        quickAction(
+                            title: "Quét rác",
+                            icon: "sparkles",
+                            action: {
+                                appState.selectedTab = .junkCleaner
+                                cleaner.startScan()
+                            }
+                        )
+                        quickAction(
+                            title: ime.isVietnameseMode ? "Chuyển sang E" : "Chuyển sang V",
+                            icon: "globe.asia.australia.fill",
+                            action: ime.toggleLanguage
+                        )
                     }
                 }
-                
-                // Feature Modules List Preview
+
                 ModernCard {
-                    Text("Các module hoạt động")
-                        .font(.system(size: 15, weight: .bold))
-                    
-                    VStack(spacing: 10) {
-                        HStack {
-                            Image(systemName: "scissors")
-                                .foregroundColor(.blue)
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("True Cut & Paste cho macOS Finder")
-                                    .font(.system(size: 13, weight: .medium))
-                                Text("Phím ⌘X cắt file, ⌘V dán di chuyển file, ⌘Z hoàn tác.")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Toggle("", isOn: $cutPaste.isEnabled)
-                                .labelsHidden()
-                        }
-                        Divider()
-                        HStack {
-                            Image(systemName: "character.bubble.fill")
-                                .foregroundColor(.green)
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Bộ gõ Tiếng Việt thông minh Xmac")
-                                    .font(.system(size: 13, weight: .medium))
-                                Text("Hỗ trợ Telex/VNI, gõ tắt macro, hoàn tác từ tiếng Anh.")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Toggle("", isOn: $ime.isVietnameseMode)
-                                .labelsHidden()
-                        }
-                        Divider()
-                        HStack {
-                            Image(systemName: "externaldrive.fill.badge.plus")
-                                .foregroundColor(.indigo)
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Đọc & Ghi ổ NTFS ngoại vi")
-                                    .font(.system(size: 13, weight: .medium))
-                                Text("Mount ổ cứng Windows NTFS ở chế độ Đọc - Ghi toàn quyền, Safe Eject.")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Button("Quản lý ổ đĩa") {
-                                appState.selectedTab = .diskNTFS
-                            }
-                            .buttonStyle(.link)
-                        }
+                    BrandSectionTitle(
+                        "Tiện ích đang quản lý",
+                        subtitle: "Bật, tắt hoặc mở nhanh từng công cụ."
+                    )
+
+                    moduleRow(
+                        icon: "scissors",
+                        title: "Finder Cut & Paste",
+                        subtitle: "⌘X để cắt · ⌘V để di chuyển · ⌘Z để hoàn tác"
+                    ) {
+                        Toggle("", isOn: $cutPaste.isEnabled).labelsHidden()
+                    }
+
+                    Divider().opacity(0.55)
+
+                    moduleRow(
+                        icon: "character.bubble.fill",
+                        title: "Bộ gõ Tiếng Việt",
+                        subtitle: "Telex, VNI và gõ tắt trong một engine nhẹ"
+                    ) {
+                        Toggle("", isOn: $ime.isVietnameseMode).labelsHidden()
+                    }
+
+                    Divider().opacity(0.55)
+
+                    moduleRow(
+                        icon: "externaldrive.fill",
+                        title: "Ổ đĩa & NTFS",
+                        subtitle: "Theo dõi dung lượng, mount đọc-ghi và eject an toàn"
+                    ) {
+                        Button("Mở quản lý") { appState.selectedTab = .diskNTFS }
+                            .buttonStyle(BrandSecondaryButtonStyle())
                     }
                 }
             }
+            .padding(26)
+        }
+        .xmacPage()
+    }
+
+    private var heroPanel: some View {
+        ZStack(alignment: .trailing) {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(XmacTheme.brandGradient)
+
+            Circle()
+                .fill(.white.opacity(0.08))
+                .frame(width: 230, height: 230)
+                .offset(x: 52, y: -72)
+
+            Circle()
+                .fill(XmacTheme.cyan.opacity(0.14))
+                .frame(width: 150, height: 150)
+                .offset(x: -80, y: 85)
+
+            HStack(spacing: 24) {
+                VStack(alignment: .leading, spacing: 11) {
+                    HStack(spacing: 7) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 8, height: 8)
+                            .shadow(color: Color.green.opacity(0.8), radius: 5)
+                        Text("XMAC ĐANG HOẠT ĐỘNG")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .tracking(1.3)
+                            .foregroundColor(.white.opacity(0.78))
+                    }
+
+                    Text("Một bảng điều khiển.\nMọi công cụ cần thiết.")
+                        .font(.system(size: 25, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Finder, bộ gõ, ổ đĩa và dọn dẹp — luôn sẵn sàng nhưng không làm gián đoạn công việc.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.7))
+                        .frame(maxWidth: 460, alignment: .leading)
+                }
+
+                Spacer()
+
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 96, height: 96)
+                    .shadow(color: Color.black.opacity(0.24), radius: 20, y: 10)
+            }
             .padding(24)
         }
+        .frame(minHeight: 170)
+        .shadow(color: XmacTheme.indigo.opacity(0.22), radius: 20, y: 10)
+    }
+
+    private var permissionBanner: some View {
+        HStack(spacing: 14) {
+            BrandIconTile(iconName: "lock.trianglebadge.exclamationmark", color: .orange, size: 44)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Cần quyền Trợ năng")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                Text("Cho phép Xmac hỗ trợ phím tắt Finder và bộ gõ Tiếng Việt trên toàn hệ thống.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Button("Mở Quyền riêng tư") {
+                permissions.requestAccessibility()
+                permissions.openAccessibilitySettings()
+            }
+            .buttonStyle(BrandPrimaryButtonStyle())
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.orange.opacity(0.08)))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.orange.opacity(0.2), lineWidth: 1))
+        .animation(.easeOut(duration: 0.24), value: permissions.isAccessibilityGranted)
+    }
+
+    private func quickAction(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                Text(title)
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(BrandSecondaryButtonStyle())
+    }
+
+    private func moduleRow<Accessory: View>(
+        icon: String,
+        title: String,
+        subtitle: String,
+        @ViewBuilder accessory: () -> Accessory
+    ) -> some View {
+        HStack(spacing: 13) {
+            BrandIconTile(iconName: icon, color: XmacTheme.blue, size: 38)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.system(size: 13, weight: .semibold))
+                Text(subtitle).font(.system(size: 11)).foregroundColor(.secondary)
+            }
+            Spacer()
+            accessory()
+        }
+    }
+
+    private func refresh() {
+        appState.updateSystemStats()
+        diskManager.refreshVolumes()
+        permissions.checkPermissions()
     }
 }

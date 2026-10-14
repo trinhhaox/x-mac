@@ -10,24 +10,18 @@ public struct VietnameseIMEView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Header
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Bộ gõ Tiếng Việt")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                        Text("Engine gõ tiếng Việt thông minh, hỗ trợ Telex và VNI, gõ tắt macro, không bị dính chữ.")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
+                BrandPageHeader(
+                    eyebrow: "Input engine",
+                    title: "Bộ gõ Tiếng Việt",
+                    subtitle: "Telex, VNI và gõ tắt với quy tắc dấu linh hoạt."
+                ) {
                     Toggle(ime.isVietnameseMode ? "Đang bật (V)" : "Đang tắt (E)", isOn: $ime.isVietnameseMode)
                         .toggleStyle(.switch)
                 }
                 
                 // Typing Method & Orthography Settings
                 ModernCard {
-                    Text("Cấu hình kiểu gõ & Quy tắc")
-                        .font(.system(size: 15, weight: .bold))
+                    BrandSectionTitle("Kiểu gõ & quy tắc", subtitle: "Thiết lập cách Xmac xử lý tiếng Việt.")
                     
                     VStack(spacing: 12) {
                         HStack {
@@ -68,11 +62,7 @@ public struct VietnameseIMEView: View {
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
-                            Text("Control + Shift")
-                                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(Capsule().fill(Color.primary.opacity(0.08)))
+                            BrandKeycap("⌃⇧")
                         }
                     }
                 }
@@ -81,8 +71,7 @@ public struct VietnameseIMEView: View {
                 ModernCard {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Bảng gõ tắt (Macro)")
-                                .font(.system(size: 15, weight: .bold))
+                            BrandSectionTitle("Bảng gõ tắt", subtitle: "Mở rộng cụm từ khi nhấn dấu cách.")
                             Text("Tự động mở rộng từ viết tắt khi nhấn dấu cách Space.")
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
@@ -106,7 +95,7 @@ public struct VietnameseIMEView: View {
                             vm.newShortcut = ""
                             vm.newExpansion = ""
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(BrandPrimaryButtonStyle())
                         .disabled(vm.newShortcut.isEmpty || vm.newExpansion.isEmpty)
                     }
                     
@@ -139,17 +128,16 @@ public struct VietnameseIMEView: View {
                 
                 // Excluded Apps Card
                 ModernCard {
-                    Text("Ứng dụng không dùng bộ gõ (Excluded Apps)")
-                        .font(.system(size: 15, weight: .bold))
-                    Text("Tự động tắt gõ tiếng Việt khi đang làm việc trong các ứng dụng này:")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                    BrandSectionTitle(
+                        "Ứng dụng loại trừ",
+                        subtitle: "Xmac tự bỏ qua bộ gõ trong các ứng dụng cần nhập lệnh chính xác."
+                    )
                     
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(ime.excludedApps, id: \.self) { bundleId in
                             HStack {
                                 Image(systemName: "app.badge.checkmark")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(XmacTheme.blue)
                                 Text(bundleId)
                                     .font(.system(size: 12, design: .monospaced))
                                 Spacer()
@@ -159,7 +147,8 @@ public struct VietnameseIMEView: View {
                     }
                 }
             }
-            .padding(24)
+            .padding(26)
         }
+        .xmacPage()
     }
 }
