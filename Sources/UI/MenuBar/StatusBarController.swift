@@ -19,7 +19,9 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         menu = NSMenu()
         menu?.delegate = self
         dashboard.behavior = .transient
-        dashboard.contentViewController = NSHostingController(rootView: MenuBarDashboard())
+        let dashboardController = NSHostingController(rootView: MenuBarDashboard())
+        dashboardController.sizingOptions = [.preferredContentSize]
+        dashboard.contentViewController = dashboardController
         statusItem?.button?.target = self
         statusItem?.button?.action = #selector(toggleDashboard)
         statusItem?.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
