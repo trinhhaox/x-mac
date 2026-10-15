@@ -22,6 +22,22 @@
 - Lệnh cần quyền Trợ năng vẫn kiểm tra quyền; khi thiếu quyền, mở Cài đặt.
   Không có lệnh dọn/xóa tệp tự động trong bảng mở nhanh.
 
+## Máy tính trong Mở nhanh (từ v1.4.0)
+
+Nhập `2 + 3 * 4` hoặc `= (12 + 3) / 5` để xem kết quả. Hỗ trợ
+`+ - * /`, `× ÷`, dấu âm, ngoặc và số thập phân dùng dấu chấm.
+Tiền tố `=` cho phép tính cả một số đơn và bỏ qua tìm tệp Spotlight.
+Enter chép kết quả vào clipboard, không tự dán; chỉ khi chép thành công
+mới hủy trạng thái Cut cũ của Finder. Clipboard hệ thống bị thay thế.
+Nếu đang bật lịch sử clipboard, kết quả có thể được lưu như văn bản thường.
+
+Phép tính chạy local, không dùng shell hoặc trình thực thi biểu thức.
+Giới hạn 256 ký tự; từ chối chia cho 0, cú pháp không hợp lệ và kết quả
+không hữu hạn. Kết quả gần đúng, hiển thị tối đa 12 chữ số có nghĩa;
+không dành cho tính toán tài chính cần độ chính xác thập phân tuyệt đối.
+Biểu thức không hợp lệ không có hàng kết quả tính; các kết quả tìm kiếm
+thông thường vẫn có thể xuất hiện. Không hỗ trợ phần trăm hoặc lũy thừa.
+
 ## Menu Bar
 
 - **Nhấp trái** mở popover: trạng thái bộ gõ và mạng, tối đa 3 tác vụ tải

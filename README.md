@@ -8,6 +8,13 @@
 
 ## 🌟 Tính Năng Nổi Bật
 
+### Thông tin hệ thống (từ v1.4.0)
+- Theo dõi CPU và biểu đồ, RAM/nén/wired/swap, dung lượng lưu trữ và tốc độ nhận/gửi qua Wi-Fi/Ethernet mỗi 2 giây.
+- Tạm dừng/tiếp tục; chỉ lấy mẫu khi mở trang, không lưu hoặc gửi số liệu.
+- Hiển thị trạng thái nhiệt của macOS; **chưa hỗ trợ nhiệt độ °C**.
+
+Chi tiết và giới hạn: [`docs/SYSTEM_MONITOR.md`](docs/SYSTEM_MONITOR.md).
+
 ### 1. ⬇️ Trung Tâm Tải Xuống Native
 - **HTTP/HTTPS**: Thêm tối đa 20 liên kết mỗi lần mà không cần engine hoặc extension bên ngoài.
 - **Kiểm soát tác vụ**: Theo dõi dung lượng, tạm dừng, tiếp tục, hủy và thử lại.
@@ -63,6 +70,8 @@ Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
 ---
 
 ## 🖥 Giao Diện Người Dùng Hiện Đại (macOS Native)
+- **Lịch sử clipboard**: Tùy chọn bật lưu cục bộ, tìm kiếm, ghim, chép văn bản thuần và loại trừ ứng dụng. Mặc định tắt, dữ liệu không mã hóa; xem giới hạn bảo mật trong [`docs/DESKTOP_PHASE3.md`](docs/DESKTOP_PHASE3.md).
+- **Sắp xếp Downloads**: Xem trước quy tắc theo loại tệp, xác nhận di chuyển không ghi đè và hoàn tác có nhật ký qua lần khởi động lại.
 - **Mở nhanh**: `⌥⇧Space` tìm lệnh Xmac, ứng dụng và tệp Spotlight; hỗ trợ ↑/↓, Enter, Esc và đổi phím trong Cài đặt.
 - **Menu Bar Dashboard**: Nhấp trái xem tải xuống, bộ gõ và ổ ngoài; nhấp phải giữ menu đầy đủ. Chi tiết: [`docs/DESKTOP_PHASE2.md`](docs/DESKTOP_PHASE2.md).
 - **Menu Bar Agent**: Icon động hiển thị `🇻🇳 V` hoặc `🇺🇸 E`, số lượng tệp đang cắt `[✂︎n]`, menu thao tác nhanh 1 chạm.
@@ -79,7 +88,7 @@ Tự kiểm tra mỗi ngày là tùy chọn; cài đặt cần xác nhận. Xem
 mô hình tin cậy chữ ký và giới hạn phục hồi tải.
 
 ### 1. Cài đặt từ DMG (Khuyến nghị)
-1. Tải file `Xmac-1.3.0.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
+1. Tải file `Xmac-1.4.0.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
 2. Kéo thả `Xmac.app` vào thư mục `Applications`.
 3. Mở ứng dụng và làm theo hướng dẫn cấp quyền.
 
@@ -90,7 +99,7 @@ cd x-mac
 chmod +x Scripts/build.sh
 ./Scripts/build.sh
 ```
-Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.3.0.dmg` sẽ được tạo trong thư mục `build/`.
+Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.4.0.dmg` sẽ được tạo trong thư mục `build/`.
 
 Mặc định script ký ad-hoc để kiểm thử local. Nếu máy đã có sẵn chứng thư và hồ sơ notarization trong Keychain, có thể tạo bản phát hành bằng:
 

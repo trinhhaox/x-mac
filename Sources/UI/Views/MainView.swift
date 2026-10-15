@@ -14,8 +14,11 @@ public struct MainView: View {
             Group {
                 switch appState.selectedTab {
                 case .overview: OverviewView()
+                case .systemMonitor: SystemMonitorView()
                 case .downloads: DownloadsView()
                 case .fileSearch: FileSearchView()
+                case .clipboard: ClipboardHistoryView()
+                case .organizer: DownloadsOrganizerView()
                 case .cutPaste: CutPasteView()
                 case .diskNTFS: DiskNTFSView()
                 case .vietnameseIME: VietnameseIMEView()
@@ -61,12 +64,14 @@ public struct MainView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)
 
+            ScrollView {
             VStack(spacing: 5) {
                 ForEach(NavigationTab.allCases) { tab in
                     sidebarButton(for: tab)
                 }
             }
             .padding(.horizontal, 10)
+            }
 
             Spacer()
 

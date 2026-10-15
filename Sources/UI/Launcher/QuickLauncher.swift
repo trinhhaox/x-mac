@@ -163,7 +163,7 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
         root.blendingMode = .behindWindow
         root.state = .active
         window.contentView = root
-        search.placeholderString = "Tìm lệnh, ứng dụng hoặc tệp…"
+        search.placeholderString = "Tìm lệnh, ứng dụng, tệp hoặc tính: = (12 + 3) / 5"
         search.font = .systemFont(ofSize: 21)
         search.delegate = self
         search.sendsSearchStringImmediately = true
@@ -207,7 +207,8 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
     func controlTextDidChange(_ notification: Notification) {
         files.cancelSearch()
         reloadResults(resetSelection: true)
-        if search.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 {
+        let query = search.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if query.count >= 2 && !query.hasPrefix("=") && LauncherCalculator.result(for: query) == nil {
             files.scheduleSearch(text: search.stringValue, scope: .home, kind: .all, includeContents: false)
         } else { files.cancelSearch() }
     }
@@ -220,13 +221,17 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
             LauncherEntry(id: "file:" + $0.path, title: $0.name, subtitle: $0.path,
                           icon: "doc", destination: .file($0.path))
         } : []
-        results = primary + fileEntries
+        if let value = LauncherCalculator.result(for: search.stringValue) {
+            results = [LauncherEntry(id: "calculation:" + value, title: "= " + value,
+                subtitle: "Enter để chép kết quả • Phép tính gần đúng, tối đa 12 chữ số có nghĩa",
+                icon: "calculator", destination: .calculation(value))]
+        } else { results = primary + fileEntries }
         table.reloadData()
         if !results.isEmpty {
             let selected = resetSelection ? 0 : (results.firstIndex { $0.id == selectedID } ?? 0)
             table.selectRowIndexes(IndexSet(integer: selected), byExtendingSelection: false)
         }
-        footer.stringValue = results.isEmpty ? "Không có kết quả • Esc Đóng" : "↑↓ Chọn • Enter Mở • Esc Đóng"
+        footer.stringValue = results.isEmpty ? "Không có kết quả • Esc Đóng" : "↑↓ Chọn • Enter Mở / Chép kết quả • Esc Đóng"
     }
 
     func numberOfRows(in tableView: NSTableView) -> Int { results.count }
@@ -290,6 +295,11 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
                 AppDelegate.shared.createMainWindow()
             }
         case .application(let path), .file(let path): NSWorkspace.shared.open(URL(fileURLWithPath: path))
+        case .calculation(let value):
+            NSPasteboard.general.clearContents()
+            if NSPasteboard.general.setString(value, forType: .string) {
+                FinderCutPasteManager.shared.handleCopy()
+            }
         }
     }
 

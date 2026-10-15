@@ -6,6 +6,7 @@ struct LauncherEntry: Identifiable, Equatable {
         case toggleLanguage
         case application(String)
         case file(String)
+        case calculation(String)
     }
     let id: String
     let title: String
