@@ -13,6 +13,8 @@
 - **Kiểm soát tác vụ**: Theo dõi dung lượng, tạm dừng, tiếp tục, hủy và thử lại.
 - **An toàn tệp**: Chuẩn hóa tên do máy chủ trả về và tự tăng hậu tố khi trùng tên, không ghi đè tệp đã có.
 - **Tích hợp macOS**: Chọn thư mục lưu, mở tệp trong Finder, lưu lịch sử và nhận thông báo hoàn tất/lỗi.
+- **Theo kết nối mạng**: Chờ khi ngoại tuyến, tự thử lại lỗi mạng tối đa 3 lần và tùy chọn tránh mạng tính phí/hạn chế dữ liệu.
+- **Giữ máy thức**: Tùy chọn giữ máy thức khi đang tải và trả chế độ ngủ bình thường khi hết tác vụ; màn hình vẫn được phép tắt.
 
 ### 2. 🔎 Tìm Tệp Nhanh Bằng Spotlight
 - **Tìm native**: Tìm theo tên hoặc nội dung đã được Spotlight lập chỉ mục, không cần daemon nền.
@@ -68,8 +70,14 @@ Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
 
 ## 🚀 Cài Đặt & Sử Dụng
 
+Trong **Cài đặt → Cập nhật ứng dụng**, Xmac có thể kiểm tra, tải, xác minh
+SHA-256 và cài bản mới từ GitHub Releases, giữ bản cũ để khôi phục thủ công.
+Tự kiểm tra mỗi ngày là tùy chọn; cài đặt cần xác nhận. Xem
+[`docs/DESKTOP_PHASE1.md`](docs/DESKTOP_PHASE1.md) về điều kiện cập nhật,
+mô hình tin cậy chữ ký và giới hạn phục hồi tải.
+
 ### 1. Cài đặt từ DMG (Khuyến nghị)
-1. Tải file `Xmac-1.1.3.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
+1. Tải file `Xmac-1.2.0.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
 2. Kéo thả `Xmac.app` vào thư mục `Applications`.
 3. Mở ứng dụng và làm theo hướng dẫn cấp quyền.
 
@@ -80,7 +88,7 @@ cd x-mac
 chmod +x Scripts/build.sh
 ./Scripts/build.sh
 ```
-Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.1.3.dmg` sẽ được tạo trong thư mục `build/`.
+Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.2.0.dmg` sẽ được tạo trong thư mục `build/`.
 
 Mặc định script ký ad-hoc để kiểm thử local. Nếu máy đã có sẵn chứng thư và hồ sơ notarization trong Keychain, có thể tạo bản phát hành bằng:
 

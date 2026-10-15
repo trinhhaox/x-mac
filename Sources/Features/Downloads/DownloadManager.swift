@@ -4,6 +4,7 @@ import UserNotifications
 
 public enum ManagedDownloadStatus: String, Codable {
     case downloading
+    case waitingForNetwork
     case paused
     case completed
     case failed
@@ -37,9 +38,15 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
     private var tasks: [UUID: URLSessionDownloadTask] = [:]
     private var taskItems: [Int: UUID] = [:]
     private var resumeData: [UUID: Data] = [:]
+    private let environment: DownloadEnvironment
+    private let defaults: UserDefaults
+    private let configuration: URLSessionConfiguration
+    private let notificationsEnabled: Bool
+    private var networkRetries: [UUID: Int] = [:]
+    private var pendingPauses = Set<UUID>()
 
     private lazy var session: URLSession = {
-        let configuration = URLSessionConfiguration.default
+        let configuration = self.configuration
         configuration.waitsForConnectivity = true
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
         configuration.timeoutIntervalForRequest = 60
@@ -51,9 +58,15 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
         return URLSession(configuration: configuration, delegate: self, delegateQueue: queue)
     }()
 
-    private override init() {
+    init(defaults: UserDefaults = .standard, environment: DownloadEnvironment = .shared,
+         configuration: URLSessionConfiguration = .default, notificationsEnabled: Bool = true) {
+        self.defaults = defaults
+        self.environment = environment
+        self.configuration = configuration
+        self.notificationsEnabled = notificationsEnabled
         super.init()
         restoreHistory()
+        environment.onChange = { [weak self] in self?.networkChanged() }
     }
 
     public var activeCount: Int {
@@ -92,7 +105,13 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
     }
 
     public func pause(_ id: UUID) {
-        guard let task = tasks[id] else { return }
+        guard let current = item(id), current.status == .downloading || current.status == .waitingForNetwork else { return }
+        guard let task = tasks[id] else {
+            update(id) { $0.status = .paused; $0.errorMessage = nil }
+            persistHistory()
+            return
+        }
+        pendingPauses.insert(id)
         update(id) { item in
             item.status = .paused
             item.errorMessage = nil
@@ -101,15 +120,29 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
         task.cancel { [weak self] data in
             DispatchQueue.main.async {
                 guard let self else { return }
-                if let data { self.resumeData[id] = data }
-                self.tasks.removeValue(forKey: id)
+                if let data, self.item(id)?.status == .paused { self.resumeData[id] = data }
+                if self.tasks[id] === task { self.tasks.removeValue(forKey: id) }
+                self.pendingPauses.remove(id)
             }
         }
     }
 
-    public func resume(_ id: UUID) {
+    public func resume(_ id: UUID, automatically: Bool = false) {
         guard let item = item(id),
-              item.status == .paused || item.status == .failed || item.status == .cancelled else { return }
+              !pendingPauses.contains(id),
+              item.status == .paused || item.status == .failed || item.status == .cancelled || item.status == .waitingForNetwork else { return }
+        if !automatically { networkRetries[id] = 0 }
+        guard environment.online, !(environment.avoidMetered && environment.metered) else {
+            update(id) { $0.status = .waitingForNetwork; $0.errorMessage = "Chờ kết nối phù hợp để tải xuống." }
+            persistHistory()
+            return
+        }
+        if let task = tasks[id] {
+            update(id) { $0.status = .downloading; $0.errorMessage = nil }
+            task.resume()
+            persistHistory()
+            return
+        }
 
         let task: URLSessionDownloadTask
         let savedResumeData = resumeData.removeValue(forKey: id)
@@ -139,6 +172,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
     }
 
     public func cancel(_ id: UUID) {
+        networkRetries.removeValue(forKey: id)
         tasks.removeValue(forKey: id)?.cancel()
         resumeData.removeValue(forKey: id)
         update(id) { item in
@@ -149,6 +183,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
     }
 
     public func remove(_ id: UUID) {
+        networkRetries.removeValue(forKey: id)
         tasks.removeValue(forKey: id)?.cancel()
         resumeData.removeValue(forKey: id)
         items.removeAll { $0.id == id }
@@ -157,8 +192,9 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
     }
 
     public func clearFinished() {
-        let removable = Set(items.filter { $0.status != .downloading && $0.status != .paused }.map(\.id))
+        let removable = Set(items.filter { $0.status != .downloading && $0.status != .paused && $0.status != .waitingForNetwork }.map(\.id))
         items.removeAll { removable.contains($0.id) }
+        for id in removable { resumeData.removeValue(forKey: id); networkRetries.removeValue(forKey: id) }
         persistHistory()
     }
 
@@ -229,7 +265,12 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
         let task = session.downloadTask(with: url)
         register(task, for: id)
         persistHistory()
-        task.resume()
+        if environment.online && !(environment.avoidMetered && environment.metered) {
+            task.resume()
+        } else {
+            update(id) { $0.status = .waitingForNetwork; $0.errorMessage = "Chờ kết nối phù hợp để tải xuống." }
+            persistHistory()
+        }
     }
 
     private func register(_ task: URLSessionDownloadTask, for id: UUID) {
@@ -247,11 +288,11 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
     }
 
     private func restoreHistory() {
-        guard let data = UserDefaults.standard.data(forKey: Self.historyKey),
+        guard let data = defaults.data(forKey: Self.historyKey),
               var restored = try? JSONDecoder().decode([ManagedDownload].self, from: data) else {
             return
         }
-        for index in restored.indices where restored[index].status == .downloading {
+        for index in restored.indices where restored[index].status == .downloading || restored[index].status == .waitingForNetwork {
             restored[index].status = .paused
             restored[index].errorMessage = "Phiên tải trước đã dừng. Tiếp tục để tải lại."
         }
@@ -259,17 +300,51 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
     }
 
     private func persistHistory() {
+        environment.setRunning(items.contains { $0.status == .downloading })
         guard let data = try? JSONEncoder().encode(items) else { return }
-        UserDefaults.standard.set(data, forKey: Self.historyKey)
+        defaults.set(data, forKey: Self.historyKey)
+    }
+
+    private func networkChanged() {
+        let allowed = environment.online && !(environment.avoidMetered && environment.metered)
+        for item in items {
+            if !allowed && item.status == .downloading {
+                tasks[item.id]?.suspend()
+                update(item.id) { $0.status = .waitingForNetwork; $0.errorMessage = "Chờ kết nối phù hợp để tải xuống." }
+            } else if allowed && item.status == .waitingForNetwork {
+                resume(item.id, automatically: true)
+            }
+        }
+        persistHistory()
+    }
+
+    static func isRecoverableNetworkError(_ error: NSError) -> Bool {
+        error.domain == NSURLErrorDomain && [
+            NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost,
+            NSURLErrorTimedOut, NSURLErrorCannotConnectToHost, NSURLErrorDNSLookupFailed,
+            NSURLErrorCannotFindHost
+        ].contains(error.code)
     }
 
     private func notify(title: String, body: String) {
+        guard notificationsEnabled else { return }
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
+    }
+
+    func shutdown() {
+        for item in items where item.status == .downloading || item.status == .waitingForNetwork {
+            update(item.id) { $0.status = .paused; $0.errorMessage = "Phiên tải đã dừng. Tiếp tục để tải lại." }
+        }
+        taskItems.removeAll()
+        tasks.removeAll()
+        session.invalidateAndCancel()
+        environment.onChange = nil
+        persistHistory()
     }
 
     public func urlSession(
@@ -281,10 +356,14 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
     ) {
         DispatchQueue.main.async {
             guard let id = self.taskItems[downloadTask.taskIdentifier] else { return }
+            guard self.tasks[id] === downloadTask else { return }
+            guard let status = self.item(id)?.status, status == .downloading || status == .waitingForNetwork else { return }
             self.update(id) { item in
+                if item.status == .waitingForNetwork { item.status = .downloading; item.errorMessage = nil }
                 item.receivedBytes = totalBytesWritten
                 item.expectedBytes = max(totalBytesExpectedToWrite, 0)
             }
+            self.environment.setRunning(self.items.contains { $0.status == .downloading })
         }
     }
 
@@ -295,7 +374,8 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
     ) {
         var context: (id: UUID, item: ManagedDownload)?
         DispatchQueue.main.sync {
-            if let id = self.taskItems[downloadTask.taskIdentifier], let item = self.item(id) {
+            if let id = self.taskItems[downloadTask.taskIdentifier], self.tasks[id] === downloadTask,
+               let item = self.item(id), item.status == .downloading || item.status == .waitingForNetwork {
                 context = (id, item)
             }
         }
@@ -355,8 +435,27 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
     ) {
         DispatchQueue.main.async {
             guard let id = self.taskItems.removeValue(forKey: task.taskIdentifier) else { return }
+            guard self.tasks[id] === task else { return }
             self.tasks.removeValue(forKey: id)
-            guard let error, let current = self.item(id), current.status == .downloading else { return }
+            guard let error, let current = self.item(id), current.status == .downloading || current.status == .waitingForNetwork else {
+                self.persistHistory()
+                return
+            }
+
+            let failure = error as NSError
+            let attempts = self.networkRetries[id, default: 0]
+            if Self.isRecoverableNetworkError(failure), attempts < 3 {
+                self.networkRetries[id] = attempts + 1
+                if let data = failure.userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+                    self.resumeData[id] = data
+                }
+                self.update(id) { $0.status = .waitingForNetwork; $0.errorMessage = "Chờ kết nối; sẽ tự thử lại khi có mạng." }
+                self.persistHistory()
+                DispatchQueue.main.asyncAfter(deadline: .now() + Double(1 << attempts)) {
+                    if self.item(id)?.status == .waitingForNetwork { self.resume(id, automatically: true) }
+                }
+                return
+            }
 
             self.update(id) { item in
                 item.status = .failed
@@ -364,6 +463,15 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
             }
             self.persistHistory()
             self.notify(title: "Tải xuống thất bại", body: current.fileName)
+        }
+    }
+
+    public func urlSession(_ session: URLSession, taskIsWaitingForConnectivity task: URLSessionTask) {
+        DispatchQueue.main.async {
+            guard let id = self.taskItems[task.taskIdentifier], self.tasks[id] === task,
+                  self.item(id)?.status == .downloading else { return }
+            self.update(id) { $0.status = .waitingForNetwork; $0.errorMessage = "Chờ kết nối mạng." }
+            self.persistHistory()
         }
     }
 

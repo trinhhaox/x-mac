@@ -33,7 +33,7 @@ public struct DownloadsView: View {
             case .all:
                 matchesFilter = true
             case .active:
-                matchesFilter = item.status == .downloading
+                matchesFilter = item.status == .downloading || item.status == .waitingForNetwork
             case .paused:
                 matchesFilter = item.status == .paused
             case .completed:
@@ -133,7 +133,7 @@ public struct DownloadsView: View {
                     manager.clearFinished()
                 }
                 .buttonStyle(BrandSecondaryButtonStyle())
-                .disabled(!manager.items.contains { $0.status != .downloading && $0.status != .paused })
+                .disabled(!manager.items.contains { $0.status != .downloading && $0.status != .paused && $0.status != .waitingForNetwork })
             }
         }
     }
@@ -189,7 +189,7 @@ public struct DownloadsView: View {
                             .foregroundColor(.secondary)
                     }
 
-                    if item.status == .downloading || item.status == .paused {
+                    if item.status == .downloading || item.status == .paused || item.status == .waitingForNetwork {
                         ProgressView(value: item.progress)
                             .tint(XmacTheme.blue)
                             .animation(.easeOut(duration: 0.2), value: item.progress)
@@ -211,7 +211,7 @@ public struct DownloadsView: View {
     private func actions(for item: ManagedDownload) -> some View {
         HStack(spacing: 6) {
             switch item.status {
-            case .downloading:
+            case .downloading, .waitingForNetwork:
                 Button(action: { manager.pause(item.id) }) {
                     Image(systemName: "pause.fill")
                 }
@@ -372,6 +372,7 @@ public struct DownloadsView: View {
     private func statusLabel(_ status: ManagedDownloadStatus) -> String {
         switch status {
         case .downloading: return "Đang tải"
+        case .waitingForNetwork: return "Chờ kết nối"
         case .paused: return "Tạm dừng"
         case .completed: return "Hoàn tất"
         case .failed: return "Lỗi"
@@ -382,6 +383,7 @@ public struct DownloadsView: View {
     private func statusIcon(_ status: ManagedDownloadStatus) -> String {
         switch status {
         case .downloading: return "arrow.down"
+        case .waitingForNetwork: return "wifi.slash"
         case .paused: return "pause.fill"
         case .completed: return "checkmark"
         case .failed: return "exclamationmark"
@@ -392,6 +394,7 @@ public struct DownloadsView: View {
     private func statusColor(_ status: ManagedDownloadStatus) -> Color {
         switch status {
         case .downloading: return XmacTheme.blue
+        case .waitingForNetwork: return .orange
         case .paused: return .orange
         case .completed: return .green
         case .failed: return .red

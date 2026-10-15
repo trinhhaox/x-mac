@@ -23,7 +23,7 @@ public final class GlobalEventTap {
             (1 << CGEventType.rightMouseDown.rawValue) |
             (1 << CGEventType.otherMouseDown.rawValue)
 
-        let callback: CGEventTapCallBack = { _, type, event, refcon in
+        let callback: CGEventTapCallBack = { proxy, type, event, refcon in
             guard let refcon else {
                 return Unmanaged.passUnretained(event)
             }
@@ -37,7 +37,7 @@ public final class GlobalEventTap {
             if EventTapManager.handleIfNeeded(type: type, event: event) {
                 return nil
             }
-            return InputHookManager.shared.handleEvent(type: type, event: event)
+            return InputHookManager.shared.handleEvent(type: type, event: event, proxy: proxy)
         }
 
         let selfPtr = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())

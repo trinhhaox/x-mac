@@ -142,6 +142,10 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         let openItem = NSMenuItem(title: "Mở Bảng điều khiển Xmac...", action: #selector(openMainWindow), keyEquivalent: "m")
         openItem.target = self
         menu.addItem(openItem)
+
+        let updateItem = NSMenuItem(title: "Kiểm tra cập nhật…", action: #selector(checkForUpdates), keyEquivalent: "")
+        updateItem.target = self
+        menu.addItem(updateItem)
         
         menu.addItem(NSMenuItem.separator())
         
@@ -151,6 +155,12 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         menu.addItem(quitItem)
     }
     
+    @objc private func checkForUpdates() {
+        AppState.shared.selectedTab = .settings
+        AppDelegate.shared.createMainWindow()
+        Task { @MainActor in await AppUpdateManager.shared.check() }
+    }
+
     @objc private func toggleLanguage() {
         InputHookManager.shared.toggleLanguage()
         updateStatusBarTitle()

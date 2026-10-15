@@ -33,6 +33,9 @@ jobs:
           test -n "$dmg_path"
           hdiutil verify "$dmg_path"
 
+      - name: Verify installation and backup using the built app
+        run: XMAC_TEST_APP="$PWD/build/Xmac.app" ./Scripts/test.sh
+
       - name: Upload ad-hoc signed artifacts
         uses: actions/upload-artifact@v4
         with:

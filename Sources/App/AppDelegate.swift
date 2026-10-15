@@ -28,6 +28,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         
         // 4. Mở cửa sổ chính khi lần đầu khởi động
         createMainWindow()
+        AppUpdateManager.shared.start()
         
     }
 
@@ -91,5 +92,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     
     public func applicationWillTerminate(_ notification: Notification) {
         GlobalEventTap.shared.stop()
+        DownloadManager.shared.shutdown()
+        DownloadEnvironment.shared.stop()
     }
 }

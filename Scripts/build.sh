@@ -13,6 +13,8 @@ VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$PROJE
 
 SWIFT_SOURCES=(
     "$PROJECT_DIR/Sources/Core/GlobalEventTap.swift"
+    "$PROJECT_DIR/Sources/Core/DownloadEnvironment.swift"
+    "$PROJECT_DIR/Sources/Core/AppUpdateManager.swift"
     "$PROJECT_DIR/Sources/Core/POSIXShell.swift"
     "$PROJECT_DIR/Sources/Core/PermissionsManager.swift"
     "$PROJECT_DIR/Sources/Core/LaunchAtLoginManager.swift"
@@ -25,6 +27,7 @@ SWIFT_SOURCES=(
     "$PROJECT_DIR/Sources/Features/DiskNTFS/DiskManager.swift"
     "$PROJECT_DIR/Sources/Features/DiskNTFS/NTFSMountHelper.swift"
     "$PROJECT_DIR/Sources/Features/VietnameseIME/VietnameseEngine.swift"
+    "$PROJECT_DIR/Sources/Features/VietnameseIME/EnglishWordRestoration.swift"
     "$PROJECT_DIR/Sources/Features/VietnameseIME/MacroManager.swift"
     "$PROJECT_DIR/Sources/Features/VietnameseIME/InputHookManager.swift"
     "$PROJECT_DIR/Sources/Features/Cleaner/CleanerModels.swift"

@@ -4,6 +4,8 @@ public struct SettingsView: View {
     @ObservedObject var launchManager = LaunchAtLoginManager.shared
     @ObservedObject var permissions = PermissionsManager.shared
     @ObservedObject var vm = SettingsViewModel.shared
+    @ObservedObject private var downloads = DownloadEnvironment.shared
+    @ObservedObject private var updates = AppUpdateManager.shared
     
     public init() {}
     
@@ -56,6 +58,36 @@ public struct SettingsView: View {
                     }
                 }
                 
+                ModernCard {
+                    BrandSectionTitle("Tải xuống", subtitle: "Quản lý nguồn điện và kết nối khi tải tệp.")
+                    Toggle("Giữ máy thức khi đang tải", isOn: $downloads.keepAwake)
+                    Text("Màn hình vẫn có thể tắt. Xmac trả chế độ ngủ bình thường khi tải xong hoặc tạm dừng.")
+                        .font(.caption).foregroundColor(.secondary)
+                    Toggle("Chờ Wi-Fi không tính phí hoặc mạng không hạn chế", isOn: $downloads.avoidMetered)
+                    Text(downloads.online ? (downloads.metered ? "Mạng hiện tại tính phí hoặc hạn chế dữ liệu." : "Đã kết nối mạng.") : "Đang ngoại tuyến. Tác vụ sẽ chờ kết nối.")
+                        .font(.caption).foregroundColor(.secondary)
+                }
+
+                ModernCard {
+                    BrandSectionTitle("Cập nhật ứng dụng", subtitle: "Bản phát hành chính thức từ GitHub của Xmac.")
+                    Toggle("Tự kiểm tra bản mới mỗi ngày", isOn: $updates.automaticChecks)
+                    Text(updates.message).font(.system(size: 12)).textSelection(.enabled)
+                    if let progress = updates.downloadProgress {
+                        ProgressView(value: progress)
+                    } else if updates.busy { ProgressView().controlSize(.small) }
+                    if let release = updates.release {
+                        Text(release.body ?? "Bản cập nhật Xmac \(release.version)")
+                            .font(.caption).lineLimit(10).textSelection(.enabled)
+                        Link("Xem đầy đủ ghi chú phát hành", destination: release.html_url)
+                        Button("Tải và cài Xmac \(release.version)…") { updates.confirmInstallation = true }
+                            .disabled(updates.busy || release.installer == nil)
+                    }
+                    Button("Kiểm tra cập nhật") { Task { await updates.check() } }
+                        .disabled(updates.busy)
+                    Text("Bộ cài được đối chiếu SHA-256 từ GitHub và kiểm tra chữ ký app. Bản cũ được giữ trong Applications để khôi phục thủ công; cập nhật có thể cần bật lại quyền Trợ năng.")
+                        .font(.caption).foregroundColor(.secondary)
+                }
+
                 // Permissions Card
                 ModernCard {
                     BrandSectionTitle("Quyền hệ thống", subtitle: "Xmac chỉ yêu cầu quyền cho những tính năng bạn sử dụng.")
@@ -147,5 +179,11 @@ public struct SettingsView: View {
             .padding(26)
         }
         .xmacPage()
+        .alert("Cài đặt bản cập nhật?", isPresented: $updates.confirmInstallation) {
+            Button("Hủy", role: .cancel) {}
+            Button("Cài đặt và mở lại") { Task { await updates.install() } }
+        } message: {
+            Text("Xmac sẽ tải bộ cài chính thức, kiểm tra tính toàn vẹn và mở lại ứng dụng. Hãy hoàn tất tác vụ đang làm trước khi cập nhật.")
+        }
     }
 }
