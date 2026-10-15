@@ -6,6 +6,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
     
     private var statusItem: NSStatusItem?
     private var menu: NSMenu?
+    private let dashboard = NSPopover()
     
     override private init() {
         super.init()
@@ -17,12 +18,36 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         menu = NSMenu()
         menu?.delegate = self
-        statusItem?.menu = menu
+        dashboard.behavior = .transient
+        dashboard.contentViewController = NSHostingController(rootView: MenuBarDashboard())
+        statusItem?.button?.target = self
+        statusItem?.button?.action = #selector(toggleDashboard)
+        statusItem?.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         
         updateStatusBarTitle()
         
         // Đăng ký observer khi chế độ gõ hoặc số file cut thay đổi
         NotificationCenter.default.addObserver(self, selector: #selector(onStateChanged), name: UserDefaults.didChangeNotification, object: nil)
+    }
+
+    func closeDashboard() { dashboard.performClose(nil) }
+
+    @objc private func toggleDashboard() {
+        guard let button = statusItem?.button else { return }
+        if NSApp.currentEvent?.type == .rightMouseUp, let menu {
+            closeDashboard()
+            menuWillOpen(menu)
+            statusItem?.menu = menu
+            button.performClick(nil)
+            statusItem?.menu = nil
+        } else if dashboard.isShown {
+            closeDashboard()
+        } else {
+            QuickLauncher.shared.hide()
+            PermissionsManager.shared.checkPermissions()
+            DiskManager.shared.refreshVolumes()
+            dashboard.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        }
     }
     
     @objc private func onStateChanged() {
@@ -51,6 +76,10 @@ public class StatusBarController: NSObject, NSMenuDelegate {
     
     public func menuWillOpen(_ menu: NSMenu) {
         menu.removeAllItems()
+        let launcherItem = NSMenuItem(title: "Mở nhanh Xmac (\(QuickLauncher.shared.shortcut.title))", action: #selector(openLauncher), keyEquivalent: "")
+        launcherItem.target = self
+        menu.addItem(launcherItem)
+        menu.addItem(NSMenuItem.separator())
         
         let ime = InputHookManager.shared
         let cutPaste = FinderCutPasteManager.shared
@@ -126,6 +155,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
                 let diskItem = NSMenuItem(title: "   • \(disk.name) - \(fsText)", action: #selector(openDiskAction(_:)), keyEquivalent: "")
                 diskItem.target = self
                 diskItem.representedObject = disk
+                diskItem.isEnabled = disk.isMounted
                 menu.addItem(diskItem)
             }
             menu.addItem(NSMenuItem.separator())
@@ -160,6 +190,8 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         AppDelegate.shared.createMainWindow()
         Task { @MainActor in await AppUpdateManager.shared.check() }
     }
+
+    @objc private func openLauncher() { QuickLauncher.shared.show() }
 
     @objc private func toggleLanguage() {
         InputHookManager.shared.toggleLanguage()

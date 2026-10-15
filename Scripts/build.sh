@@ -49,6 +49,9 @@ SWIFT_SOURCES=(
     "$PROJECT_DIR/Sources/UI/Views/SettingsView.swift"
     "$PROJECT_DIR/Sources/UI/Views/MainView.swift"
     "$PROJECT_DIR/Sources/UI/MenuBar/StatusBarController.swift"
+    "$PROJECT_DIR/Sources/UI/MenuBar/MenuBarDashboard.swift"
+    "$PROJECT_DIR/Sources/UI/Launcher/LauncherCatalog.swift"
+    "$PROJECT_DIR/Sources/UI/Launcher/QuickLauncher.swift"
     "$PROJECT_DIR/Sources/App/AppDelegate.swift"
     "$PROJECT_DIR/Sources/App/main.swift"
 )

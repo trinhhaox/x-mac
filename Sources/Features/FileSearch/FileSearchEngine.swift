@@ -179,7 +179,7 @@ public final class FileSearchEngine: NSObject, ObservableObject {
     private var activeExpression = FileSearchExpression.parse("")
     private let maximumResults = 200
 
-    override private init() {
+    override init() {
         super.init()
     }
 
@@ -196,6 +196,15 @@ public final class FileSearchEngine: NSObject, ObservableObject {
         if panel.runModal() == .OK, let url = panel.url {
             customScopeURL = url
         }
+    }
+
+    public func cancelSearch() {
+        debounceWorkItem?.cancel()
+        debounceWorkItem = nil
+        stopQuery()
+        results = []
+        isSearching = false
+        statusMessage = "Nhập từ khóa để bắt đầu"
     }
 
     public func scheduleSearch(
@@ -351,6 +360,7 @@ public final class FileSearchEngine: NSObject, ObservableObject {
     }
 
     private func consumeResults(from query: NSMetadataQuery, finished: Bool) {
+        guard query === metadataQuery else { return }
         query.disableUpdates()
         defer { query.enableUpdates() }
 

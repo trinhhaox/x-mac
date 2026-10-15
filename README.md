@@ -63,6 +63,8 @@ Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
 ---
 
 ## 🖥 Giao Diện Người Dùng Hiện Đại (macOS Native)
+- **Mở nhanh**: `⌥⇧Space` tìm lệnh Xmac, ứng dụng và tệp Spotlight; hỗ trợ ↑/↓, Enter, Esc và đổi phím trong Cài đặt.
+- **Menu Bar Dashboard**: Nhấp trái xem tải xuống, bộ gõ và ổ ngoài; nhấp phải giữ menu đầy đủ. Chi tiết: [`docs/DESKTOP_PHASE2.md`](docs/DESKTOP_PHASE2.md).
 - **Menu Bar Agent**: Icon động hiển thị `🇻🇳 V` hoặc `🇺🇸 E`, số lượng tệp đang cắt `[✂︎n]`, menu thao tác nhanh 1 chạm.
 - **Control Center Window**: Cửa sổ điều khiển Sidebar phong cách macOS Ventura / Sonoma / Sequoia, hỗ trợ Dark Mode và Light Mode tự động.
 
@@ -77,7 +79,7 @@ Tự kiểm tra mỗi ngày là tùy chọn; cài đặt cần xác nhận. Xem
 mô hình tin cậy chữ ký và giới hạn phục hồi tải.
 
 ### 1. Cài đặt từ DMG (Khuyến nghị)
-1. Tải file `Xmac-1.2.0.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
+1. Tải file `Xmac-1.3.0.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
 2. Kéo thả `Xmac.app` vào thư mục `Applications`.
 3. Mở ứng dụng và làm theo hướng dẫn cấp quyền.
 
@@ -88,7 +90,7 @@ cd x-mac
 chmod +x Scripts/build.sh
 ./Scripts/build.sh
 ```
-Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.2.0.dmg` sẽ được tạo trong thư mục `build/`.
+Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.3.0.dmg` sẽ được tạo trong thư mục `build/`.
 
 Mặc định script ký ad-hoc để kiểm thử local. Nếu máy đã có sẵn chứng thư và hồ sơ notarization trong Keychain, có thể tạo bản phát hành bằng:
 

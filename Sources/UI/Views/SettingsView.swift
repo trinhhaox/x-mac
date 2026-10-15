@@ -6,6 +6,7 @@ public struct SettingsView: View {
     @ObservedObject var vm = SettingsViewModel.shared
     @ObservedObject private var downloads = DownloadEnvironment.shared
     @ObservedObject private var updates = AppUpdateManager.shared
+    @ObservedObject private var launcher = QuickLauncher.shared
     
     public init() {}
     
@@ -58,6 +59,17 @@ public struct SettingsView: View {
                     }
                 }
                 
+                ModernCard {
+                    BrandSectionTitle("Mở nhanh", subtitle: "Tìm lệnh, ứng dụng và tệp từ bất kỳ ứng dụng nào.")
+                    Picker("Phím tắt", selection: Binding(get: { launcher.shortcut }, set: { launcher.setShortcut($0) })) {
+                        ForEach(LauncherShortcut.allCases) { choice in Text(choice.title).tag(choice) }
+                    }
+                    Text(launcher.shortcutMessage).font(.caption).foregroundColor(.secondary)
+                    Button("Mở bảng lệnh") { launcher.show() }
+                    Text("Nhấp trái biểu tượng Menu Bar để xem trạng thái; nhấp phải để mở menu đầy đủ.")
+                        .font(.caption).foregroundColor(.secondary)
+                }
+
                 ModernCard {
                     BrandSectionTitle("Tải xuống", subtitle: "Quản lý nguồn điện và kết nối khi tải tệp.")
                     Toggle("Giữ máy thức khi đang tải", isOn: $downloads.keepAwake)
