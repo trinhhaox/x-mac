@@ -282,7 +282,7 @@ public class NTFSMountHelper: DiskMounter {
               ) as? [String: Any] else {
             return nil
         }
-        return plist["Mounted"] as? Bool
+        return DiskManager.isMounted(from: plist)
     }
 
     private func rollbackReadOnlyIfNeeded(

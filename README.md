@@ -69,7 +69,7 @@ Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
 ## 🚀 Cài Đặt & Sử Dụng
 
 ### 1. Cài đặt từ DMG (Khuyến nghị)
-1. Tải file `Xmac-1.1.2.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
+1. Tải file `Xmac-1.1.3.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
 2. Kéo thả `Xmac.app` vào thư mục `Applications`.
 3. Mở ứng dụng và làm theo hướng dẫn cấp quyền.
 
@@ -80,7 +80,7 @@ cd x-mac
 chmod +x Scripts/build.sh
 ./Scripts/build.sh
 ```
-Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.1.2.dmg` sẽ được tạo trong thư mục `build/`.
+Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.1.3.dmg` sẽ được tạo trong thư mục `build/`.
 
 Mặc định script ký ad-hoc để kiểm thử local. Nếu máy đã có sẵn chứng thư và hồ sơ notarization trong Keychain, có thể tạo bản phát hành bằng:
 

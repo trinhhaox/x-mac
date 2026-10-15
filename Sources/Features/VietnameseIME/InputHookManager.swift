@@ -146,6 +146,13 @@ public class InputHookManager: ObservableObject {
             }
             return Unmanaged.passUnretained(event)
         }
+
+        // Some input sources do not attach a Unicode payload to the physical
+        // Space key. Detect it by the stable hardware key code before reading
+        // Unicode so macro expansion still runs.
+        if keyCode == 49 {
+            return handleWordBoundary(character: " ", event: event)
+        }
         
         // Lấy ký tự Unicode
         var length = 0
@@ -161,17 +168,7 @@ public class InputHookManager: ObservableObject {
         
         // Phím phân tách từ: Space, Return, Tab, dấu câu
         if char == " " || char == "\n" || char == "\t" || ",.!?;:()[]{}\"'".contains(char) {
-            // Kiểm tra Macro
-            if char == " " && MacroManager.shared.isMacroEnabled {
-                if let expansion = MacroManager.shared.getExpansion(for: currentBuffer) {
-                    let oldLen = currentBuffer.count
-                    currentBuffer = ""
-                    replaceWord(backspaceCount: oldLen, newText: expansion + " ")
-                    return nil // Nuốt phím space vì đã gửi kèm trong expansion
-                }
-            }
-            currentBuffer = ""
-            return Unmanaged.passUnretained(event)
+            return handleWordBoundary(character: char, event: event)
         }
         
         // Nếu đang ở chế độ Tiếng Anh (E), chỉ lưu buffer cơ bản và cho qua
@@ -197,6 +194,38 @@ public class InputHookManager: ObservableObject {
             currentBuffer.append(char)
             return Unmanaged.passUnretained(event)
         }
+    }
+
+    static func macroExpansion(
+        for buffer: String,
+        boundaryKeyCode: Int64,
+        character: Character?,
+        manager: MacroManager
+    ) -> String? {
+        let isSpace = boundaryKeyCode == 49 || character == " "
+        guard isSpace, manager.isMacroEnabled else { return nil }
+        return manager.getExpansion(for: buffer)
+    }
+
+    private func handleWordBoundary(
+        character: Character,
+        event: CGEvent
+    ) -> Unmanaged<CGEvent>? {
+        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+        if let expansion = Self.macroExpansion(
+            for: currentBuffer,
+            boundaryKeyCode: keyCode,
+            character: character,
+            manager: MacroManager.shared
+        ) {
+            let oldLen = currentBuffer.count
+            currentBuffer = ""
+            replaceWord(backspaceCount: oldLen, newText: expansion + " ")
+            return nil
+        }
+
+        currentBuffer = ""
+        return Unmanaged.passUnretained(event)
     }
     
     private func replaceWord(backspaceCount: Int, newText: String) {

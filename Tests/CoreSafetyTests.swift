@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 @testable import Xmac
 
@@ -66,6 +67,41 @@ import Testing
             isMounted: false
         )
         #expect(!unmounted.hasReliableCapacity)
+    }
+
+    @Test func emptyMountPointIsNotTreatedAsMounted() {
+        let unmountedPlist: [String: Any] = [
+            "MountPoint": "",
+            "FilesystemType": "ntfs"
+        ]
+        #expect(DiskManager.mountPoint(from: unmountedPlist) == nil)
+        #expect(!DiskManager.isMounted(from: unmountedPlist))
+
+        let mountedPlist: [String: Any] = ["MountPoint": "/Volumes/Test"]
+        #expect(DiskManager.mountPoint(from: mountedPlist) == "/Volumes/Test")
+        #expect(DiskManager.isMounted(from: mountedPlist))
+
+        let explicitUnmounted: [String: Any] = [
+            "Mounted": false,
+            "MountPoint": "/Volumes/Stale"
+        ]
+        #expect(!DiskManager.isMounted(from: explicitUnmounted))
+    }
+
+    @Test func physicalSpaceKeyExpandsMacroWithoutUnicodePayload() {
+        let suiteName = "XmacTests.MacroSpace.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let manager = MacroManager(defaults: defaults)
+
+        let expansion = InputHookManager.macroExpansion(
+            for: "vn",
+            boundaryKeyCode: 49,
+            character: nil,
+            manager: manager
+        )
+
+        #expect(expansion == "Việt Nam")
     }
 
     @Test func cleanerPathPolicyAllowsOnlyDescendantsOfKnownRoots() {

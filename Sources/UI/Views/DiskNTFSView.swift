@@ -190,6 +190,7 @@ struct DiskVolumeCard: View {
                                 Image(systemName: "eject.fill")
                             }
                             .buttonStyle(BrandSecondaryButtonStyle())
+                            .disabled(!volume.isMounted)
                             .help("Ngắt kết nối an toàn")
                         }
                     }

@@ -93,12 +93,12 @@ public class DiskManager: ObservableObject {
             }
             
             let name = (plist["VolumeName"] as? String) ?? (plist["MediaName"] as? String) ?? bsdName
-            let mountPoint = plist["MountPoint"] as? String
+            let mountPoint = Self.mountPoint(from: plist)
             let fs = (plist["FilesystemType"] as? String) ?? (plist["FilesystemName"] as? String) ?? "Unknown"
             let totalSize = (plist["TotalSize"] as? Int64) ?? 0
             let freeSize = (plist["FreeSpace"] as? Int64) ?? 0
             let isWritable = (plist["WritableVolume"] as? Bool) ?? false
-            let isMounted = (plist["Mounted"] as? Bool) ?? (mountPoint != nil)
+            let isMounted = Self.isMounted(from: plist)
             let isInternal = (plist["Internal"] as? Bool) ?? false
             
             return DiskVolume(
@@ -115,5 +115,20 @@ public class DiskManager: ObservableObject {
         } catch {
             return nil
         }
+    }
+
+    static func mountPoint(from plist: [String: Any]) -> String? {
+        guard let value = plist["MountPoint"] as? String,
+              !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        return value
+    }
+
+    static func isMounted(from plist: [String: Any]) -> Bool {
+        if let mounted = plist["Mounted"] as? Bool {
+            return mounted
+        }
+        return mountPoint(from: plist) != nil
     }
 }
