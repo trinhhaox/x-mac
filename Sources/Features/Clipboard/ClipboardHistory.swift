@@ -13,7 +13,13 @@ struct ClipboardItem: Identifiable, Codable, Equatable {
     let html: Data?
     let png: Data?
     let paths: [String]?
-    var byteCount: Int { (text?.utf8.count ?? 0) + (html?.count ?? 0) + (png?.count ?? 0) + (paths?.joined().utf8.count ?? 0) }
+    var byteCount: Int {
+        let textBytes: Int = text?.utf8.count ?? 0
+        let htmlBytes: Int = html?.count ?? 0
+        let imageBytes: Int = png?.count ?? 0
+        let pathBytes: Int = paths?.joined().utf8.count ?? 0
+        return textBytes + htmlBytes + imageBytes + pathBytes
+    }
     var title: String { text ?? paths?.map { URL(fileURLWithPath: $0).lastPathComponent }.joined(separator: ", ") ?? "Hình ảnh" }
 }
 
