@@ -83,6 +83,30 @@ public class VietnameseEngine {
             let lastChar = currentWord.last!
             let lastLower = Character(lastChar.lowercased())
             let lastIsUpper = lastChar.isUppercase
+
+            // Repeating a Telex transformation key cancels the conversion and
+            // leaves the key literal: ass -> as, aaa -> aa, ddd -> dd.
+            if lower == "d" && lastLower == "đ" {
+                var word = currentWord
+                word.removeLast()
+                word.append(lastIsUpper ? "D" : "d")
+                word.append(newChar)
+                return (word, true)
+            }
+            if lower == "a" && lastLower == "â" {
+                return replacingLast(in: currentWord, with: lastIsUpper ? "A" : "a", appending: newChar)
+            }
+            if lower == "e" && lastLower == "ê" {
+                return replacingLast(in: currentWord, with: lastIsUpper ? "E" : "e", appending: newChar)
+            }
+            if lower == "o" && lastLower == "ô" {
+                return replacingLast(in: currentWord, with: lastIsUpper ? "O" : "o", appending: newChar)
+            }
+            let wCancellationBases: [Character: Character] = ["ă": "a", "ơ": "o", "ư": "u"]
+            if lower == "w", let base = wCancellationBases[lastLower] {
+                let replacement = lastIsUpper ? Character(String(base).uppercased()) : base
+                return replacingLast(in: currentWord, with: replacement, appending: newChar)
+            }
             
             // dd -> đ / Đ
             if lower == "d" && lastLower == "d" {
@@ -150,6 +174,9 @@ public class VietnameseEngine {
         }
         
         if let targetTone = tone {
+            if targetTone != .none && containsTone(targetTone, in: currentWord) {
+                return (removingTones(from: currentWord) + String(newChar), true)
+            }
             let (newWord, success) = applyTone(to: currentWord, tone: targetTone, modern: modern)
             if success {
                 return (newWord, true)
@@ -170,6 +197,9 @@ public class VietnameseEngine {
                 1: .acute, 2: .grave, 3: .hook, 4: .tilde, 5: .dot, 0: .none
             ]
             if let targetTone = toneMapVNI[num] {
+                if targetTone != .none && containsTone(targetTone, in: currentWord) {
+                    return (removingTones(from: currentWord) + String(newChar), true)
+                }
                 let (newWord, success) = applyTone(to: currentWord, tone: targetTone, modern: modern)
                 if success {
                     return (newWord, true)
@@ -182,6 +212,19 @@ public class VietnameseEngine {
             let lastChar = currentWord.last!
             let lastLower = Character(lastChar.lowercased())
             let lastIsUpper = lastChar.isUppercase
+
+            // Repeating a VNI transformation digit cancels the conversion and
+            // keeps that digit literal, matching the Telex escape behavior.
+            let vniCancellationBases: [Int: [Character: Character]] = [
+                6: ["â": "a", "ê": "e", "ô": "o"],
+                7: ["ơ": "o", "ư": "u"],
+                8: ["ă": "a"],
+                9: ["đ": "d"]
+            ]
+            if let base = vniCancellationBases[num]?[lastLower] {
+                let replacement = lastIsUpper ? Character(String(base).uppercased()) : base
+                return replacingLast(in: currentWord, with: replacement, appending: newChar)
+            }
             
             if num == 9 && lastLower == "d" {
                 var word = currentWord
@@ -211,6 +254,26 @@ public class VietnameseEngine {
         }
         
         return (currentWord + String(newChar), false)
+    }
+
+    private func replacingLast(
+        in word: String,
+        with replacement: Character,
+        appending character: Character
+    ) -> (String, Bool) {
+        var result = word
+        result.removeLast()
+        result.append(replacement)
+        result.append(character)
+        return (result, true)
+    }
+
+    private func containsTone(_ tone: ToneMarkType, in word: String) -> Bool {
+        word.contains { reverseToneMap[$0]?.tone == tone }
+    }
+
+    private func removingTones(from word: String) -> String {
+        String(word.map(stripTone))
     }
     
     /// Bỏ dấu thanh vào vị trí nguyên âm thích hợp nhất trong từ

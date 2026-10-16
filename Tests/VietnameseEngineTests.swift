@@ -14,6 +14,24 @@ import Testing
         #expect(type("asz", method: .telex) == "a")
     }
 
+    @Test func repeatedTelexKeysCancelTheConversionForLiteralEnglishText() {
+        #expect(type("ass", method: .telex) == "as")
+        #expect(type("aaa", method: .telex) == "aa")
+        #expect(type("eee", method: .telex) == "ee")
+        #expect(type("ooo", method: .telex) == "oo")
+        #expect(type("ddd", method: .telex) == "dd")
+        #expect(type("aww", method: .telex) == "aw")
+        #expect(type("awws", method: .telex) == "áw")
+    }
+
+    @Test func repeatedVNIKeyCancelsToneForLiteralInput() {
+        #expect(type("a11", method: .vni) == "a1")
+        #expect(type("a66", method: .vni) == "a6")
+        #expect(type("u77", method: .vni) == "u7")
+        #expect(type("a88", method: .vni) == "a8")
+        #expect(type("d99", method: .vni) == "d9")
+    }
+
     @Test func vniTransformsVietnameseLettersAndTone() {
         #expect(type("d9", method: .vni) == "đ")
         #expect(type("a61", method: .vni) == "ấ")

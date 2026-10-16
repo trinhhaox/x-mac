@@ -49,6 +49,7 @@ Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
 - **Hỗ trợ đầy đủ kiểu gõ**: Telex, VNI và Simple Telex.
 - **Bảng mã Unicode**: Hoạt động qua Accessibility event tap; mức tương thích phụ thuộc cách từng ứng dụng xử lý nhập liệu và secure input.
 - **Quy tắc bỏ dấu linh hoạt**: Tùy chọn kiểu bỏ dấu mới (`hòa`, `thúy`) hoặc chuẩn truyền thống (`hoà`, `thuý`).
+- **Gõ Việt–Anh thông minh**: Tự khôi phục các từ tiếng Anh bị Telex/VNI biến đổi khi kết thúc từ; có thể gõ lặp phím dấu để giữ nguyên chữ Latin mà không cần chuyển sang chế độ E.
 - **Phím tắt chuyển đổi nhanh (V / E)**: Chuyển đổi ngôn ngữ gõ tức thì bằng tổ hợp phím `Control + Shift` hoặc nhấn trực tiếp trên thanh Menu Bar.
 - **Bảng gõ tắt (Macro)**: Tự động mở rộng từ viết tắt (ví dụ: `vn` ➔ `Việt Nam`, `dc` ➔ `được`, `ko` ➔ `không`).
 - **Danh sách loại trừ (Excluded Apps)**: Tự động tắt tiếng Việt khi làm việc trong Terminal, iTerm, Xcode để tránh gõ nhầm lệnh.
@@ -88,7 +89,7 @@ Tự kiểm tra mỗi ngày là tùy chọn; cài đặt cần xác nhận. Xem
 mô hình tin cậy chữ ký và giới hạn phục hồi tải.
 
 ### 1. Cài đặt từ DMG (Khuyến nghị)
-1. Tải file `Xmac-1.5.0.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
+1. Tải file `Xmac-1.5.1.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
 2. Kéo thả `Xmac.app` vào thư mục `Applications`.
 3. Mở ứng dụng và làm theo hướng dẫn cấp quyền.
 
@@ -99,7 +100,7 @@ cd x-mac
 chmod +x Scripts/build.sh
 ./Scripts/build.sh
 ```
-Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.5.0.dmg` sẽ được tạo trong thư mục `build/`.
+Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.5.1.dmg` sẽ được tạo trong thư mục `build/`.
 
 Mặc định script ký ad-hoc để kiểm thử local. Nếu máy đã có sẵn chứng thư và hồ sơ notarization trong Keychain, có thể tạo bản phát hành bằng:
 

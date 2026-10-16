@@ -30,6 +30,7 @@ public class InputHookManager: ObservableObject {
     
     private var currentBuffer: String = ""
     private var rawBuffer: String = ""
+    private var lastActionWasExplicitCancellation = false
     private var eventProxy: CGEventTapProxy?
     private var activeProcessIdentifier: pid_t?
 
@@ -63,6 +64,7 @@ public class InputHookManager: ObservableObject {
         self.isVietnameseMode.toggle()
         currentBuffer = ""
         rawBuffer = ""
+        lastActionWasExplicitCancellation = false
         SoundEffectManager.shared.play(.paste)
     }
     
@@ -113,6 +115,7 @@ public class InputHookManager: ObservableObject {
         if flags.contains(.maskCommand) || flags.contains(.maskAlternate) || flags.contains(.maskControl) {
             currentBuffer = ""
             rawBuffer = ""
+            lastActionWasExplicitCancellation = false
             return Unmanaged.passUnretained(event)
         }
         
@@ -121,6 +124,7 @@ public class InputHookManager: ObservableObject {
             if excludedApps.contains(frontApp) {
                 currentBuffer = ""
                 rawBuffer = ""
+                lastActionWasExplicitCancellation = false
                 return Unmanaged.passUnretained(event)
             }
         }
@@ -154,6 +158,7 @@ public class InputHookManager: ObservableObject {
             // Backspace edits the displayed text, not the original Telex keys.
             // Do not restore stale keys after an explicit correction.
             rawBuffer = currentBuffer
+            lastActionWasExplicitCancellation = false
             return Unmanaged.passUnretained(event)
         }
 
@@ -175,6 +180,7 @@ public class InputHookManager: ObservableObject {
         guard length > 0, let scalar = UnicodeScalar(chars[0]) else {
             currentBuffer = ""
             rawBuffer = ""
+            lastActionWasExplicitCancellation = false
             return Unmanaged.passUnretained(event)
         }
         
@@ -186,9 +192,13 @@ public class InputHookManager: ObservableObject {
         }
         
         // Nếu đang ở chế độ Tiếng Anh (E), chỉ lưu buffer cơ bản và cho qua
+        let repeatedInputKey = rawBuffer.last.map {
+            String($0).lowercased() == String(char).lowercased()
+        } ?? false
         rawBuffer.append(char)
         guard isVietnameseMode else {
             currentBuffer.append(char)
+            lastActionWasExplicitCancellation = false
             return Unmanaged.passUnretained(event)
         }
         
@@ -203,10 +213,13 @@ public class InputHookManager: ObservableObject {
         if didTransform {
             let backspaces = currentBuffer.count
             currentBuffer = transformed
+            lastActionWasExplicitCancellation = repeatedInputKey
+                && transformed.last.map { String($0).lowercased() == String(char).lowercased() } == true
             replaceWord(backspaceCount: backspaces, newText: transformed)
             return nil // Nuốt sự kiện gốc
         } else {
             currentBuffer.append(char)
+            lastActionWasExplicitCancellation = false
             return Unmanaged.passUnretained(event)
         }
     }
@@ -236,22 +249,25 @@ public class InputHookManager: ObservableObject {
             let oldLen = currentBuffer.count
             currentBuffer = ""
             rawBuffer = ""
+            lastActionWasExplicitCancellation = false
             replaceWord(backspaceCount: oldLen, newText: expansion + " ")
             return nil
         }
 
-        if isVietnameseMode,
+        if isVietnameseMode, !lastActionWasExplicitCancellation,
            EnglishWordRestoration.shouldRestore(raw: rawBuffer, composed: currentBuffer) {
             let oldLength = currentBuffer.count
             let restored = rawBuffer + String(character)
             currentBuffer = ""
             rawBuffer = ""
+            lastActionWasExplicitCancellation = false
             replaceWord(backspaceCount: oldLength, newText: restored)
             return nil
         }
 
         currentBuffer = ""
         rawBuffer = ""
+        lastActionWasExplicitCancellation = false
         return Unmanaged.passUnretained(event)
     }
     
@@ -297,6 +313,7 @@ public class InputHookManager: ObservableObject {
         if let activeProcessIdentifier, activeProcessIdentifier != processIdentifier {
             currentBuffer = ""
             rawBuffer = ""
+            lastActionWasExplicitCancellation = false
         }
         activeProcessIdentifier = processIdentifier
     }
@@ -304,6 +321,7 @@ public class InputHookManager: ObservableObject {
     private func resetComposition() {
         currentBuffer = ""
         rawBuffer = ""
+        lastActionWasExplicitCancellation = false
         activeProcessIdentifier = NSWorkspace.shared.frontmostApplication?.processIdentifier
     }
 }
