@@ -51,7 +51,7 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
     private var panel: NSPanel?
     private let search = NSSearchField()
     private let table = LauncherTable()
-    private let footer = NSTextField(labelWithString: "↑↓ Chọn • Enter Mở • Esc Đóng")
+    private let footer = NSTextField(labelWithString: L10n.text("↑↓ Chọn • Enter Mở • Esc Đóng"))
     private let files = FileSearchEngine()
     private var subscription: AnyCancellable?
     private var applications: [LauncherEntry] = []
@@ -76,7 +76,7 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
             DispatchQueue.main.async { owner.toggle() }
             return noErr
         }, 1, &event, Unmanaged.passUnretained(self).toOpaque(), &handler)
-        guard status == noErr else { shortcutMessage = "Không thể khởi tạo phím tắt (\(status))."; return }
+        guard status == noErr else { shortcutMessage = L10n.format("Không thể khởi tạo phím tắt (%d).", status); return }
         setShortcut(shortcut)
     }
 
@@ -87,7 +87,7 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
         let status = RegisterEventHotKey(choice.keyCode, choice.modifiers,
                                         EventHotKeyID(signature: Self.signature, id: nextID), GetApplicationEventTarget(), 0, &replacement)
         guard status == noErr else {
-            shortcutMessage = "Không thể dùng \(choice.title), có thể đang bị ứng dụng khác chiếm (\(status))."
+            shortcutMessage = L10n.format("Không thể dùng %@, có thể đang bị ứng dụng khác chiếm (%d).", choice.title, status)
             return
         }
         if let hotKey { UnregisterEventHotKey(hotKey) }
@@ -95,7 +95,7 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
         registrationID = nextID
         shortcut = choice
         UserDefaults.standard.set(choice.rawValue, forKey: "Launcher.Shortcut")
-        shortcutMessage = "Mở nhanh bằng \(choice.title). Không cần quyền Trợ năng."
+        shortcutMessage = L10n.format("Mở nhanh bằng %@. Không cần quyền Trợ năng.", choice.title)
     }
 
     func stop() {
@@ -111,6 +111,7 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
     func show() {
         if panel == nil { createPanel() }
         guard let panel else { return }
+        refreshLocalizedChrome()
         StatusBarController.shared.closeDashboard()
         search.stringValue = ""
         reloadResults(resetSelection: true)
@@ -148,7 +149,7 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
     private func createPanel() {
         let window = LauncherPanel(contentRect: NSRect(x: 0, y: 0, width: 680, height: 440),
                                    styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel], backing: .buffered, defer: false)
-        window.title = "Mở nhanh Xmac"
+        window.title = L10n.text("Mở nhanh Xmac")
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isFloatingPanel = true
@@ -163,11 +164,11 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
         root.blendingMode = .behindWindow
         root.state = .active
         window.contentView = root
-        search.placeholderString = "Tìm lệnh, ứng dụng, tệp hoặc tính: = (12 + 3) / 5"
+        search.placeholderString = L10n.text("Tìm lệnh, ứng dụng, tệp hoặc tính: = (12 + 3) / 5")
         search.font = .systemFont(ofSize: 21)
         search.delegate = self
         search.sendsSearchStringImmediately = true
-        search.setAccessibilityLabel("Tìm lệnh, ứng dụng hoặc tệp")
+        search.setAccessibilityLabel(L10n.text("Tìm lệnh, ứng dụng hoặc tệp"))
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("result"))
         table.addTableColumn(column)
         table.headerView = nil
@@ -178,7 +179,7 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
         table.doubleAction = #selector(openSelection)
         table.onOpen = { [weak self] in self?.openSelection() }
         table.onDismiss = { [weak self] in self?.hide() }
-        table.setAccessibilityLabel("Kết quả mở nhanh")
+        table.setAccessibilityLabel(L10n.text("Kết quả mở nhanh"))
         let scroll = NSScrollView()
         scroll.documentView = table
         scroll.hasVerticalScroller = true
@@ -223,7 +224,7 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
         } : []
         if let value = LauncherCalculator.result(for: search.stringValue) {
             results = [LauncherEntry(id: "calculation:" + value, title: "= " + value,
-                subtitle: "Enter để chép kết quả • Phép tính gần đúng, tối đa 12 chữ số có nghĩa",
+                subtitle: L10n.text("Enter để chép kết quả • Phép tính gần đúng, tối đa 12 chữ số có nghĩa"),
                 icon: "calculator", destination: .calculation(value))]
         } else { results = primary + fileEntries }
         table.reloadData()
@@ -231,7 +232,7 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
             let selected = resetSelection ? 0 : (results.firstIndex { $0.id == selectedID } ?? 0)
             table.selectRowIndexes(IndexSet(integer: selected), byExtendingSelection: false)
         }
-        footer.stringValue = results.isEmpty ? "Không có kết quả • Esc Đóng" : "↑↓ Chọn • Enter Mở / Chép kết quả • Esc Đóng"
+        footer.stringValue = results.isEmpty ? L10n.text("Không có kết quả • Esc Đóng") : L10n.text("↑↓ Chọn • Enter Mở / Chép kết quả • Esc Đóng")
     }
 
     func numberOfRows(in tableView: NSTableView) -> Int { results.count }
@@ -304,4 +305,11 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
     }
 
     func windowDidResignKey(_ notification: Notification) { hide() }
+
+    private func refreshLocalizedChrome() {
+        panel?.title = L10n.text("Mở nhanh Xmac")
+        search.placeholderString = L10n.text("Tìm lệnh, ứng dụng, tệp hoặc tính: = (12 + 3) / 5")
+        search.setAccessibilityLabel(L10n.text("Tìm lệnh, ứng dụng hoặc tệp"))
+        table.setAccessibilityLabel(L10n.text("Kết quả mở nhanh"))
+    }
 }

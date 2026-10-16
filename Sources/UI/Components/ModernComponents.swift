@@ -117,15 +117,15 @@ public struct BrandPageHeader<Trailing: View>: View {
         HStack(alignment: .center, spacing: 24) {
             VStack(alignment: .leading, spacing: 6) {
                 if let eyebrow, !eyebrow.isEmpty {
-                    Text(eyebrow.uppercased())
+                    Text(L10n.text(eyebrow).uppercased())
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                         .tracking(1.5)
                         .foregroundColor(XmacTheme.blue)
                 }
-                Text(title)
+                Text(L10n.text(title))
                     .font(.system(size: 25, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
-                Text(subtitle)
+                Text(L10n.text(subtitle))
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -147,10 +147,10 @@ public struct BrandSectionTitle: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title)
+            Text(L10n.text(title))
                 .font(.system(size: 15, weight: .bold, design: .rounded))
             if let subtitle {
-                Text(subtitle)
+                Text(L10n.text(subtitle))
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
@@ -325,10 +325,10 @@ public struct BrandToggleRow: View {
     public var body: some View {
         Toggle(isOn: $isOn) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(L10n.text(title))
                     .font(.system(size: 13, weight: .medium))
                 if let subtitle {
-                    Text(subtitle)
+                    Text(L10n.text(subtitle))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -371,7 +371,7 @@ public struct StatusBadge: View {
                 .fill(isPositive ? Color.green : Color.orange)
                 .frame(width: 7, height: 7)
                 .shadow(color: (isPositive ? Color.green : Color.orange).opacity(0.4), radius: 4)
-            Text(title)
+            Text(L10n.text(title))
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(isPositive ? .green : .orange)
         }
@@ -401,15 +401,15 @@ public struct MetricCard: View {
         ModernCard {
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text(title.uppercased())
+                    Text(L10n.text(title).uppercased())
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                         .tracking(0.8)
                         .foregroundColor(.secondary)
-                    Text(value)
+                    Text(L10n.text(value))
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                         .lineLimit(2)
-                    Text(subtitle)
+                    Text(L10n.text(subtitle))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -429,7 +429,7 @@ public struct BrandKeycap: View {
     }
 
     public var body: some View {
-        Text(text)
+        Text(L10n.text(text))
             .font(.system(size: 13, weight: .bold, design: .monospaced))
             .foregroundColor(XmacTheme.blue)
             .frame(minWidth: 46)

@@ -80,6 +80,8 @@ public struct AppAssociatedFile: Identifiable, Hashable {
 public enum AssociationConfidence: String, Hashable {
     case verified = "Xác định"
     case inferred = "Suy đoán"
+
+    var title: String { L10n.text(rawValue) }
 }
 
 enum UninstallPathPolicy {

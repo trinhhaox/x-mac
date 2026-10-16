@@ -186,11 +186,11 @@ enum SystemProbe {
 
     static func thermalTitle(_ state: ProcessInfo.ThermalState) -> String {
         switch state {
-        case .nominal: return "Bình thường"
-        case .fair: return "Ấm"
-        case .serious: return "Nóng — hệ thống đang hạn chế hiệu năng"
-        case .critical: return "Rất nóng — cần giảm tải"
-        @unknown default: return "Không xác định"
+        case .nominal: return L10n.text("Bình thường")
+        case .fair: return L10n.text("Ấm")
+        case .serious: return L10n.text("Nóng — hệ thống đang hạn chế hiệu năng")
+        case .critical: return L10n.text("Rất nóng — cần giảm tải")
+        @unknown default: return L10n.text("Không xác định")
         }
     }
 }

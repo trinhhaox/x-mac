@@ -47,13 +47,13 @@ struct ClipboardHistoryView: View {
                         "Bundle ID ứng dụng loại trừ, ngăn cách bằng dấu phẩy",
                         text: $history.exclusions
                     )
-                    Text(history.message).font(.caption).foregroundColor(.secondary)
+                    Text(L10n.text(history.message)).font(.caption).foregroundColor(.secondary)
                 }
 
                 HStack(alignment: .bottom, spacing: 12) {
                     BrandSectionTitle(
                         "Nội dung gần đây",
-                        subtitle: "\(filtered.count) mục phù hợp"
+                        subtitle: L10n.format("%lld mục phù hợp", Int64(filtered.count))
                     )
                     Spacer()
                     BrandTextField("Tìm nội dung hoặc ứng dụng nguồn", text: $state.query)

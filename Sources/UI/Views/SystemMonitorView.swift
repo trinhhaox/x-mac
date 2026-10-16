@@ -24,13 +24,13 @@ import SwiftUI
   private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
   private var physicalMemory: UInt64 { ProcessInfo.processInfo.physicalMemory }
   private var cpuStatus: String {
-    if monitor.cpuUsage != nil { return monitor.running ? "Đang dùng" : "Mẫu cuối" }
-    if !monitor.cpuHistory.isEmpty { return "Chờ mẫu mới" }
-    return monitor.sample?.cpu == nil && monitor.sample != nil ? "Chưa có dữ liệu" : "Đang đo…"
+    if monitor.cpuUsage != nil { return L10n.text(monitor.running ? "Đang dùng" : "Mẫu cuối") }
+    if !monitor.cpuHistory.isEmpty { return L10n.text("Chờ mẫu mới") }
+    return L10n.text(monitor.sample?.cpu == nil && monitor.sample != nil ? "Chưa có dữ liệu" : "Đang đo…")
   }
   private var cpuHistoryTitle: String {
-    if monitor.cpuHistory.isEmpty { return "Chưa có mẫu" }
-    return monitor.cpuUsage == nil ? "Lịch sử trước đó" : "\(monitor.cpuHistory.count) mẫu gần nhất"
+    if monitor.cpuHistory.isEmpty { return L10n.text("Chưa có mẫu") }
+    return monitor.cpuUsage == nil ? L10n.text("Lịch sử trước đó") : L10n.format("%lld mẫu gần nhất", Int64(monitor.cpuHistory.count))
   }
   private var memoryFraction: Double? {
     monitor.sample?.memoryUsed.map { min(1, Double($0) / Double(physicalMemory)) }
@@ -89,9 +89,12 @@ import SwiftUI
         Text("Thông tin hệ thống")
           .font(.system(size: 25, weight: .bold, design: .rounded))
           .accessibilityAddTraits(.isHeader)
-        Text(
-          "\(ProcessInfo.processInfo.processorCount) nhân CPU · \(bytes(physicalMemory)) RAM · macOS \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion)"
-        )
+        Text(L10n.format(
+          "%lld nhân CPU · %@ RAM · macOS %lld.%lld",
+          Int64(ProcessInfo.processInfo.processorCount), bytes(physicalMemory),
+          Int64(ProcessInfo.processInfo.operatingSystemVersion.majorVersion),
+          Int64(ProcessInfo.processInfo.operatingSystemVersion.minorVersion)
+        ))
         .font(.system(size: 13)).foregroundStyle(.secondary)
       }
       Spacer(minLength: 0)
@@ -99,7 +102,7 @@ import SwiftUI
         monitor.running ? monitor.stop() : monitor.start()
       } label: {
         Label(
-          monitor.running ? "Tạm dừng" : "Tiếp tục",
+          L10n.text(monitor.running ? "Tạm dừng" : "Tiếp tục"),
           systemImage: monitor.running ? "pause.fill" : "play.fill")
       }
       .buttonStyle(BrandSecondaryButtonStyle())
@@ -109,9 +112,9 @@ import SwiftUI
 
   private func cardTitle(_ title: String, icon: String, caption: String? = nil) -> some View {
     HStack {
-      Label(title, systemImage: icon).font(.system(size: 14, weight: .semibold))
+      Label(L10n.text(title), systemImage: icon).font(.system(size: 14, weight: .semibold))
       Spacer(minLength: 4)
-      if let caption { Text(caption).font(.system(size: 12)).foregroundStyle(.secondary) }
+      if let caption { Text(L10n.text(caption)).font(.system(size: 12)).foregroundStyle(.secondary) }
     }
   }
 
@@ -179,11 +182,11 @@ import SwiftUI
           .frame(width: 64, height: 64)
           .accessibilityLabel("Tỷ lệ RAM đang dùng")
           .accessibilityValue(
-            memoryFraction.map { "\(Int(($0 * 100).rounded())) phần trăm" } ?? "Chưa có dữ liệu")
+            memoryFraction.map { L10n.format("%lld phần trăm", Int64(($0 * 100).rounded())) } ?? L10n.text("Chưa có dữ liệu"))
           VStack(alignment: .leading, spacing: 3) {
             Text(bytes(monitor.sample?.memoryUsed))
               .font(.system(size: 25, weight: .bold, design: .rounded)).monospacedDigit()
-            Text("đang dùng / \(bytes(physicalMemory))")
+            Text(L10n.format("đang dùng / %@", bytes(physicalMemory)))
               .font(.system(size: 12)).foregroundStyle(.secondary)
           }
           Spacer(minLength: 0)
@@ -208,14 +211,14 @@ import SwiftUI
           Spacer(minLength: 0)
           smallMetric("↑ Gửi", rate(monitor.networkRate?.sent), prominent: true)
         }
-        Text(
+        Text(L10n.text(
           monitor.sample?.network == nil
             ? "Không đọc được giao diện mạng"
             : (monitor.sample?.network?.isEmpty == true
               ? "Không có giao diện en* đang bật"
               : (monitor.networkRate == nil
                 ? "Đang chờ mẫu kế tiếp…" : "Lưu lượng thực tế · không phải speed test"))
-        )
+        ))
         .font(.system(size: 12)).foregroundStyle(.secondary)
       }.frame(maxWidth: .infinity, minHeight: 124, alignment: .top)
     }
@@ -237,9 +240,9 @@ import SwiftUI
             .accessibilityLabel("Dung lượng lưu trữ đang dùng")
         }
         HStack {
-          Text("Tổng \(diskBytes(monitor.sample?.diskTotal))")
+          Text(L10n.format("Tổng %@", diskBytes(monitor.sample?.diskTotal)))
           Spacer(minLength: 4)
-          if let used = diskFraction { Text("\(Int((used * 100).rounded()))% đã dùng") }
+          if let used = diskFraction { Text(L10n.format("%lld%% đã dùng", Int64((used * 100).rounded()))) }
         }.font(.system(size: 12)).foregroundStyle(.secondary)
       }.frame(maxWidth: .infinity, minHeight: 124, alignment: .top)
     }
@@ -264,7 +267,7 @@ import SwiftUI
         Text("macOS · chưa hỗ trợ nhiệt độ °C").font(.system(size: 12)).foregroundStyle(.secondary)
       }
       Spacer(minLength: 8)
-      Text(monitor.sample.map { SystemMonitor.thermalTitle($0.thermal) } ?? "Chưa có dữ liệu")
+      Text(monitor.sample.map { SystemMonitor.thermalTitle($0.thermal) } ?? L10n.text("Chưa có dữ liệu"))
         .font(.system(size: 13, weight: .medium)).foregroundStyle(thermalColor)
         .multilineTextAlignment(.trailing)
     }
@@ -278,11 +281,11 @@ import SwiftUI
       VStack(alignment: .leading, spacing: 12) {
         detail(
           "RAM",
-          "Active + wired + compressed; không phải áp lực bộ nhớ. Wired: \(bytes(monitor.sample?.memoryWired)). Swap dùng dung lượng ổ đĩa."
+          L10n.format("Active + wired + compressed; không phải áp lực bộ nhớ. Wired: %@. Swap dùng dung lượng ổ đĩa.", bytes(monitor.sample?.memoryWired))
         )
         detail(
           "Mạng",
-          "Giao diện: \(monitor.sample?.network?.keys.sorted().joined(separator: ", ") ?? "Không đọc được"). Chỉ cộng en*, không cộng trùng VPN, loopback hoặc kết nối ngang hàng; gồm cả mạng nội bộ."
+          L10n.format("Giao diện: %@. Chỉ cộng en*, không cộng trùng VPN, loopback hoặc kết nối ngang hàng; gồm cả mạng nội bộ.", monitor.sample?.network?.keys.sorted().joined(separator: ", ") ?? L10n.text("Không đọc được"))
         )
         detail(
           "Lưu trữ",
@@ -310,7 +313,7 @@ import SwiftUI
   private var footer: some View {
     HStack(spacing: 6) {
       Circle().fill(monitor.running ? XmacTheme.blue : .secondary).frame(width: 6, height: 6)
-      Text(monitor.running ? "Đang theo dõi" : "Đã tạm dừng")
+      Text(L10n.text(monitor.running ? "Đang theo dõi" : "Đã tạm dừng"))
       if let date = monitor.sample?.date {
         Text("· \(date.formatted(date: .omitted, time: .standard))").monospacedDigit()
       }
@@ -321,7 +324,7 @@ import SwiftUI
 
   private func smallMetric(_ title: String, _ value: String, prominent: Bool = false) -> some View {
     VStack(alignment: .leading, spacing: 4) {
-      Text(title).font(.system(size: 12)).foregroundStyle(.secondary)
+      Text(L10n.text(title)).font(.system(size: 12)).foregroundStyle(.secondary)
       Text(value).font(.system(size: prominent ? 23 : 14, weight: .semibold, design: .rounded))
         .monospacedDigit()
     }
@@ -329,8 +332,8 @@ import SwiftUI
 
   private func detail(_ title: String, _ text: String) -> some View {
     VStack(alignment: .leading, spacing: 3) {
-      Text(title).fontWeight(.semibold)
-      Text(text).foregroundStyle(.secondary)
+      Text(L10n.text(title)).fontWeight(.semibold)
+      Text(L10n.text(text)).foregroundStyle(.secondary)
     }
   }
 }

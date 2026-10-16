@@ -43,7 +43,7 @@ public struct CutPasteView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Danh sách tệp đang chờ dán")
                                 .font(.system(size: 15, weight: .bold))
-                            Text(cutPaste.cutFiles.isEmpty ? "Hiện không có tệp nào được cắt." : "Có \(cutPaste.cutFiles.count) tệp đang chờ di chuyển.")
+                            Text(cutPaste.cutFiles.isEmpty ? L10n.text("Hiện không có tệp nào được cắt.") : L10n.format("Có %lld tệp đang chờ di chuyển.", Int64(cutPaste.cutFiles.count)))
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                         }
@@ -121,7 +121,7 @@ struct ShortcutRow: View {
                 .frame(width: 56)
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(L10n.text(title))
                     .font(.system(size: 13, weight: .semibold))
                 Text(desc)
                     .font(.system(size: 11))

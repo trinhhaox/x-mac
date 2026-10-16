@@ -132,7 +132,7 @@ public struct VietnameseIMEView: View {
                                         .buttonStyle(.plain)
                                         .foregroundColor(.red)
                                         .help("Xóa gõ tắt")
-                                        .accessibilityLabel("Xóa gõ tắt \(item.shortcut)")
+                                        .accessibilityLabel(L10n.format("Xóa gõ tắt %@", item.shortcut))
                                     }
                                 }
                                 if index < macroManager.macros.count - 1 {

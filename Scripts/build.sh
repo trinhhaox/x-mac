@@ -39,6 +39,7 @@ SWIFT_SOURCES=(
     "$PROJECT_DIR/Sources/Features/Clipboard/ClipboardHistory.swift"
     "$PROJECT_DIR/Sources/Features/Organizer/DownloadsOrganizer.swift"
     "$PROJECT_DIR/Sources/Features/FileSearch/FileSearchEngine.swift"
+    "$PROJECT_DIR/Sources/App/Localization.swift"
     "$PROJECT_DIR/Sources/App/AppState.swift"
     "$PROJECT_DIR/Sources/UI/ViewModels/AppViewModels.swift"
     "$PROJECT_DIR/Sources/UI/Components/ModernComponents.swift"
@@ -116,6 +117,11 @@ cp "$PROJECT_DIR/Resources/Info.plist" "$APP_BUNDLE/Contents/"
 if [ -f "$PROJECT_DIR/Resources/AppIcon.icns" ]; then
     cp "$PROJECT_DIR/Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/"
 fi
+for localization_dir in "$PROJECT_DIR"/Sources/LocalizationResources/*.lproj; do
+    if [ -d "$localization_dir" ]; then
+        cp -R "$localization_dir" "$APP_BUNDLE/Contents/Resources/"
+    fi
+done
 
 rm "$BUILD_DIR/$APP_NAME"
 

@@ -8,14 +8,14 @@ public struct AppVersionInfo: Equatable {
     public static let current = from(infoDictionary: Bundle.main.infoDictionary ?? [:])
 
     public static func from(infoDictionary: [String: Any]) -> AppVersionInfo {
-        let version = infoDictionary["CFBundleShortVersionString"] as? String ?? "Không xác định"
+        let version = infoDictionary["CFBundleShortVersionString"] as? String ?? L10n.text("Không xác định")
         let build = infoDictionary["CFBundleVersion"] as? String ?? ""
         return AppVersionInfo(version: version, build: build)
     }
 
     public var settingsDescription: String {
-        guard !build.isEmpty, build != version else { return "Phiên bản \(version)" }
-        return "Phiên bản \(version) (Build \(build))"
+        guard !build.isEmpty, build != version else { return L10n.format("Phiên bản %@", version) }
+        return L10n.format("Phiên bản %@ (Build %@)", version, build)
     }
 }
 
@@ -34,6 +34,8 @@ public enum NavigationTab: String, CaseIterable, Identifiable {
     case settings = "Cài đặt"
     
     public var id: String { rawValue }
+
+    public var title: String { L10n.text(rawValue) }
     
     public var iconName: String {
         switch self {
@@ -57,8 +59,8 @@ public class AppState: ObservableObject {
     public static let shared = AppState()
     
     @Published public var selectedTab: NavigationTab = .overview
-    @Published public var systemRAMUsage: String = "Đang tải..."
-    @Published public var diskFreeSpace: String = "Đang tải..."
+    @Published public var systemRAMUsage: String = L10n.text("Đang tải...")
+    @Published public var diskFreeSpace: String = L10n.text("Đang tải...")
     
     private init() {
         updateSystemStats()
@@ -70,7 +72,7 @@ public class AppState: ObservableObject {
             if let space = try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeAvailableCapacityKey]).volumeAvailableCapacity {
                 let formatted = ByteCountFormatter.string(fromByteCount: Int64(space), countStyle: .file)
                 DispatchQueue.main.async {
-                    self.diskFreeSpace = "\(formatted) khả dụng"
+                    self.diskFreeSpace = L10n.format("%@ khả dụng", formatted)
                 }
             }
             
@@ -92,7 +94,7 @@ public class AppState: ObservableObject {
                 let used = active + wired + compressed
                 let formattedUsed = ByteCountFormatter.string(fromByteCount: used, countStyle: .memory)
                 DispatchQueue.main.async {
-                    self.systemRAMUsage = "\(formattedUsed) đang dùng"
+                    self.systemRAMUsage = L10n.format("%@ đang dùng", formattedUsed)
                 }
             }
         }

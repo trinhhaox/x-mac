@@ -80,7 +80,7 @@ struct MenuBarDashboardContent: View {
           downloadsSection
           disksSection
           if !snapshot.message.isEmpty {
-            Text(snapshot.message).font(.system(size: 12)).foregroundStyle(.secondary)
+            Text(L10n.text(snapshot.message)).font(.system(size: 12)).foregroundStyle(.secondary)
               .fixedSize(horizontal: false, vertical: true)
           }
         }
@@ -113,14 +113,14 @@ struct MenuBarDashboardContent: View {
                 .foregroundStyle(.secondary)
             }
             Label(
-              snapshot.online ? "Có kết nối mạng" : "Ngoại tuyến",
+              L10n.text(snapshot.online ? "Có kết nối mạng" : "Ngoại tuyến"),
               systemImage: snapshot.online ? "wifi" : "wifi.slash"
             )
             .font(.system(size: 11)).foregroundStyle(.secondary)
           }
         }
       }
-      .buttonStyle(.plain).help("Mở bảng điều khiển Xmac")
+      .buttonStyle(.plain).help(L10n.text("Mở bảng điều khiển Xmac"))
       .accessibilityIdentifier("dashboard.overview")
       .accessibilityLabel("Mở bảng điều khiển Xmac")
       Spacer(minLength: 8)
@@ -175,7 +175,7 @@ struct MenuBarDashboardContent: View {
     } label: {
       HStack(spacing: 5) {
         if selected { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)) }
-        Text(title).font(.system(size: 12, weight: selected ? .semibold : .regular))
+        Text(L10n.text(title)).font(.system(size: 12, weight: selected ? .semibold : .regular))
       }
       .frame(maxWidth: .infinity).padding(.vertical, 6)
       .foregroundStyle(selected ? XmacTheme.blue : Color.secondary)
@@ -192,7 +192,7 @@ struct MenuBarDashboardContent: View {
         "Tải xuống", icon: "arrow.down.circle", count: snapshot.activeDownloads.count,
         action: "Xem tất cả", tab: .downloads)
       if snapshot.activeDownloads.isEmpty {
-        empty("Không có tác vụ đang tải", icon: "tray")
+        empty(L10n.text("Không có tác vụ đang tải"), icon: "tray")
       }
       ForEach(snapshot.activeDownloads.prefix(3)) { item in
         VStack(alignment: .leading, spacing: 5) {
@@ -210,7 +210,7 @@ struct MenuBarDashboardContent: View {
             .padding(5).background(
               XmacTheme.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 6)
             )
-            .accessibilityLabel("Tạm dừng tải \(item.fileName)")
+            .accessibilityLabel(L10n.format("Tạm dừng tải %@", item.fileName))
             .accessibilityIdentifier("dashboard.pause.\(item.id.uuidString)")
           }
           if item.expectedBytes > 0 { ProgressView(value: item.progress).tint(XmacTheme.blue) }
@@ -218,7 +218,7 @@ struct MenuBarDashboardContent: View {
             item.status == .waitingForNetwork
               ? "Chờ kết nối mạng"
               : (item.expectedBytes > 0
-                ? "\(Int(item.progress * 100))% đã tải" : "Đang tải · chưa rõ tổng dung lượng")
+                ? L10n.format("%lld%% đã tải", Int64(item.progress * 100)) : L10n.text("Đang tải · chưa rõ tổng dung lượng"))
           )
           .font(.system(size: 11)).foregroundStyle(
             item.status == .waitingForNetwork ? Color.orange : Color.secondary)
@@ -254,7 +254,7 @@ struct MenuBarDashboardContent: View {
             ).help(disk.name).foregroundStyle(Color.primary)
             Text(
               disk.hasReliableCapacity
-                ? "\(disk.formattedFreeSize) trống · \(disk.fileSystem)" : "Chưa gắn kết"
+                ? L10n.format("%@ trống · %@", disk.formattedFreeSize, disk.fileSystem) : L10n.text("Chưa gắn kết")
             )
             .font(.system(size: 11)).foregroundStyle(Color.secondary)
           }
@@ -265,7 +265,7 @@ struct MenuBarDashboardContent: View {
             Image(systemName: "folder")
           }
           .buttonStyle(.plain).disabled(!disk.isMounted || snapshot.ejecting)
-          .help("Mở \(disk.name) trong Finder").accessibilityLabel("Mở \(disk.name) trong Finder")
+          .help(L10n.format("Mở %@ trong Finder", disk.name)).accessibilityLabel(L10n.format("Mở %@ trong Finder", disk.name))
           .accessibilityIdentifier("dashboard.finder.\(disk.id)")
           Button {
             actions.eject(disk)
@@ -273,7 +273,7 @@ struct MenuBarDashboardContent: View {
             Image(systemName: "eject")
           }
           .buttonStyle(.plain).disabled(!disk.isMounted || snapshot.ejecting)
-          .help("Ngắt kết nối \(disk.name)").accessibilityLabel("Ngắt kết nối \(disk.name)")
+          .help(L10n.format("Ngắt kết nối %@", disk.name)).accessibilityLabel(L10n.format("Ngắt kết nối %@", disk.name))
           .accessibilityIdentifier("dashboard.eject.\(disk.id)")
         }
         .foregroundStyle(XmacTheme.blue)
@@ -285,7 +285,7 @@ struct MenuBarDashboardContent: View {
     _ title: String, icon: String, count: Int, action: String, tab: NavigationTab
   ) -> some View {
     HStack(spacing: 5) {
-      Label(title, systemImage: icon).font(.system(size: 13, weight: .semibold))
+      Label(L10n.text(title), systemImage: icon).font(.system(size: 13, weight: .semibold))
       if count > 0 {
         Text("\(count)").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
       }
@@ -294,7 +294,7 @@ struct MenuBarDashboardContent: View {
         actions.open(tab)
       } label: {
         HStack(spacing: 3) {
-          Text(action)
+          Text(L10n.text(action))
           Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold))
         }
       }
@@ -305,7 +305,7 @@ struct MenuBarDashboardContent: View {
   }
 
   private func empty(_ text: String, icon: String) -> some View {
-    Label(text, systemImage: icon).font(.system(size: 12)).foregroundStyle(.secondary).padding(
+    Label(L10n.text(text), systemImage: icon).font(.system(size: 12)).foregroundStyle(.secondary).padding(
       .vertical, 3)
   }
 
@@ -315,7 +315,7 @@ struct MenuBarDashboardContent: View {
     } label: {
       VStack(spacing: 4) {
         Image(systemName: icon).font(.system(size: 15))
-        Text(title).font(.system(size: 12, weight: .medium))
+        Text(L10n.text(title)).font(.system(size: 12, weight: .medium))
       }
       .frame(maxWidth: .infinity).padding(.vertical, 5).contentShape(Rectangle())
     }
@@ -332,6 +332,7 @@ struct MenuBarDashboardContent: View {
 }
 
 struct MenuBarDashboard: View {
+  @ObservedObject private var localization = LocalizationManager.shared
   @ObservedObject private var downloads = DownloadManager.shared
   @ObservedObject private var disks = DiskManager.shared
   @ObservedObject private var ime = InputHookManager.shared
@@ -371,9 +372,11 @@ struct MenuBarDashboard: View {
         }),
       maximumHeight: max(240, min(620, (NSScreen.main?.visibleFrame.height ?? 720) - 100))
     )
+    .environment(\.locale, localization.language.locale)
+    .id(localization.language)
     .alert(item: $state.ejectCandidate) { volume in
       Alert(
-        title: Text("Ngắt kết nối \(volume.name)?"),
+        title: Text(L10n.format("Ngắt kết nối %@?", volume.name)),
         message: Text("Hãy hoàn tất các thao tác đọc/ghi trên ổ đĩa trước khi tiếp tục."),
         primaryButton: .destructive(Text("Ngắt kết nối")) {
           state.ejecting = true
@@ -382,7 +385,7 @@ struct MenuBarDashboard: View {
               state.ejecting = false
               state.message =
                 success
-                ? "Đã ngắt kết nối \(volume.name)."
+                ? L10n.format("Đã ngắt kết nối %@.", volume.name)
                 : "Chưa thể ngắt kết nối; ổ có thể đang được sử dụng."
               disks.refreshVolumes()
             }

@@ -120,14 +120,14 @@ public struct AppUninstallerView: View {
         }
         .alert(isPresented: $vm.showConfirmAlert) {
             Alert(
-                title: Text("Xác nhận gỡ bỏ \(vm.selectedApp?.name ?? "")?"),
+                title: Text(L10n.format("Xác nhận gỡ bỏ %@?", vm.selectedApp?.name ?? "")),
                 message: Text("Ứng dụng và các file phụ trợ đã chọn sẽ được chuyển an toàn vào Thùng rác (Trash)."),
                 primaryButton: .destructive(Text("Chuyển vào Thùng rác")) {
                     if let app = vm.selectedApp {
                         uninstaller.uninstallApp(app) { success in
                             self.vm.uninstallResultText = success
-                                ? "Đã chuyển các mục đã chọn của \(app.name) vào Thùng rác."
-                                : "Không thể gỡ bỏ đầy đủ \(app.name). App bundle được giữ lại nếu file phụ trợ gặp lỗi."
+                                ? L10n.format("Đã chuyển các mục đã chọn của %@ vào Thùng rác.", app.name)
+                                : L10n.format("Không thể gỡ bỏ đầy đủ %@. App bundle được giữ lại nếu file phụ trợ gặp lỗi.", app.name)
                             self.vm.selectedApp = nil
                         }
                     }
@@ -204,7 +204,7 @@ struct AppDetailView: View {
                         Text(app.bundleIdentifier)
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundColor(.secondary)
-                        Text("Tổng dung lượng: \(app.formattedTotalSize)")
+                        Text(L10n.format("Tổng dung lượng: %@", app.formattedTotalSize))
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(XmacTheme.blue)
                     }
@@ -231,13 +231,13 @@ struct AppDetailView: View {
                 .overlay(RoundedRectangle(cornerRadius: 18).stroke(XmacTheme.cardStroke, lineWidth: 1))
                 
                 // Danh sách file phụ trợ
-                Text("Tệp phụ trợ phát hiện được (\(app.associatedFiles.count) mục):")
+                Text(L10n.format("Tệp phụ trợ phát hiện được (%lld mục):", Int64(app.associatedFiles.count)))
                     .font(.system(size: 13, weight: .bold))
                 
                 VStack(spacing: 8) {
                     ForEach($selection.app.associatedFiles) { $file in
                         HStack {
-                            Toggle("Chọn tệp \(file.name)", isOn: $file.isSelected)
+                            Toggle(L10n.format("Chọn tệp %@", file.name), isOn: $file.isSelected)
                                 .labelsHidden()
 
                             Image(systemName: iconForType(file.fileType))
@@ -251,7 +251,7 @@ struct AppDetailView: View {
                                     Text("(\(file.fileType))")
                                         .font(.system(size: 10))
                                         .foregroundColor(.secondary)
-                                    Text(file.confidence.rawValue)
+                                    Text(file.confidence.title)
                                         .font(.system(size: 9, weight: .medium))
                                         .padding(.horizontal, 5)
                                         .padding(.vertical, 2)

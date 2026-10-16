@@ -19,7 +19,7 @@ public struct OverviewView: View {
                     subtitle: "Trạng thái quan trọng và tác vụ thường dùng trên máy Mac."
                 ) {
                     Button(action: refresh) {
-                        Label("Làm mới", systemImage: "arrow.clockwise")
+                        Label(L10n.text("Làm mới"), systemImage: "arrow.clockwise")
                     }
                     .buttonStyle(BrandSecondaryButtonStyle())
                 }
@@ -36,8 +36,8 @@ public struct OverviewView: View {
                     MetricCard(
                         title: "Tải xuống",
                         value: downloads.activeCount > 0
-                            ? "\(downloads.activeCount) đang tải"
-                            : "Không có tác vụ",
+                            ? L10n.format("%lld đang tải", Int64(downloads.activeCount))
+                            : L10n.text("Không có tác vụ"),
                         subtitle: "Tác vụ đang chạy hoặc chờ kết nối",
                         iconName: "arrow.down.circle.fill",
                         accentColor: XmacTheme.blue
@@ -46,17 +46,17 @@ public struct OverviewView: View {
                     MetricCard(
                         title: "Finder Cut & Paste",
                         value: permissions.isAccessibilityGranted
-                            ? (cutPaste.isEnabled ? "Đang hoạt động" : "Đang tắt")
-                            : "Cần quyền Trợ năng",
-                        subtitle: "\(cutPaste.cutFiles.count) mục đang chờ di chuyển",
+                            ? L10n.text(cutPaste.isEnabled ? "Đang hoạt động" : "Đang tắt")
+                            : L10n.text("Cần quyền Trợ năng"),
+                        subtitle: L10n.format("%lld mục đang chờ di chuyển", Int64(cutPaste.cutFiles.count)),
                         iconName: "scissors",
                         accentColor: XmacTheme.cyan
                     )
 
                     MetricCard(
                         title: "Ổ đĩa & NTFS",
-                        value: "\(diskManager.volumes.count) ổ đĩa",
-                        subtitle: "\(diskManager.volumes.filter { $0.isNTFS }.count) phân vùng NTFS",
+                        value: L10n.format("%lld ổ đĩa", Int64(diskManager.volumes.count)),
+                        subtitle: L10n.format("%lld phân vùng NTFS", Int64(diskManager.volumes.filter { $0.isNTFS }.count)),
                         iconName: "externaldrive.fill",
                         accentColor: XmacTheme.indigo
                     )
@@ -141,7 +141,7 @@ public struct OverviewView: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                Text(title)
+                Text(L10n.text(title))
                 Spacer()
             }
             .frame(maxWidth: .infinity)

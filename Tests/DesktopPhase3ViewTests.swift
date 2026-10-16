@@ -38,6 +38,7 @@ import Testing
     func renderNewViewsUsingOnlyIsolatedSampleData() async throws {
         _ = NSApplication.shared
         let originalTab = AppState.shared.selectedTab
+        let originalLanguage = LocalizationManager.shared.language
         let name = "XmacDesktopViewTest.\(UUID().uuidString)"
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(name)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -48,6 +49,7 @@ import Testing
         defer {
             organizer.stopWatching(); history.stop(); board.releaseGlobally()
             AppState.shared.selectedTab = originalTab
+            LocalizationManager.shared.language = originalLanguage
             defaults.removePersistentDomain(forName: name)
             try? FileManager.default.removeItem(at: root)
         }
@@ -80,6 +82,9 @@ import Testing
         try await render(VietnameseIMEView(), path: "/tmp/xmac-ime-phase2.png")
         AppState.shared.selectedTab = .overview
         try await render(MainView(), path: "/tmp/xmac-main-phase3.png")
+        LocalizationManager.shared.language = .english
+        try await render(SettingsView(), path: "/tmp/xmac-settings-english.png")
+        try await render(MainView(), path: "/tmp/xmac-main-english.png")
         organizer.requestApply()
         try Data("not part of the confirmed preview".utf8).write(to: root.appendingPathComponent("second.pdf"))
         try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(-10)], ofItemAtPath: root.appendingPathComponent("second.pdf").path)

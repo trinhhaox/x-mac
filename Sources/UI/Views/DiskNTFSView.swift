@@ -93,16 +93,16 @@ public struct DiskNTFSView: View {
     
     private func mountVolume(_ volume: DiskVolume) {
         vm.isProcessing = true
-        vm.mountStatusMessage = "Đang kích hoạt chế độ ghi NTFS cho \(volume.name)..."
+        vm.mountStatusMessage = L10n.format("Đang kích hoạt chế độ ghi NTFS cho %@...", volume.name)
         NTFSMountHelper.shared.mountNTFSReadWrite(volume: volume) { result in
             self.vm.isProcessing = false
             switch result {
             case .success(let mountPath):
-                self.vm.mountStatusMessage = "Kích hoạt ghi NTFS thành công tại: \(mountPath)"
+                self.vm.mountStatusMessage = L10n.format("Kích hoạt ghi NTFS thành công tại: %@", mountPath)
             case .requiresSudo(let cmd):
-                self.vm.mountStatusMessage = "Cần quyền administrator: \(cmd)"
+                self.vm.mountStatusMessage = L10n.format("Cần quyền administrator: %@", cmd)
             case .failure(let err):
-                self.vm.mountStatusMessage = "Lỗi kích hoạt NTFS: \(err)"
+                self.vm.mountStatusMessage = L10n.format("Lỗi kích hoạt NTFS: %@", err)
             case .helperMissing(let message):
                 self.vm.mountStatusMessage = message
             }
@@ -111,11 +111,11 @@ public struct DiskNTFSView: View {
     
     private func ejectVolume(_ volume: DiskVolume) {
         vm.isProcessing = true
-        vm.mountStatusMessage = "Đang ngắt kết nối an toàn cho \(volume.name)..."
+        vm.mountStatusMessage = L10n.format("Đang ngắt kết nối an toàn cho %@...", volume.name)
         NTFSMountHelper.shared.ejectVolume(volume: volume) { success in
             self.vm.isProcessing = false
             if success {
-                self.vm.mountStatusMessage = "Đã ngắt kết nối an toàn cho \(volume.name). Bạn có thể rút ổ đĩa."
+                self.vm.mountStatusMessage = L10n.format("Đã ngắt kết nối an toàn cho %@. Bạn có thể rút ổ đĩa.", volume.name)
             } else {
                 self.vm.mountStatusMessage = "Không thể ngắt kết nối ổ đĩa. Có thể tệp tin đang được sử dụng."
             }
@@ -166,7 +166,7 @@ struct DiskVolumeCard: View {
                             )
                         }
                         
-                        Text("Phân vùng: /dev/\(volume.bsdName)  •  Gắn kết: \(volume.mountPoint ?? "Chưa gắn")")
+                        Text(L10n.format("Phân vùng: /dev/%@  •  Gắn kết: %@", volume.bsdName, volume.mountPoint ?? L10n.text("Chưa gắn kết")))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
@@ -191,7 +191,7 @@ struct DiskVolumeCard: View {
                             .buttonStyle(BrandSecondaryButtonStyle())
                             .disabled(!volume.isMounted)
                             .help("Ngắt kết nối an toàn")
-                            .accessibilityLabel("Ngắt kết nối \(volume.name) an toàn")
+                            .accessibilityLabel(L10n.format("Ngắt kết nối %@ an toàn", volume.name))
                         }
                     }
                 }
@@ -212,11 +212,11 @@ struct DiskVolumeCard: View {
                         .frame(height: 8)
                         
                         HStack {
-                            Text("Đã dùng: \(volume.formattedUsedSize) (\(Int(volume.usedPercentage * 100))%)")
+                            Text(L10n.format("Đã dùng: %@ (%lld%%)", volume.formattedUsedSize, Int64(volume.usedPercentage * 100)))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text("Còn trống: \(volume.formattedFreeSize) / Tổng: \(volume.formattedTotalSize)")
+                            Text(L10n.format("Còn trống: %@ / Tổng: %@", volume.formattedFreeSize, volume.formattedTotalSize))
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(.secondary)
                         }
@@ -227,7 +227,7 @@ struct DiskVolumeCard: View {
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text("Tổng: \(volume.formattedTotalSize)")
+                        Text(L10n.format("Tổng: %@", volume.formattedTotalSize))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.secondary)
                     }

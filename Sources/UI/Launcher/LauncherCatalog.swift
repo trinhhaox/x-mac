@@ -16,10 +16,10 @@ struct LauncherEntry: Identifiable, Equatable {
 
     static var commands: [LauncherEntry] {
         NavigationTab.allCases.map {
-            LauncherEntry(id: "tab:\($0.rawValue)", title: $0.rawValue,
-                          subtitle: "Mở trong Xmac", icon: $0.iconName, destination: .tab($0))
-        } + [LauncherEntry(id: "language", title: "Chuyển Tiếng Việt / English",
-                           subtitle: "Bật hoặc tắt bộ gõ • Cần quyền Trợ năng",
+            LauncherEntry(id: "tab:\($0.rawValue)", title: $0.title,
+                          subtitle: L10n.text("Mở trong Xmac"), icon: $0.iconName, destination: .tab($0))
+        } + [LauncherEntry(id: "language", title: L10n.text("Chuyển Tiếng Việt / English"),
+                           subtitle: L10n.text("Bật hoặc tắt bộ gõ • Cần quyền Trợ năng"),
                            icon: "character.bubble", destination: .toggleLanguage)]
     }
 

@@ -150,7 +150,7 @@ final class DownloadsOrganizer: ObservableObject {
     }
     @Published private(set) var preview: [OrganizationPreview] = []
     @Published private(set) var busy = false
-    @Published private(set) var message = "Xem trước trước khi di chuyển tệp."
+    @Published private(set) var message = L10n.text("Xem trước trước khi di chuyển tệp.")
     @Published private(set) var undoCount = 0
     @Published private(set) var undoRoot = ""
     @Published var confirmation = false
@@ -185,7 +185,7 @@ final class DownloadsOrganizer: ObservableObject {
     func startWatching() {
         stopWatching()
         let descriptor = open(root.path, O_EVTONLY)
-        guard descriptor >= 0 else { message = "Không thể theo dõi thư mục. Kiểm tra quyền truy cập."; return }
+        guard descriptor >= 0 else { message = L10n.text("Không thể theo dõi thư mục. Kiểm tra quyền truy cập."); return }
         let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: descriptor, eventMask: [.write, .rename, .delete], queue: .main)
         source.setEventHandler { [weak self] in
             guard let self else { return }
@@ -209,7 +209,7 @@ final class DownloadsOrganizer: ObservableObject {
             DispatchQueue.main.async {
                 guard self.generation == token, !self.busy else { return }
                 switch result {
-                case .success(let entries): self.preview = entries; self.message = "Xem trước: \(entries.count) tệp sẵn sàng (tối đa 500). Chỉ di chuyển khi xác nhận."
+                case .success(let entries): self.preview = entries; self.message = L10n.format("Xem trước: %lld tệp sẵn sàng (tối đa 500). Chỉ di chuyển khi xác nhận.", Int64(entries.count))
                 case .failure(let error): self.preview = []; self.message = error.localizedDescription
                 }
             }
@@ -246,7 +246,7 @@ final class DownloadsOrganizer: ObservableObject {
                 self.busy = false; self.undoCount = count; self.preview = []
                 self.undoRoot = journal?.root.path ?? ""
                 switch result {
-                case .success(let errors): self.message = errors.isEmpty ? "Đã hoàn tất. \(count) tệp còn có thể hoàn tác." : errors.prefix(5).joined(separator: "\n")
+                case .success(let errors): self.message = errors.isEmpty ? L10n.format("Đã hoàn tất. %lld tệp còn có thể hoàn tác.", Int64(count)) : errors.prefix(5).joined(separator: "\n")
                 case .failure(let error): self.message = error.localizedDescription
                 }
             }

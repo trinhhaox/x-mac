@@ -36,7 +36,7 @@ public struct FileSearchView: View {
                                 .fill(engine.results.isEmpty ? Color.secondary.opacity(0.42) : Color.green)
                                 .frame(width: 7, height: 7)
                         }
-                        Text(engine.statusMessage)
+                        Text(L10n.text(engine.statusMessage))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.secondary)
                     }
@@ -116,14 +116,14 @@ public struct FileSearchView: View {
                 HStack(spacing: 12) {
                     Picker("Phạm vi", selection: $viewState.scope) {
                         ForEach(FileSearchScope.allCases) { scope in
-                            Text(scope.rawValue).tag(scope)
+                            Text(scope.title).tag(scope)
                         }
                     }
                     .frame(maxWidth: .infinity)
 
                     Picker("Loại", selection: $viewState.kind) {
                         ForEach(FileSearchKind.allCases) { kind in
-                            Text(kind.rawValue).tag(kind)
+                            Text(kind.title).tag(kind)
                         }
                     }
                     .frame(maxWidth: .infinity)

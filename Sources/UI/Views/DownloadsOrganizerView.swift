@@ -134,7 +134,7 @@ struct DownloadsOrganizerView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(organizer.undoCount > 0 ? "Có thể hoàn tác" : "Trạng thái bản xem trước")
                         .font(.system(size: 13, weight: .semibold))
-                    Text(organizer.message)
+                    Text(L10n.text(organizer.message))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .textSelection(.enabled)
@@ -143,7 +143,7 @@ struct DownloadsOrganizerView: View {
                 Button("Quét lại") { organizer.refresh() }
                     .buttonStyle(BrandSecondaryButtonStyle())
                     .disabled(organizer.busy)
-                Button("Sắp xếp \(organizer.preview.count) tệp…") { organizer.requestApply() }
+                Button(L10n.format("Sắp xếp %lld tệp…", Int64(organizer.preview.count))) { organizer.requestApply() }
                     .buttonStyle(BrandPrimaryButtonStyle())
                     .disabled(organizer.busy || organizer.preview.isEmpty || organizer.undoCount > 0)
             }
@@ -151,7 +151,7 @@ struct DownloadsOrganizerView: View {
             if organizer.undoCount > 0 {
                 Divider().opacity(0.55)
                 HStack(spacing: 10) {
-                    Text("\(organizer.undoCount) tệp của lần sắp xếp trước vẫn có thể khôi phục.")
+                    Text(L10n.format("%lld tệp của lần sắp xếp trước vẫn có thể khôi phục.", Int64(organizer.undoCount)))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                     Spacer()
@@ -177,7 +177,7 @@ struct DownloadsOrganizerView: View {
         if !organizer.preview.isEmpty {
             BrandSectionTitle(
                 "Bản xem trước",
-                subtitle: "\(organizer.preview.count) tệp sẽ được di chuyển sau khi bạn xác nhận."
+                subtitle: L10n.format("%lld tệp sẽ được di chuyển sau khi bạn xác nhận.", Int64(organizer.preview.count))
             )
 
             ModernCard {

@@ -64,7 +64,7 @@ public struct JunkCleanerView: View {
                                 cleaner.isCleaning
                                     ? "Đang dọn..."
                                     : (cleaner.totalSelectedSize > 0
-                                        ? "Dọn \(cleaner.formattedTotalSelectedSize)"
+                                        ? L10n.format("Dọn %@", cleaner.formattedTotalSelectedSize)
                                         : "Chọn mục để dọn"),
                                 systemImage: "trash.fill"
                             )
@@ -153,8 +153,8 @@ public struct JunkCleanerView: View {
                             countStyle: .file
                         )
                         vm.cleanResultText = result.failedCount == 0
-                            ? "Đã xóa \(result.deletedCount) mục, giải phóng \(formatted)."
-                            : "Đã xóa \(result.deletedCount) mục (\(formatted)); \(result.failedCount) mục thất bại hoặc bị từ chối."
+                            ? L10n.format("Đã xóa %lld mục, giải phóng %@.", Int64(result.deletedCount), formatted)
+                            : L10n.format("Đã xóa %lld mục (%@); %lld mục thất bại hoặc bị từ chối.", Int64(result.deletedCount), formatted, Int64(result.failedCount))
                     }
                 },
                 secondaryButton: .cancel(Text("Huỷ"))
@@ -172,7 +172,7 @@ struct CategoryRow: View {
         ModernCard {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Toggle("Chọn tất cả trong \(category.name)", isOn: $category.isSelected)
+                    Toggle(L10n.format("Chọn tất cả trong %@", category.name), isOn: $category.isSelected)
                         .labelsHidden()
                         .onChange(of: category.isSelected) { newValue in
                             for i in 0..<category.items.count {
@@ -207,8 +207,8 @@ struct CategoryRow: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(
                         vm.isExpanded(categoryName: category.name)
-                            ? "Thu gọn \(category.name)"
-                            : "Mở rộng \(category.name)"
+                            ? L10n.format("Thu gọn %@", category.name)
+                            : L10n.format("Mở rộng %@", category.name)
                     )
                 }
                 
@@ -217,7 +217,7 @@ struct CategoryRow: View {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach($category.items) { $item in
                             HStack {
-                                Toggle("Chọn \(item.name)", isOn: $item.isSelected)
+                                Toggle(L10n.format("Chọn %@", item.name), isOn: $item.isSelected)
                                     .labelsHidden()
                                 Text(item.name)
                                     .font(.system(size: 12))

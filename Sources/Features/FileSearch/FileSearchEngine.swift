@@ -11,6 +11,7 @@ public enum FileSearchScope: String, CaseIterable, Identifiable {
     case custom = "Thư mục đã chọn"
 
     public var id: String { rawValue }
+    public var title: String { L10n.text(rawValue) }
 }
 
 public enum FileSearchKind: String, CaseIterable, Identifiable {
@@ -24,6 +25,7 @@ public enum FileSearchKind: String, CaseIterable, Identifiable {
     case archives = "Tệp nén"
 
     public var id: String { rawValue }
+    public var title: String { L10n.text(rawValue) }
 
     fileprivate var metadataType: String? {
         switch self {
@@ -170,7 +172,7 @@ public final class FileSearchEngine: NSObject, ObservableObject {
 
     @Published public private(set) var results: [FileSearchResult] = []
     @Published public private(set) var isSearching = false
-    @Published public private(set) var statusMessage = "Nhập từ khóa để bắt đầu"
+    @Published public private(set) var statusMessage = L10n.text("Nhập từ khóa để bắt đầu")
     @Published public private(set) var customScopeURL: URL?
 
     private var metadataQuery: NSMetadataQuery?
@@ -192,7 +194,7 @@ public final class FileSearchEngine: NSObject, ObservableObject {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Chọn thư mục"
+        panel.prompt = L10n.text("Chọn thư mục")
         if panel.runModal() == .OK, let url = panel.url {
             customScopeURL = url
         }
@@ -204,7 +206,7 @@ public final class FileSearchEngine: NSObject, ObservableObject {
         stopQuery()
         results = []
         isSearching = false
-        statusMessage = "Nhập từ khóa để bắt đầu"
+        statusMessage = L10n.text("Nhập từ khóa để bắt đầu")
     }
 
     public func scheduleSearch(
@@ -230,7 +232,7 @@ public final class FileSearchEngine: NSObject, ObservableObject {
         activeExpression = expression
         guard !expression.isEmpty else {
             results = []
-            statusMessage = "Nhập từ khóa, ext:pdf hoặc type:image"
+            statusMessage = L10n.text("Nhập từ khóa, ext:pdf hoặc type:image")
             isSearching = false
             return
         }
@@ -255,10 +257,10 @@ public final class FileSearchEngine: NSObject, ObservableObject {
         metadataQuery = query
         results = []
         isSearching = true
-        statusMessage = "Đang hỏi chỉ mục Spotlight…"
+        statusMessage = L10n.text("Đang hỏi chỉ mục Spotlight…")
         if !query.start() {
             isSearching = false
-            statusMessage = "Không thể khởi động Spotlight"
+            statusMessage = L10n.text("Không thể khởi động Spotlight")
         }
     }
 
@@ -273,7 +275,7 @@ public final class FileSearchEngine: NSObject, ObservableObject {
     public func copyPath(_ result: FileSearchResult) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(result.path, forType: .string)
-        statusMessage = "Đã sao chép: \(result.name)"
+        statusMessage = L10n.format("Đã sao chép: %@", result.name)
     }
 
     public static func predicate(
@@ -374,7 +376,7 @@ public final class FileSearchEngine: NSObject, ObservableObject {
             items.append(FileSearchResult(
                 path: path,
                 name: (item.value(forAttribute: kMDItemFSName as String) as? String) ?? url.lastPathComponent,
-                kind: (item.value(forAttribute: kMDItemKind as String) as? String) ?? (values?.isDirectory == true ? "Thư mục" : "Tệp"),
+                kind: (item.value(forAttribute: kMDItemKind as String) as? String) ?? L10n.text(values?.isDirectory == true ? "Thư mục" : "Tệp"),
                 size: Int64(values?.fileSize ?? 0),
                 modifiedAt: values?.contentModificationDate,
                 isDirectory: values?.isDirectory == true
@@ -384,8 +386,8 @@ public final class FileSearchEngine: NSObject, ObservableObject {
         results = Self.rank(items, expression: activeExpression)
         isSearching = !finished
         statusMessage = finished
-            ? (results.isEmpty ? "Không tìm thấy kết quả phù hợp" : "\(results.count) kết quả từ Spotlight")
-            : "Đang cập nhật \(results.count) kết quả…"
+            ? (results.isEmpty ? L10n.text("Không tìm thấy kết quả phù hợp") : L10n.format("%lld kết quả từ Spotlight", Int64(results.count)))
+            : L10n.format("Đang cập nhật %lld kết quả…", Int64(results.count))
     }
 
     private static func rank(_ results: [FileSearchResult], expression: FileSearchExpression) -> [FileSearchResult] {

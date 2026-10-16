@@ -42,10 +42,10 @@ public class FinderCutPasteManager: ObservableObject {
         SoundEffectManager.shared.play(.cut)
 
         let count = selected.count
-        let title = "Đã cắt \(count) mục"
+        let title = L10n.format("Đã cắt %lld mục", Int64(count))
         let subtitle = count == 1
             ? (selected.first as NSString?)?.lastPathComponent ?? ""
-            : "Sẵn sàng để dán (⌘V)"
+            : L10n.text("Sẵn sàng để dán (⌘V)")
         sendNotification(title: title, body: subtitle)
         return true
     }
@@ -56,8 +56,8 @@ public class FinderCutPasteManager: ObservableObject {
 
         guard let currentFolder = FinderBridge.getCurrentFolder() else {
             sendNotification(
-                title: "Không thể dán",
-                body: "Không xác định được thư mục đích trong Finder."
+                title: L10n.text("Không thể dán"),
+                body: L10n.text("Không xác định được thư mục đích trong Finder.")
             )
             return true
         }
@@ -84,8 +84,8 @@ public class FinderCutPasteManager: ObservableObject {
 
                 guard !moved.isEmpty else {
                     self.sendNotification(
-                        title: "Không có mục nào được di chuyển",
-                        body: "Danh sách cắt được giữ lại để bạn thử lại."
+                        title: L10n.text("Không có mục nào được di chuyển"),
+                        body: L10n.text("Danh sách cắt được giữ lại để bạn thử lại.")
                     )
                     return
                 }
@@ -93,9 +93,9 @@ public class FinderCutPasteManager: ObservableObject {
                 SoundEffectManager.shared.play(.paste)
                 let failedCount = filesToMove.count - moved.count
                 let body = failedCount == 0
-                    ? "Đến: \((currentFolder as NSString).lastPathComponent)"
-                    : "Còn \(failedCount) mục chưa di chuyển; bạn có thể thử lại."
-                self.sendNotification(title: "Đã di chuyển \(moved.count) mục", body: body)
+                    ? L10n.format("Đến: %@", (currentFolder as NSString).lastPathComponent)
+                    : L10n.format("Còn %lld mục chưa di chuyển; bạn có thể thử lại.", Int64(failedCount))
+                self.sendNotification(title: L10n.format("Đã di chuyển %lld mục", Int64(moved.count)), body: body)
             }
         }
         return true
@@ -114,13 +114,13 @@ public class FinderCutPasteManager: ObservableObject {
                 if count > 0 {
                     SoundEffectManager.shared.play(.undo)
                     let body = hasFailures
-                        ? "Đã trả \(count) mục; một số mục chưa thể hoàn tác."
-                        : "Đã trả \(count) mục về vị trí ban đầu"
-                    self.sendNotification(title: "Đã hoàn tác", body: body)
+                        ? L10n.format("Đã trả %lld mục; một số mục chưa thể hoàn tác.", Int64(count))
+                        : L10n.format("Đã trả %lld mục về vị trí ban đầu", Int64(count))
+                    self.sendNotification(title: L10n.text("Đã hoàn tác"), body: body)
                 } else if hasFailures {
                     self.sendNotification(
-                        title: "Chưa thể hoàn tác",
-                        body: "Trạng thái undo được giữ lại để bạn thử lại."
+                        title: L10n.text("Chưa thể hoàn tác"),
+                        body: L10n.text("Trạng thái undo được giữ lại để bạn thử lại.")
                     )
                 }
             }

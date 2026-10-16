@@ -9,6 +9,7 @@ private enum DownloadFilter: String, CaseIterable, Identifiable {
     case failed = "Lỗi"
 
     var id: String { rawValue }
+    var title: String { L10n.text(rawValue) }
 }
 
 private final class DownloadsViewState: ObservableObject {
@@ -110,7 +111,7 @@ public struct DownloadsView: View {
         VStack(spacing: 10) {
             Picker("Trạng thái", selection: $viewState.filter) {
                 ForEach(DownloadFilter.allCases) { option in
-                    Text(option.rawValue).tag(option)
+                    Text(option.title).tag(option)
                 }
             }
             .pickerStyle(.segmented)
@@ -200,7 +201,7 @@ public struct DownloadsView: View {
                             .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: item.progress)
                     }
 
-                    Text(item.errorMessage ?? item.sourceURL)
+                    Text(item.errorMessage.map { L10n.text($0) } ?? item.sourceURL)
                         .font(.system(size: 11))
                         .foregroundColor(item.errorMessage == nil ? .secondary : .red)
                         .lineLimit(1)
@@ -217,31 +218,31 @@ public struct DownloadsView: View {
         HStack(spacing: 6) {
             switch item.status {
             case .downloading, .waitingForNetwork:
-                downloadActionButton("pause.fill", label: "Tạm dừng tải \(item.fileName)") {
+                downloadActionButton("pause.fill", label: L10n.format("Tạm dừng tải %@", item.fileName)) {
                     manager.pause(item.id)
                 }
-                downloadActionButton("xmark", label: "Hủy tải \(item.fileName)", destructive: true) {
+                downloadActionButton("xmark", label: L10n.format("Hủy tải %@", item.fileName), destructive: true) {
                     manager.cancel(item.id)
                 }
             case .paused, .failed:
-                downloadActionButton("play.fill", label: "Tiếp tục tải \(item.fileName)") {
+                downloadActionButton("play.fill", label: L10n.format("Tiếp tục tải %@", item.fileName)) {
                     manager.resume(item.id)
                 }
-                downloadActionButton("trash", label: "Xóa \(item.fileName) khỏi lịch sử tải", destructive: true) {
+                downloadActionButton("trash", label: L10n.format("Xóa %@ khỏi lịch sử tải", item.fileName), destructive: true) {
                     manager.remove(item.id)
                 }
             case .completed:
-                downloadActionButton("folder", label: "Hiển thị \(item.fileName) trong Finder") {
+                downloadActionButton("folder", label: L10n.format("Hiển thị %@ trong Finder", item.fileName)) {
                     manager.reveal(item.id)
                 }
-                downloadActionButton("trash", label: "Xóa \(item.fileName) khỏi lịch sử tải", destructive: true) {
+                downloadActionButton("trash", label: L10n.format("Xóa %@ khỏi lịch sử tải", item.fileName), destructive: true) {
                     manager.remove(item.id)
                 }
             case .cancelled:
-                downloadActionButton("arrow.clockwise", label: "Tải lại \(item.fileName)") {
+                downloadActionButton("arrow.clockwise", label: L10n.format("Tải lại %@", item.fileName)) {
                     manager.resume(item.id)
                 }
-                downloadActionButton("trash", label: "Xóa \(item.fileName) khỏi lịch sử tải", destructive: true) {
+                downloadActionButton("trash", label: L10n.format("Xóa %@ khỏi lịch sử tải", item.fileName), destructive: true) {
                     manager.remove(item.id)
                 }
             }
@@ -371,7 +372,7 @@ public struct DownloadsView: View {
             viewState.links = ""
             viewState.validationMessage = nil
         } else {
-            viewState.validationMessage = "Không thể thêm: \(rejected.joined(separator: ", "))"
+            viewState.validationMessage = L10n.format("Không thể thêm: %@", rejected.joined(separator: ", "))
             viewState.links = rejected.filter { $0.contains("://") }.joined(separator: "\n")
         }
     }

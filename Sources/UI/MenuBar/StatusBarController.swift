@@ -73,12 +73,12 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         }
         
         button.title = title
-        button.toolTip = "Xmac - Tiện ích thiết yếu cho macOS"
+        button.toolTip = L10n.text("Xmac - Tiện ích thiết yếu cho macOS")
     }
     
     public func menuWillOpen(_ menu: NSMenu) {
         menu.removeAllItems()
-        let launcherItem = NSMenuItem(title: "Mở nhanh Xmac (\(QuickLauncher.shared.shortcut.title))", action: #selector(openLauncher), keyEquivalent: "")
+        let launcherItem = NSMenuItem(title: L10n.format("Mở nhanh Xmac (%@)", QuickLauncher.shared.shortcut.title), action: #selector(openLauncher), keyEquivalent: "")
         launcherItem.target = self
         menu.addItem(launcherItem)
         menu.addItem(NSMenuItem.separator())
@@ -91,8 +91,8 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         
         // 1. Chuyển đổi ngôn ngữ gõ
         let langTitle = hasAccessibility
-            ? (ime.isVietnameseMode ? "🇻🇳 Đang gõ: Tiếng Việt (Nhấn để đổi E)" : "🇺🇸 Đang gõ: Tiếng Anh (Nhấn để đổi V)")
-            : "⚠ Bộ gõ cần quyền Trợ năng"
+            ? (ime.isVietnameseMode ? L10n.text("🇻🇳 Đang gõ: Tiếng Việt (Nhấn để đổi E)") : L10n.text("🇺🇸 Đang gõ: Tiếng Anh (Nhấn để đổi V)"))
+            : L10n.text("⚠ Bộ gõ cần quyền Trợ năng")
         let langItem = NSMenuItem(title: langTitle, action: #selector(toggleLanguage), keyEquivalent: "")
         langItem.target = self
         langItem.isEnabled = hasAccessibility
@@ -107,20 +107,20 @@ public class StatusBarController: NSObject, NSMenuDelegate {
             item.state = (ime.typingMethod == method) ? .on : .off
             methodMenu.addItem(item)
         }
-        let typingItem = NSMenuItem(title: "Kiểu gõ: \(ime.typingMethod.rawValue)", action: nil, keyEquivalent: "")
+        let typingItem = NSMenuItem(title: L10n.format("Kiểu gõ: %@", ime.typingMethod.rawValue), action: nil, keyEquivalent: "")
         typingItem.submenu = methodMenu
         menu.addItem(typingItem)
         
         menu.addItem(NSMenuItem.separator())
 
         let downloadTitle = downloads.activeCount > 0
-            ? "↓ Tải xuống: \(downloads.activeCount) tác vụ đang chạy"
-            : "↓ Mở Trung tâm tải xuống"
+            ? L10n.format("↓ Tải xuống: %lld tác vụ đang chạy", Int64(downloads.activeCount))
+            : L10n.text("↓ Mở Trung tâm tải xuống")
         let downloadItem = NSMenuItem(title: downloadTitle, action: #selector(openDownloads), keyEquivalent: "")
         downloadItem.target = self
         menu.addItem(downloadItem)
 
-        let searchItem = NSMenuItem(title: "⌕ Tìm tệp nhanh", action: #selector(openFileSearch), keyEquivalent: "f")
+        let searchItem = NSMenuItem(title: L10n.text("⌕ Tìm tệp nhanh"), action: #selector(openFileSearch), keyEquivalent: "f")
         searchItem.keyEquivalentModifierMask = [.command, .option]
         searchItem.target = self
         menu.addItem(searchItem)
@@ -129,8 +129,8 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         
         // 2. Finder Cut & Paste
         let cutPasteTitle = hasAccessibility
-            ? (cutPaste.isEnabled ? "✂︎ Finder Cut & Paste: Đang bật" : "✂︎ Finder Cut & Paste: Đã tắt")
-            : "✂︎ Finder Cut & Paste: Cần quyền Trợ năng"
+            ? (cutPaste.isEnabled ? L10n.text("✂︎ Finder Cut & Paste: Đang bật") : L10n.text("✂︎ Finder Cut & Paste: Đã tắt"))
+            : L10n.text("✂︎ Finder Cut & Paste: Cần quyền Trợ năng")
         let cutPasteItem = NSMenuItem(title: cutPasteTitle, action: #selector(toggleCutPaste), keyEquivalent: "")
         cutPasteItem.target = self
         cutPasteItem.state = hasAccessibility && cutPaste.isEnabled ? .on : .off
@@ -138,7 +138,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         menu.addItem(cutPasteItem)
         
         if !cutPaste.cutFiles.isEmpty {
-            let pasteNow = NSMenuItem(title: "   ↳ Dán \(cutPaste.cutFiles.count) tệp ngay (⌘V)", action: #selector(pasteNowAction), keyEquivalent: "")
+            let pasteNow = NSMenuItem(title: L10n.format("   ↳ Dán %lld tệp ngay (⌘V)", Int64(cutPaste.cutFiles.count)), action: #selector(pasteNowAction), keyEquivalent: "")
             pasteNow.target = self
             menu.addItem(pasteNow)
         }
@@ -148,12 +148,12 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         // 3. Ổ đĩa ngoại vi & NTFS
         let extDisks = diskManager.volumes.filter { $0.isExternal }
         if !extDisks.isEmpty {
-            let diskHeader = NSMenuItem(title: "Ổ cứng ngoại vi (\(extDisks.count)):", action: nil, keyEquivalent: "")
+            let diskHeader = NSMenuItem(title: L10n.format("Ổ cứng ngoại vi (%lld):", Int64(extDisks.count)), action: nil, keyEquivalent: "")
             diskHeader.isEnabled = false
             menu.addItem(diskHeader)
             
             for disk in extDisks {
-                let fsText = disk.isNTFS ? "NTFS (\(disk.isWritable ? "R/W" : "Chỉ đọc"))" : disk.fileSystem
+                let fsText = disk.isNTFS ? "NTFS (\(disk.isWritable ? "R/W" : L10n.text("Chỉ đọc")))" : disk.fileSystem
                 let diskItem = NSMenuItem(title: "   • \(disk.name) - \(fsText)", action: #selector(openDiskAction(_:)), keyEquivalent: "")
                 diskItem.target = self
                 diskItem.representedObject = disk
@@ -164,25 +164,25 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         }
         
         // 4. Quick Clean Memory
-        let purgeItem = NSMenuItem(title: "⚡️ Giải phóng bộ nhớ RAM", action: #selector(purgeMemoryAction), keyEquivalent: "")
+        let purgeItem = NSMenuItem(title: L10n.text("⚡️ Giải phóng bộ nhớ RAM"), action: #selector(purgeMemoryAction), keyEquivalent: "")
         purgeItem.target = self
         menu.addItem(purgeItem)
         
         menu.addItem(NSMenuItem.separator())
         
         // 5. Mở Dashboard
-        let openItem = NSMenuItem(title: "Mở Bảng điều khiển Xmac...", action: #selector(openMainWindow), keyEquivalent: "m")
+        let openItem = NSMenuItem(title: L10n.text("Mở Bảng điều khiển Xmac..."), action: #selector(openMainWindow), keyEquivalent: "m")
         openItem.target = self
         menu.addItem(openItem)
 
-        let updateItem = NSMenuItem(title: "Kiểm tra cập nhật…", action: #selector(checkForUpdates), keyEquivalent: "")
+        let updateItem = NSMenuItem(title: L10n.text("Kiểm tra cập nhật…"), action: #selector(checkForUpdates), keyEquivalent: "")
         updateItem.target = self
         menu.addItem(updateItem)
         
         menu.addItem(NSMenuItem.separator())
         
         // 6. Thoát
-        let quitItem = NSMenuItem(title: "Thoát Xmac", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: L10n.text("Thoát Xmac"), action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
     }

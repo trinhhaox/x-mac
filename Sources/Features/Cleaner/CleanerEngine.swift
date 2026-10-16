@@ -53,8 +53,8 @@ public class CleanerEngine: ObservableObject {
             // 1. User Caches
             let cachePath = ("~/Library/Caches" as NSString).expandingTildeInPath
             let cacheCategory = self.scanDirectory(
-                name: "Bộ nhớ đệm người dùng (User Caches)",
-                description: "Dữ liệu cache tạm thời của các ứng dụng giúp tăng tốc độ nhưng có thể tích tụ qua thời gian.",
+                name: L10n.text("Bộ nhớ đệm người dùng (User Caches)"),
+                description: L10n.text("Dữ liệu cache tạm thời của các ứng dụng giúp tăng tốc độ nhưng có thể tích tụ qua thời gian."),
                 iconName: "cylinder.split.1x2",
                 directoryPath: cachePath
             )
@@ -63,8 +63,8 @@ public class CleanerEngine: ObservableObject {
             // 2. System & User Logs
             let logPath = ("~/Library/Logs" as NSString).expandingTildeInPath
             let logCategory = self.scanDirectory(
-                name: "Nhật ký ứng dụng & hệ thống (Logs)",
-                description: "Các file nhật ký ghi lại sự kiện và lỗi phần mềm, thường không còn cần thiết.",
+                name: L10n.text("Nhật ký ứng dụng & hệ thống (Logs)"),
+                description: L10n.text("Các file nhật ký ghi lại sự kiện và lỗi phần mềm, thường không còn cần thiết."),
                 iconName: "doc.text.magnifyingglass",
                 directoryPath: logPath,
                 excludingNames: ["DiagnosticReports"]
@@ -74,8 +74,8 @@ public class CleanerEngine: ObservableObject {
             // 3. Crash Reports
             let crashPath = ("~/Library/Logs/DiagnosticReports" as NSString).expandingTildeInPath
             let crashCategory = self.scanDirectory(
-                name: "Báo cáo lỗi (Crash & Diagnostic Reports)",
-                description: "Báo cáo lỗi tự động gửi khi ứng dụng bị tắt đột ngột.",
+                name: L10n.text("Báo cáo lỗi (Crash & Diagnostic Reports)"),
+                description: L10n.text("Báo cáo lỗi tự động gửi khi ứng dụng bị tắt đột ngột."),
                 iconName: "exclamationmark.triangle",
                 directoryPath: crashPath
             )
@@ -84,8 +84,8 @@ public class CleanerEngine: ObservableObject {
             // 4. Xcode & Developer Caches
             let xcodePath = ("~/Library/Developer/Xcode/DerivedData" as NSString).expandingTildeInPath
             let xcodeCategory = self.scanDirectory(
-                name: "Dữ liệu biên dịch Xcode (DerivedData)",
-                description: "Bộ nhớ cache biên dịch dự án của lập trình viên, có thể giải phóng dung lượng rất lớn.",
+                name: L10n.text("Dữ liệu biên dịch Xcode (DerivedData)"),
+                description: L10n.text("Bộ nhớ cache biên dịch dự án của lập trình viên, có thể giải phóng dung lượng rất lớn."),
                 iconName: "hammer",
                 directoryPath: xcodePath
             )
@@ -96,8 +96,8 @@ public class CleanerEngine: ObservableObject {
             // 5. Thùng rác (Trash)
             let trashPath = ("~/.Trash" as NSString).expandingTildeInPath
             let trashCategory = self.scanDirectory(
-                name: "Thùng rác (Trash)",
-                description: "Các tệp tin bạn đã xóa nhưng vẫn lưu trữ trong Thùng rác hệ thống.",
+                name: L10n.text("Thùng rác (Trash)"),
+                description: L10n.text("Các tệp tin bạn đã xóa nhưng vẫn lưu trữ trong Thùng rác hệ thống."),
                 iconName: "trash",
                 directoryPath: trashPath
             )

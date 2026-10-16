@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "Xmac",
+    defaultLocalization: "vi",
     platforms: [
         .macOS(.v13)
     ],
@@ -12,7 +13,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "Xmac",
-            path: "Sources"
+            path: "Sources",
+            resources: [
+                .process("LocalizationResources")
+            ]
         ),
         .testTarget(
             name: "XmacTests",

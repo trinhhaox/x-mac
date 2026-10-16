@@ -7,6 +7,7 @@ public struct SettingsView: View {
     @ObservedObject private var downloads = DownloadEnvironment.shared
     @ObservedObject private var updates = AppUpdateManager.shared
     @ObservedObject private var launcher = QuickLauncher.shared
+    @ObservedObject private var localization = LocalizationManager.shared
     
     public init() {}
     
@@ -21,6 +22,20 @@ public struct SettingsView: View {
                 }
                 
                 // General Settings Card
+                ModernCard {
+                    BrandSectionTitle("Ngôn ngữ giao diện", subtitle: "Chọn ngôn ngữ hiển thị cho toàn bộ Xmac.")
+                    Picker(L10n.text("Ngôn ngữ giao diện"), selection: $localization.language) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(language.displayName).tag(language)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityLabel(L10n.text("Ngôn ngữ giao diện"))
+                    Text(L10n.text("Thay đổi được áp dụng ngay cho cửa sổ chính, Menu Bar và bảng mở nhanh."))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
                 ModernCard {
                     BrandSectionTitle("Cài đặt chung", subtitle: "Các hành vi áp dụng trên toàn ứng dụng.")
                     
@@ -46,15 +61,15 @@ public struct SettingsView: View {
                 ModernCard {
                     BrandSectionTitle("Mở nhanh", subtitle: "Tìm lệnh, ứng dụng và tệp từ bất kỳ ứng dụng nào.")
                     HStack(spacing: 12) {
-                        Picker("Phím tắt", selection: Binding(get: { launcher.shortcut }, set: { launcher.setShortcut($0) })) {
+                        Picker(L10n.text("Phím tắt"), selection: Binding(get: { launcher.shortcut }, set: { launcher.setShortcut($0) })) {
                             ForEach(LauncherShortcut.allCases) { choice in Text(choice.title).tag(choice) }
                         }
                         Spacer()
-                        Button("Mở bảng lệnh") { launcher.show() }
+                        Button(L10n.text("Mở bảng lệnh")) { launcher.show() }
                             .buttonStyle(BrandSecondaryButtonStyle())
                     }
                     Text(launcher.shortcutMessage).font(.caption).foregroundColor(.secondary)
-                    Text("Nhấp trái biểu tượng Menu Bar để xem trạng thái; nhấp phải để mở menu đầy đủ.")
+                    Text(L10n.text("Nhấp trái biểu tượng Menu Bar để xem trạng thái; nhấp phải để mở menu đầy đủ."))
                         .font(.caption).foregroundColor(.secondary)
                 }
 
@@ -86,7 +101,7 @@ public struct SettingsView: View {
                     HStack(spacing: 8) {
                         Image(systemName: updates.busy ? "arrow.triangle.2.circlepath" : "info.circle")
                             .foregroundColor(XmacTheme.blue)
-                        Text(updates.message).font(.system(size: 12)).textSelection(.enabled)
+                        Text(L10n.text(updates.message)).font(.system(size: 12)).textSelection(.enabled)
                         Spacer()
                         if updates.busy { ProgressView().controlSize(.small) }
                     }
@@ -94,17 +109,17 @@ public struct SettingsView: View {
                         ProgressView(value: progress)
                     }
                     if let release = updates.release {
-                        Text(release.body ?? "Bản cập nhật Xmac \(release.version)")
+                        Text(release.body ?? L10n.format("Bản cập nhật Xmac %@", release.version))
                             .font(.caption).lineLimit(10).textSelection(.enabled)
-                        Link("Xem đầy đủ ghi chú phát hành", destination: release.html_url)
-                        Button("Tải và cài Xmac \(release.version)…") { updates.confirmInstallation = true }
+                        Link(L10n.text("Xem đầy đủ ghi chú phát hành"), destination: release.html_url)
+                        Button(L10n.format("Tải và cài Xmac %@…", release.version)) { updates.confirmInstallation = true }
                             .buttonStyle(BrandPrimaryButtonStyle())
                             .disabled(updates.busy || release.installer == nil)
                     }
-                    Button("Kiểm tra cập nhật") { Task { await updates.check() } }
+                    Button(L10n.text("Kiểm tra cập nhật")) { Task { await updates.check() } }
                         .buttonStyle(BrandSecondaryButtonStyle())
                         .disabled(updates.busy)
-                    Text("Xmac xác thực bộ cài và giữ bản cũ để bạn có thể khôi phục thủ công khi cần.")
+                    Text(L10n.text("Xmac xác thực bộ cài và giữ bản cũ để bạn có thể khôi phục thủ công khi cần."))
                         .font(.caption).foregroundColor(.secondary)
                 }
 
@@ -115,9 +130,9 @@ public struct SettingsView: View {
                     VStack(spacing: 12) {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Trợ năng (Accessibility)")
+                                Text(L10n.text("Trợ năng (Accessibility)"))
                                     .font(.system(size: 13, weight: .medium))
-                                Text("Bắt buộc để ⌘X/⌘V trong Finder và Bộ gõ tiếng Việt hoạt động.")
+                                Text(L10n.text("Bắt buộc để ⌘X/⌘V trong Finder và Bộ gõ tiếng Việt hoạt động."))
                                     .font(.system(size: 11))
                                     .foregroundColor(.secondary)
                             }
@@ -126,7 +141,7 @@ public struct SettingsView: View {
                                 title: permissions.isAccessibilityGranted ? "Đã cấp quyền" : "Chưa cấp quyền",
                                 isPositive: permissions.isAccessibilityGranted
                             )
-                            Button("Mở Cài đặt") {
+                            Button(L10n.text("Mở Cài đặt")) {
                                 permissions.openAccessibilitySettings()
                             }
                             .buttonStyle(BrandSecondaryButtonStyle())
@@ -136,9 +151,9 @@ public struct SettingsView: View {
                         
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Truy cập ổ đĩa đầy đủ (Full Disk Access)")
+                                Text(L10n.text("Truy cập ổ đĩa đầy đủ (Full Disk Access)"))
                                     .font(.system(size: 13, weight: .medium))
-                                Text("Cho phép dọn dẹp bộ nhớ đệm sâu và quét file phụ trợ của ứng dụng.")
+                                Text(L10n.text("Cho phép dọn dẹp bộ nhớ đệm sâu và quét file phụ trợ của ứng dụng."))
                                     .font(.system(size: 11))
                                     .foregroundColor(.secondary)
                             }
@@ -147,7 +162,7 @@ public struct SettingsView: View {
                                 title: permissions.isFullDiskAccessGranted ? "Đã cấp quyền" : "Khuyên dùng",
                                 isPositive: permissions.isFullDiskAccessGranted
                             )
-                            Button("Mở Cài đặt") {
+                            Button(L10n.text("Mở Cài đặt")) {
                                 permissions.openFullDiskAccessSettings()
                             }
                             .buttonStyle(BrandSecondaryButtonStyle())
@@ -157,14 +172,14 @@ public struct SettingsView: View {
                         
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Tự động hoá Finder (Automation)")
+                                Text(L10n.text("Tự động hoá Finder (Automation)"))
                                     .font(.system(size: 13, weight: .medium))
-                                Text("Cho phép Xmac giao tiếp với Finder để lấy danh sách file đang chọn.")
+                                Text(L10n.text("Cho phép Xmac giao tiếp với Finder để lấy danh sách file đang chọn."))
                                     .font(.system(size: 11))
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
-                            Button("Mở Cài đặt") {
+                            Button(L10n.text("Mở Cài đặt")) {
                                 permissions.openAutomationSettings()
                             }
                             .buttonStyle(BrandSecondaryButtonStyle())
@@ -187,7 +202,7 @@ public struct SettingsView: View {
                             Text(AppVersionInfo.current.settingsDescription)
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
-                            Text("Một bảng điều khiển cho những tiện ích macOS thiết yếu.")
+                            Text(L10n.text("Một bảng điều khiển cho những tiện ích macOS thiết yếu."))
                                 .font(.system(size: 11))
                                 .foregroundColor(.secondary)
                         }

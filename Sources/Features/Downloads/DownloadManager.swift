@@ -99,7 +99,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
         }
 
         if lines.count > 20 {
-            rejected.append("Chỉ có thể thêm tối đa 20 liên kết mỗi lần.")
+            rejected.append(L10n.text("Chỉ có thể thêm tối đa 20 liên kết mỗi lần."))
         }
         return rejected
     }
@@ -133,7 +133,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
               item.status == .paused || item.status == .failed || item.status == .cancelled || item.status == .waitingForNetwork else { return }
         if !automatically { networkRetries[id] = 0 }
         guard environment.online, !(environment.avoidMetered && environment.metered) else {
-            update(id) { $0.status = .waitingForNetwork; $0.errorMessage = "Chờ kết nối phù hợp để tải xuống." }
+            update(id) { $0.status = .waitingForNetwork; $0.errorMessage = L10n.text("Chờ kết nối phù hợp để tải xuống.") }
             persistHistory()
             return
         }
@@ -153,7 +153,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
         } else {
             update(id) { download in
                 download.status = .failed
-                download.errorMessage = "Liên kết tải xuống không còn hợp lệ."
+                download.errorMessage = L10n.text("Liên kết tải xuống không còn hợp lệ.")
             }
             return
         }
@@ -268,7 +268,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
         if environment.online && !(environment.avoidMetered && environment.metered) {
             task.resume()
         } else {
-            update(id) { $0.status = .waitingForNetwork; $0.errorMessage = "Chờ kết nối phù hợp để tải xuống." }
+            update(id) { $0.status = .waitingForNetwork; $0.errorMessage = L10n.text("Chờ kết nối phù hợp để tải xuống.") }
             persistHistory()
         }
     }
@@ -294,7 +294,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
         }
         for index in restored.indices where restored[index].status == .downloading || restored[index].status == .waitingForNetwork {
             restored[index].status = .paused
-            restored[index].errorMessage = "Phiên tải trước đã dừng. Tiếp tục để tải lại."
+            restored[index].errorMessage = L10n.text("Phiên tải trước đã dừng. Tiếp tục để tải lại.")
         }
         items = restored
     }
@@ -310,7 +310,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
         for item in items {
             if !allowed && item.status == .downloading {
                 tasks[item.id]?.suspend()
-                update(item.id) { $0.status = .waitingForNetwork; $0.errorMessage = "Chờ kết nối phù hợp để tải xuống." }
+                update(item.id) { $0.status = .waitingForNetwork; $0.errorMessage = L10n.text("Chờ kết nối phù hợp để tải xuống.") }
             } else if allowed && item.status == .waitingForNetwork {
                 resume(item.id, automatically: true)
             }
@@ -338,7 +338,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
 
     func shutdown() {
         for item in items where item.status == .downloading || item.status == .waitingForNetwork {
-            update(item.id) { $0.status = .paused; $0.errorMessage = "Phiên tải đã dừng. Tiếp tục để tải lại." }
+            update(item.id) { $0.status = .paused; $0.errorMessage = L10n.text("Phiên tải đã dừng. Tiếp tục để tải lại.") }
         }
         taskItems.removeAll()
         tasks.removeAll()
@@ -386,11 +386,11 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
             DispatchQueue.main.async {
                 self.update(context.id) { item in
                     item.status = .failed
-                    item.errorMessage = "Máy chủ phản hồi HTTP \(response.statusCode)."
+                    item.errorMessage = L10n.format("Máy chủ phản hồi HTTP %lld.", Int64(response.statusCode))
                 }
                 self.tasks.removeValue(forKey: context.id)
                 self.persistHistory()
-                self.notify(title: "Tải xuống thất bại", body: context.item.fileName)
+                self.notify(title: L10n.text("Tải xuống thất bại"), body: context.item.fileName)
             }
             return
         }
@@ -413,7 +413,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
                 }
                 self.tasks.removeValue(forKey: context.id)
                 self.persistHistory()
-                self.notify(title: "Tải xuống hoàn tất", body: destination.lastPathComponent)
+                self.notify(title: L10n.text("Tải xuống hoàn tất"), body: destination.lastPathComponent)
             }
         } catch {
             DispatchQueue.main.async {
@@ -423,7 +423,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
                 }
                 self.tasks.removeValue(forKey: context.id)
                 self.persistHistory()
-                self.notify(title: "Tải xuống thất bại", body: context.item.fileName)
+                self.notify(title: L10n.text("Tải xuống thất bại"), body: context.item.fileName)
             }
         }
     }
@@ -449,7 +449,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
                 if let data = failure.userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
                     self.resumeData[id] = data
                 }
-                self.update(id) { $0.status = .waitingForNetwork; $0.errorMessage = "Chờ kết nối; sẽ tự thử lại khi có mạng." }
+                self.update(id) { $0.status = .waitingForNetwork; $0.errorMessage = L10n.text("Chờ kết nối; sẽ tự thử lại khi có mạng.") }
                 self.persistHistory()
                 DispatchQueue.main.asyncAfter(deadline: .now() + Double(1 << attempts)) {
                     if self.item(id)?.status == .waitingForNetwork { self.resume(id, automatically: true) }
@@ -462,7 +462,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
                 item.errorMessage = error.localizedDescription
             }
             self.persistHistory()
-            self.notify(title: "Tải xuống thất bại", body: current.fileName)
+            self.notify(title: L10n.text("Tải xuống thất bại"), body: current.fileName)
         }
     }
 
@@ -470,7 +470,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
         DispatchQueue.main.async {
             guard let id = self.taskItems[task.taskIdentifier], self.tasks[id] === task,
                   self.item(id)?.status == .downloading else { return }
-            self.update(id) { $0.status = .waitingForNetwork; $0.errorMessage = "Chờ kết nối mạng." }
+            self.update(id) { $0.status = .waitingForNetwork; $0.errorMessage = L10n.text("Chờ kết nối mạng.") }
             self.persistHistory()
         }
     }

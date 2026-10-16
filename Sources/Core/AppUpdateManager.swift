@@ -47,7 +47,7 @@ struct XmacRelease: Decodable {
     @Published private(set) var busy = false
     @Published private(set) var downloadProgress: Double?
     @Published var confirmInstallation = false
-    @Published private(set) var message = "Chưa kiểm tra bản cập nhật."
+    @Published private(set) var message = L10n.text("Chưa kiểm tra bản cập nhật.")
     @Published var automaticChecks = UserDefaults.standard.bool(forKey: "Updates.AutomaticChecks") {
         didSet {
             UserDefaults.standard.set(automaticChecks, forKey: "Updates.AutomaticChecks")
@@ -74,26 +74,26 @@ struct XmacRelease: Decodable {
         guard !busy else { return }
         busy = true
         defer { busy = false }
-        message = "Đang kiểm tra GitHub Releases…"
+        message = L10n.text("Đang kiểm tra GitHub Releases…")
         do {
             var request = URLRequest(url: URL(string: "https://api.github.com/repos/trinhhaox/x-mac/releases/latest")!)
             request.timeoutInterval = 30
             request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw UpdateFailure("Không thể đọc bản phát hành. Vui lòng thử lại sau.") }
+            guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw UpdateFailure(L10n.text("Không thể đọc bản phát hành. Vui lòng thử lại sau.")) }
             let latest = try JSONDecoder().decode(XmacRelease.self, from: data)
             guard !latest.draft, !latest.prerelease,
                   latest.html_url.scheme == "https", latest.html_url.host == "github.com",
                   latest.html_url.path == "/trinhhaox/x-mac/releases/tag/\(latest.tag_name)" else {
-                throw UpdateFailure("Thông tin bản phát hành không hợp lệ.")
+                throw UpdateFailure(L10n.text("Thông tin bản phát hành không hợp lệ."))
             }
             UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "Updates.LastCheck")
             if XmacRelease.isNewer(latest.version, than: AppVersionInfo.current.version) {
                 release = latest
-                message = "Có Xmac \(latest.version)."
+                message = L10n.format("Có Xmac %@.", latest.version)
             } else {
                 release = nil
-                message = "Bạn đang dùng bản Xmac mới nhất."
+                message = L10n.text("Bạn đang dùng bản Xmac mới nhất.")
             }
         } catch { message = error.localizedDescription }
     }
@@ -102,10 +102,10 @@ struct XmacRelease: Decodable {
         guard !busy, let release, let asset = release.installer else { return }
         busy = true
         defer { busy = false; downloadProgress = nil }
-        message = "Đang tải và xác minh bản cập nhật…"
+        message = L10n.text("Đang tải và xác minh bản cập nhật…")
         do {
             guard let digest = asset.digest, digest.hasPrefix("sha256:"), digest.count == 71 else {
-                throw UpdateFailure("Bản phát hành chưa có SHA-256 để xác minh. Hãy tải từ trang phát hành.")
+                throw UpdateFailure(L10n.text("Bản phát hành chưa có SHA-256 để xác minh. Hãy tải từ trang phát hành."))
             }
             let file = try await InstallerDownload().fetch(asset.browser_download_url) { [weak self] fraction in
                 Task { @MainActor in self?.downloadProgress = fraction }
@@ -113,7 +113,7 @@ struct XmacRelease: Decodable {
             defer { try? FileManager.default.removeItem(at: file) }
             downloadProgress = nil
             let target = Bundle.main.bundleURL
-            message = "Đang kiểm tra và cài đặt. Xmac sẽ mở lại sau khi hoàn tất…"
+            message = L10n.text("Đang kiểm tra và cài đặt. Xmac sẽ mở lại sau khi hoàn tất…")
             try await Task.detached {
                 try UpdateInstaller.install(dmg: file, asset: asset, version: release.version, target: target)
             }.value
@@ -144,7 +144,7 @@ enum UpdateInstaller {
             hash.update(data: chunk)
         }
         let actual = "sha256:" + hash.finalize().map { String(format: "%02x", $0) }.joined()
-        guard count == size, actual == digest else { throw UpdateFailure("Tệp cập nhật sai kích thước hoặc SHA-256. Đã hủy cài đặt.") }
+        guard count == size, actual == digest else { throw UpdateFailure(L10n.text("Tệp cập nhật sai kích thước hoặc SHA-256. Đã hủy cài đặt.")) }
     }
 
     static func install(dmg: URL, asset: XmacRelease.Asset, version: String, target: URL) throws {
@@ -156,7 +156,7 @@ enum UpdateInstaller {
               allowedParents.contains(where: { $0.standardizedFileURL == parentDirectory }),
               (try fm.attributesOfItem(atPath: target.path)[.type] as? FileAttributeType) == .typeDirectory,
               fm.isWritableFile(atPath: target.deletingLastPathComponent().path) else {
-            throw UpdateFailure("Hãy đặt Xmac trong thư mục Applications có quyền ghi trước khi cập nhật.")
+            throw UpdateFailure(L10n.text("Hãy đặt Xmac trong thư mục Applications có quyền ghi trước khi cập nhật."))
         }
         let root = fm.temporaryDirectory.appendingPathComponent("XmacUpdate-\(UUID().uuidString)")
         try fm.createDirectory(at: root, withIntermediateDirectories: true)
@@ -174,7 +174,7 @@ enum UpdateInstaller {
         guard (try fm.attributesOfItem(atPath: source.path)[.type] as? FileAttributeType) == .typeDirectory,
               let bundle = Bundle(url: source), bundle.bundleIdentifier == "vn.xmac.app",
               bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String == version else {
-            throw UpdateFailure("Ứng dụng trong bản cập nhật không đúng định danh hoặc phiên bản.")
+            throw UpdateFailure(L10n.text("Ứng dụng trong bản cập nhật không đúng định danh hoặc phiên bản."))
         }
         try run("/usr/bin/codesign", ["--verify", "--deep", "--strict", source.path])
         let parent = target.deletingLastPathComponent()
@@ -204,7 +204,7 @@ enum UpdateInstaller {
         process.standardError = FileHandle.nullDevice
         try process.run()
         process.waitUntilExit()
-        guard process.terminationStatus == 0 else { throw UpdateFailure("Không thể xác minh hoặc mở bộ cài đặt (\(URL(fileURLWithPath: path).lastPathComponent)).") }
+        guard process.terminationStatus == 0 else { throw UpdateFailure(L10n.format("Không thể xác minh hoặc mở bộ cài đặt (%@).", URL(fileURLWithPath: path).lastPathComponent)) }
     }
 }
 
@@ -243,6 +243,6 @@ private final class InstallerDownload: NSObject, URLSessionDownloadDelegate {
         defer { continuation = nil; session.finishTasksAndInvalidate() }
         if let error { continuation?.resume(throwing: error) }
         else if let downloadedFile { continuation?.resume(returning: downloadedFile) }
-        else { continuation?.resume(throwing: UpdateFailure("Tải bản cập nhật thất bại.")) }
+        else { continuation?.resume(throwing: UpdateFailure(L10n.text("Tải bản cập nhật thất bại."))) }
     }
 }

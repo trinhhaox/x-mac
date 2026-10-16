@@ -171,19 +171,19 @@ final class ClipboardHistory: ObservableObject {
             offer.setData(data, forType: .png)
         case .files:
             let urls = (item.paths ?? []).filter { FileManager.default.fileExists(atPath: $0) }.map { NSURL(fileURLWithPath: $0) }
-            guard urls.count == item.paths?.count else { message = "Một số tệp không còn tồn tại."; return }
+            guard urls.count == item.paths?.count else { message = L10n.text("Một số tệp không còn tồn tại."); return }
             board.clearContents()
-            guard board.writeObjects(urls) else { message = "Không thể ghi clipboard."; return }
+            guard board.writeObjects(urls) else { message = L10n.text("Không thể ghi clipboard."); return }
             onCopy()
             lastChange = board.changeCount
-            message = "Đã chép danh sách tệp. Dùng ⌘V để dán."
+            message = L10n.text("Đã chép danh sách tệp. Dùng ⌘V để dán.")
             return
         }
         board.clearContents()
-        guard board.writeObjects([offer]) else { message = "Không thể ghi clipboard."; return }
+        guard board.writeObjects([offer]) else { message = L10n.text("Không thể ghi clipboard."); return }
         onCopy()
         lastChange = board.changeCount
-        message = "Đã chép. Dùng ⌘V trong ứng dụng đích để dán."
+        message = L10n.text("Đã chép. Dùng ⌘V trong ứng dụng đích để dán.")
     }
 
     private func prune(now: Date = Date()) {
@@ -203,7 +203,7 @@ final class ClipboardHistory: ObservableObject {
             try fm.createDirectory(at: store.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
             try JSONEncoder().encode(snapshot).write(to: store, options: .atomic)
             try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: store.path)
-        } catch { DispatchQueue.main.async { self.message = "Không thể lưu lịch sử: \(error.localizedDescription)" } }
+        } catch { DispatchQueue.main.async { self.message = L10n.format("Không thể lưu lịch sử: %@", error.localizedDescription) } }
         }
     }
 }

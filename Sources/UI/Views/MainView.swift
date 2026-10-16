@@ -5,6 +5,7 @@ public struct MainView: View {
     @ObservedObject var appState = AppState.shared
     @ObservedObject var ime = InputHookManager.shared
     @ObservedObject var permissions = PermissionsManager.shared
+    @ObservedObject private var localization = LocalizationManager.shared
 
     public init() {}
 
@@ -32,6 +33,14 @@ public struct MainView: View {
             .background(XmacTheme.workspaceBackground)
         }
         .frame(minWidth: 900, minHeight: 600)
+        .environment(\.locale, localization.language.locale)
+        .id(localization.language)
+        .onChange(of: localization.language) { _ in
+            appState.updateSystemStats()
+        }
+        .onAppear {
+            appState.updateSystemStats()
+        }
     }
 
     private var sidebar: some View {
@@ -47,7 +56,7 @@ public struct MainView: View {
                     Text("Xmac")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
-                    Text("BỘ CÔNG CỤ MAC")
+                    Text(L10n.text("BỘ CÔNG CỤ MAC"))
                         .font(.system(size: 9, weight: .bold, design: .rounded))
                         .tracking(1.5)
                         .foregroundColor(.white.opacity(0.52))
@@ -62,7 +71,7 @@ public struct MainView: View {
                 VStack(alignment: .leading, spacing: 15) {
                     ForEach(Array(sidebarSections.enumerated()), id: \.offset) { _, section in
                         VStack(alignment: .leading, spacing: 5) {
-                            Text(section.title)
+                            Text(L10n.text(section.title))
                                 .font(.system(size: 9, weight: .bold, design: .rounded))
                                 .tracking(1.3)
                                 .foregroundColor(.white.opacity(0.62))
@@ -98,11 +107,11 @@ public struct MainView: View {
                         .frame(width: 28, height: 28)
 
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(
+                            Text(L10n.text(
                                 permissions.isAccessibilityGranted
                                     ? (ime.isVietnameseMode ? "Tiếng Việt" : "English")
                                     : "Cần Trợ năng"
-                            )
+                            ))
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.white)
                             Text("Control + Shift")
@@ -116,11 +125,11 @@ public struct MainView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(!permissions.isAccessibilityGranted)
-                .accessibilityLabel(permissions.isAccessibilityGranted ? "Chuyển bộ gõ giữa Tiếng Việt và English" : "Bộ gõ cần quyền Trợ năng")
-                .accessibilityHint(permissions.isAccessibilityGranted ? "Nhấn để chuyển ngôn ngữ nhập" : "Mở mục Tổng quan để cấp quyền Trợ năng")
+                .accessibilityLabel(L10n.text(permissions.isAccessibilityGranted ? "Chuyển bộ gõ giữa Tiếng Việt và English" : "Bộ gõ cần quyền Trợ năng"))
+                .accessibilityHint(L10n.text(permissions.isAccessibilityGranted ? "Nhấn để chuyển ngôn ngữ nhập" : "Mở mục Tổng quan để cấp quyền Trợ năng"))
 
                 HStack {
-                    Text("Xmac \(AppVersionInfo.current.version)")
+                    Text("Xmac \(L10n.text(AppVersionInfo.current.version))")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.white.opacity(0.60))
                     Spacer()
@@ -131,8 +140,8 @@ public struct MainView: View {
                             .frame(width: 28, height: 28)
                     }
                     .buttonStyle(.plain)
-                    .help("Thoát Xmac")
-                    .accessibilityLabel("Thoát Xmac")
+                    .help(L10n.text("Thoát Xmac"))
+                    .accessibilityLabel(L10n.text("Thoát Xmac"))
                 }
             }
             .padding(14)
@@ -167,7 +176,7 @@ public struct MainView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(isSelected ? XmacTheme.cyan : .white.opacity(0.58))
                     .frame(width: 22)
-                Text(tab.rawValue)
+                Text(tab.title)
                     .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
                     .foregroundColor(isSelected ? .white : .white.opacity(0.68))
                 Spacer()
