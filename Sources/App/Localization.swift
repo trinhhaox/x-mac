@@ -53,7 +53,13 @@ public enum L10n {
     }
 
     private static func localizedBundle(for language: AppLanguage) -> Bundle? {
-        let bundles = [Bundle.main, Bundle(for: LocalizationBundleToken.self)] + Bundle.allBundles + Bundle.allFrameworks
+        var bundles = [Bundle.main, Bundle(for: LocalizationBundleToken.self)]
+#if SWIFT_PACKAGE
+        // SwiftPM places processed resources in a target-specific bundle that
+        // is not guaranteed to appear in Bundle.allBundles on a clean runner.
+        bundles.insert(Bundle.module, at: 0)
+#endif
+        bundles += Bundle.allBundles + Bundle.allFrameworks
         for base in bundles {
             if let path = base.path(forResource: language.rawValue, ofType: "lproj"),
                let localized = Bundle(path: path) {
