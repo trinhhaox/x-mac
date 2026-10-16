@@ -14,7 +14,6 @@ public struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 BrandPageHeader(
-                    eyebrow: "Preferences",
                     title: "Cài đặt Xmac",
                     subtitle: "Quản lý khởi động, phản hồi và quyền hệ thống."
                 ) {
@@ -26,77 +25,86 @@ public struct SettingsView: View {
                     BrandSectionTitle("Cài đặt chung", subtitle: "Các hành vi áp dụng trên toàn ứng dụng.")
                     
                     VStack(spacing: 12) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Khởi động cùng macOS")
-                                    .font(.system(size: 13, weight: .medium))
-                                Text("Tự động mở Xmac khi bạn đăng nhập vào máy tính.")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Toggle("", isOn: Binding(
+                        BrandToggleRow(
+                            "Khởi động cùng macOS",
+                            subtitle: "Tự động mở Xmac khi bạn đăng nhập vào máy tính.",
+                            isOn: Binding(
                                 get: { launchManager.isEnabled },
                                 set: { launchManager.setEnabled($0) }
                             ))
-                            .labelsHidden()
-                        }
                         
                         Divider()
                         
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Hiệu ứng âm thanh tương tác")
-                                    .font(.system(size: 13, weight: .medium))
-                                Text("Phát âm thanh nhẹ khi cắt, dán file, dọn rác hoặc cắm/rút ổ cứng.")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Toggle("", isOn: $vm.enableSoundEffects)
-                                .labelsHidden()
-                        }
+                        BrandToggleRow(
+                            "Hiệu ứng âm thanh tương tác",
+                            subtitle: "Phát âm thanh nhẹ khi cắt, dán file, dọn rác hoặc cắm/rút ổ cứng.",
+                            isOn: $vm.enableSoundEffects
+                        )
                     }
                 }
                 
                 ModernCard {
                     BrandSectionTitle("Mở nhanh", subtitle: "Tìm lệnh, ứng dụng và tệp từ bất kỳ ứng dụng nào.")
-                    Picker("Phím tắt", selection: Binding(get: { launcher.shortcut }, set: { launcher.setShortcut($0) })) {
-                        ForEach(LauncherShortcut.allCases) { choice in Text(choice.title).tag(choice) }
+                    HStack(spacing: 12) {
+                        Picker("Phím tắt", selection: Binding(get: { launcher.shortcut }, set: { launcher.setShortcut($0) })) {
+                            ForEach(LauncherShortcut.allCases) { choice in Text(choice.title).tag(choice) }
+                        }
+                        Spacer()
+                        Button("Mở bảng lệnh") { launcher.show() }
+                            .buttonStyle(BrandSecondaryButtonStyle())
                     }
                     Text(launcher.shortcutMessage).font(.caption).foregroundColor(.secondary)
-                    Button("Mở bảng lệnh") { launcher.show() }
                     Text("Nhấp trái biểu tượng Menu Bar để xem trạng thái; nhấp phải để mở menu đầy đủ.")
                         .font(.caption).foregroundColor(.secondary)
                 }
 
                 ModernCard {
                     BrandSectionTitle("Tải xuống", subtitle: "Quản lý nguồn điện và kết nối khi tải tệp.")
-                    Toggle("Giữ máy thức khi đang tải", isOn: $downloads.keepAwake)
-                    Text("Màn hình vẫn có thể tắt. Xmac trả chế độ ngủ bình thường khi tải xong hoặc tạm dừng.")
-                        .font(.caption).foregroundColor(.secondary)
-                    Toggle("Chờ Wi-Fi không tính phí hoặc mạng không hạn chế", isOn: $downloads.avoidMetered)
-                    Text(downloads.online ? (downloads.metered ? "Mạng hiện tại tính phí hoặc hạn chế dữ liệu." : "Đã kết nối mạng.") : "Đang ngoại tuyến. Tác vụ sẽ chờ kết nối.")
-                        .font(.caption).foregroundColor(.secondary)
+                    BrandToggleRow(
+                        "Giữ máy thức khi đang tải",
+                        subtitle: "Màn hình vẫn có thể tắt; chế độ ngủ tự khôi phục khi tải xong.",
+                        isOn: $downloads.keepAwake
+                    )
+                    Divider().opacity(0.55)
+                    BrandToggleRow(
+                        "Chờ kết nối không giới hạn dữ liệu",
+                        subtitle: downloads.online
+                            ? (downloads.metered ? "Mạng hiện tại đang hạn chế dữ liệu." : "Mạng hiện tại sẵn sàng tải.")
+                            : "Đang ngoại tuyến; tác vụ sẽ tự chờ kết nối.",
+                        isOn: $downloads.avoidMetered
+                    )
                 }
 
                 ModernCard {
                     BrandSectionTitle("Cập nhật ứng dụng", subtitle: "Bản phát hành chính thức từ GitHub của Xmac.")
-                    Toggle("Tự kiểm tra bản mới mỗi ngày", isOn: $updates.automaticChecks)
-                    Text(updates.message).font(.system(size: 12)).textSelection(.enabled)
+                    BrandToggleRow(
+                        "Tự kiểm tra bản mới mỗi ngày",
+                        subtitle: "Thông báo khi có phiên bản Xmac mới.",
+                        isOn: $updates.automaticChecks
+                    )
+                    Divider().opacity(0.55)
+                    HStack(spacing: 8) {
+                        Image(systemName: updates.busy ? "arrow.triangle.2.circlepath" : "info.circle")
+                            .foregroundColor(XmacTheme.blue)
+                        Text(updates.message).font(.system(size: 12)).textSelection(.enabled)
+                        Spacer()
+                        if updates.busy { ProgressView().controlSize(.small) }
+                    }
                     if let progress = updates.downloadProgress {
                         ProgressView(value: progress)
-                    } else if updates.busy { ProgressView().controlSize(.small) }
+                    }
                     if let release = updates.release {
                         Text(release.body ?? "Bản cập nhật Xmac \(release.version)")
                             .font(.caption).lineLimit(10).textSelection(.enabled)
                         Link("Xem đầy đủ ghi chú phát hành", destination: release.html_url)
                         Button("Tải và cài Xmac \(release.version)…") { updates.confirmInstallation = true }
+                            .buttonStyle(BrandPrimaryButtonStyle())
                             .disabled(updates.busy || release.installer == nil)
                     }
                     Button("Kiểm tra cập nhật") { Task { await updates.check() } }
+                        .buttonStyle(BrandSecondaryButtonStyle())
                         .disabled(updates.busy)
-                    Text("Bộ cài được đối chiếu SHA-256 từ GitHub và kiểm tra chữ ký app. Bản cũ được giữ trong Applications để khôi phục thủ công; cập nhật có thể cần bật lại quyền Trợ năng.")
+                    Text("Xmac xác thực bộ cài và giữ bản cũ để bạn có thể khôi phục thủ công khi cần.")
                         .font(.caption).foregroundColor(.secondary)
                 }
 

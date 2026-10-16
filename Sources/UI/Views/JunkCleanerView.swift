@@ -10,7 +10,6 @@ public struct JunkCleanerView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 BrandPageHeader(
-                    eyebrow: "System care",
                     title: "Dọn rác hệ thống",
                     subtitle: "Xem trước, chọn lọc và làm sạch cache, log cùng dữ liệu tạm."
                 ) {
@@ -73,7 +72,7 @@ public struct JunkCleanerView: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                         }
-                        .buttonStyle(BrandPrimaryButtonStyle())
+                        .buttonStyle(BrandDestructiveButtonStyle())
                         .disabled(cleaner.totalSelectedSize == 0 || cleaner.isCleaning || cleaner.isScanning)
                     }
                 }
@@ -165,6 +164,7 @@ public struct JunkCleanerView: View {
 }
 
 struct CategoryRow: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var category: JunkCategory
     @ObservedObject var vm: JunkCleanerViewModel
     
@@ -172,7 +172,7 @@ struct CategoryRow: View {
         ModernCard {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Toggle("", isOn: $category.isSelected)
+                    Toggle("Chọn tất cả trong \(category.name)", isOn: $category.isSelected)
                         .labelsHidden()
                         .onChange(of: category.isSelected) { newValue in
                             for i in 0..<category.items.count {
@@ -205,6 +205,11 @@ struct CategoryRow: View {
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(
+                        vm.isExpanded(categoryName: category.name)
+                            ? "Thu gọn \(category.name)"
+                            : "Mở rộng \(category.name)"
+                    )
                 }
                 
                 if vm.isExpanded(categoryName: category.name) && !category.items.isEmpty {
@@ -212,7 +217,7 @@ struct CategoryRow: View {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach($category.items) { $item in
                             HStack {
-                                Toggle("", isOn: $item.isSelected)
+                                Toggle("Chọn \(item.name)", isOn: $item.isSelected)
                                     .labelsHidden()
                                 Text(item.name)
                                     .font(.system(size: 12))
@@ -227,7 +232,7 @@ struct CategoryRow: View {
                     }
                 }
             }
-            .animation(.easeOut(duration: 0.24), value: vm.isExpanded(categoryName: category.name))
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.24), value: vm.isExpanded(categoryName: category.name))
         }
     }
 }

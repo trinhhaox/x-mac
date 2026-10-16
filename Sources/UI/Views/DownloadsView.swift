@@ -21,6 +21,7 @@ private final class DownloadsViewState: ObservableObject {
 }
 
 public struct DownloadsView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var manager = DownloadManager.shared
     @StateObject private var viewState = DownloadsViewState()
 
@@ -68,14 +69,19 @@ public struct DownloadsView: View {
                     noResults
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: 10) {
-                            ForEach(visibleItems) { item in
-                                downloadRow(item)
-                                    .transition(.move(edge: .top).combined(with: .opacity))
+                        ModernCard {
+                            LazyVStack(spacing: 0) {
+                                ForEach(Array(visibleItems.enumerated()), id: \.element.id) { index, item in
+                                    downloadRow(item)
+                                        .transition(.move(edge: .top).combined(with: .opacity))
+                                    if index < visibleItems.count - 1 {
+                                        Divider().opacity(0.55)
+                                    }
+                                }
                             }
                         }
                         .padding(.bottom, 24)
-                        .animation(.easeOut(duration: 0.24), value: visibleItems.map(\.id))
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.24), value: visibleItems.map(\.id))
                     }
                 }
             }
@@ -90,7 +96,6 @@ public struct DownloadsView: View {
 
     private var header: some View {
         BrandPageHeader(
-            eyebrow: "DOWNLOAD CENTER",
             title: "Tải xuống",
             subtitle: "Quản lý tải tệp HTTP/HTTPS bằng engine native của macOS."
         ) {
@@ -132,7 +137,7 @@ public struct DownloadsView: View {
                 Button("Xóa lịch sử") {
                     manager.clearFinished()
                 }
-                .buttonStyle(BrandSecondaryButtonStyle())
+                .buttonStyle(BrandDestructiveButtonStyle())
                 .disabled(!manager.items.contains { $0.status != .downloading && $0.status != .paused && $0.status != .waitingForNetwork })
             }
         }
@@ -173,7 +178,7 @@ public struct DownloadsView: View {
     }
 
     private func downloadRow(_ item: ManagedDownload) -> some View {
-        ModernCard {
+        BrandListRow {
             HStack(spacing: 14) {
                 BrandIconTile(iconName: statusIcon(item.status), color: statusColor(item.status), size: 46)
 
@@ -192,7 +197,7 @@ public struct DownloadsView: View {
                     if item.status == .downloading || item.status == .paused || item.status == .waitingForNetwork {
                         ProgressView(value: item.progress)
                             .tint(XmacTheme.blue)
-                            .animation(.easeOut(duration: 0.2), value: item.progress)
+                            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: item.progress)
                     }
 
                     Text(item.errorMessage ?? item.sourceURL)
@@ -212,44 +217,55 @@ public struct DownloadsView: View {
         HStack(spacing: 6) {
             switch item.status {
             case .downloading, .waitingForNetwork:
-                Button(action: { manager.pause(item.id) }) {
-                    Image(systemName: "pause.fill")
+                downloadActionButton("pause.fill", label: "Tạm dừng tải \(item.fileName)") {
+                    manager.pause(item.id)
                 }
-                .help("Tạm dừng")
-                Button(action: { manager.cancel(item.id) }) {
-                    Image(systemName: "xmark")
+                downloadActionButton("xmark", label: "Hủy tải \(item.fileName)", destructive: true) {
+                    manager.cancel(item.id)
                 }
-                .help("Hủy")
             case .paused, .failed:
-                Button(action: { manager.resume(item.id) }) {
-                    Image(systemName: "play.fill")
+                downloadActionButton("play.fill", label: "Tiếp tục tải \(item.fileName)") {
+                    manager.resume(item.id)
                 }
-                .help("Tiếp tục")
-                Button(action: { manager.remove(item.id) }) {
-                    Image(systemName: "trash")
+                downloadActionButton("trash", label: "Xóa \(item.fileName) khỏi lịch sử tải", destructive: true) {
+                    manager.remove(item.id)
                 }
-                .help("Xóa khỏi lịch sử")
             case .completed:
-                Button(action: { manager.reveal(item.id) }) {
-                    Image(systemName: "folder")
+                downloadActionButton("folder", label: "Hiển thị \(item.fileName) trong Finder") {
+                    manager.reveal(item.id)
                 }
-                .help("Hiển thị trong Finder")
-                Button(action: { manager.remove(item.id) }) {
-                    Image(systemName: "trash")
+                downloadActionButton("trash", label: "Xóa \(item.fileName) khỏi lịch sử tải", destructive: true) {
+                    manager.remove(item.id)
                 }
-                .help("Xóa khỏi lịch sử")
             case .cancelled:
-                Button(action: { manager.resume(item.id) }) {
-                    Image(systemName: "arrow.clockwise")
+                downloadActionButton("arrow.clockwise", label: "Tải lại \(item.fileName)") {
+                    manager.resume(item.id)
                 }
-                .help("Tải lại")
-                Button(action: { manager.remove(item.id) }) {
-                    Image(systemName: "trash")
+                downloadActionButton("trash", label: "Xóa \(item.fileName) khỏi lịch sử tải", destructive: true) {
+                    manager.remove(item.id)
                 }
-                .help("Xóa khỏi lịch sử")
             }
         }
-        .buttonStyle(BrandSecondaryButtonStyle())
+    }
+
+    private func downloadActionButton(
+        _ icon: String,
+        label: String,
+        destructive: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .frame(width: 28, height: 28)
+                .background(
+                    Circle().fill((destructive ? Color.red : XmacTheme.blue).opacity(0.08))
+                )
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(destructive ? .red : XmacTheme.blue)
+        .help(label)
+        .accessibilityLabel(label)
     }
 
     private var newTaskSheet: some View {

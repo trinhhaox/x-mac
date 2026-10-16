@@ -19,7 +19,6 @@ public struct AppUninstallerView: View {
     public var body: some View {
         VStack(spacing: 0) {
             BrandPageHeader(
-                eyebrow: "Application care",
                 title: "Gỡ ứng dụng",
                 subtitle: "Kiểm tra từng tệp liên quan trước khi chuyển ứng dụng vào Thùng rác."
             ) {
@@ -41,6 +40,8 @@ public struct AppUninstallerView: View {
                     }
                     .buttonStyle(BrandSecondaryButtonStyle())
                     .disabled(uninstaller.isScanning)
+                    .help("Quét lại danh sách ứng dụng")
+                    .accessibilityLabel("Quét lại danh sách ứng dụng")
                 }
             }
             .padding(.horizontal, 26)
@@ -205,7 +206,7 @@ struct AppDetailView: View {
                             .foregroundColor(.secondary)
                         Text("Tổng dung lượng: \(app.formattedTotalSize)")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.blue)
+                            .foregroundColor(XmacTheme.blue)
                     }
                     
                     Spacer()
@@ -214,7 +215,7 @@ struct AppDetailView: View {
                         Button(action: { onUninstall(app) }) {
                             Label("Gỡ các mục đã chọn", systemImage: "trash.fill")
                         }
-                        .buttonStyle(BrandPrimaryButtonStyle())
+                        .buttonStyle(BrandDestructiveButtonStyle())
                         .disabled(app.selectedSize == 0)
                     } else {
                         Text("Ứng dụng hệ thống")
@@ -236,7 +237,7 @@ struct AppDetailView: View {
                 VStack(spacing: 8) {
                     ForEach($selection.app.associatedFiles) { $file in
                         HStack {
-                            Toggle("", isOn: $file.isSelected)
+                            Toggle("Chọn tệp \(file.name)", isOn: $file.isSelected)
                                 .labelsHidden()
 
                             Image(systemName: iconForType(file.fileType))

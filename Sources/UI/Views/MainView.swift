@@ -1,6 +1,7 @@
 import SwiftUI
 
 public struct MainView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var appState = AppState.shared
     @ObservedObject var ime = InputHookManager.shared
     @ObservedObject var permissions = PermissionsManager.shared
@@ -46,7 +47,7 @@ public struct MainView: View {
                     Text("Xmac")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
-                    Text("CONTROL DECK")
+                    Text("BỘ CÔNG CỤ MAC")
                         .font(.system(size: 9, weight: .bold, design: .rounded))
                         .tracking(1.5)
                         .foregroundColor(.white.opacity(0.52))
@@ -57,25 +58,35 @@ public struct MainView: View {
             .padding(.top, 26)
             .padding(.bottom, 24)
 
-            Text("TIỆN ÍCH")
-                .font(.system(size: 9, weight: .bold, design: .rounded))
-                .tracking(1.4)
-                .foregroundColor(.white.opacity(0.42))
-                .padding(.horizontal, 20)
-                .padding(.bottom, 8)
-
             ScrollView {
-            VStack(spacing: 5) {
-                ForEach(NavigationTab.allCases) { tab in
-                    sidebarButton(for: tab)
+                VStack(alignment: .leading, spacing: 15) {
+                    ForEach(Array(sidebarSections.enumerated()), id: \.offset) { _, section in
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(section.title)
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .tracking(1.3)
+                                .foregroundColor(.white.opacity(0.62))
+                                .padding(.horizontal, 10)
+
+                            ForEach(section.tabs) { tab in
+                                sidebarButton(for: tab)
+                            }
+                        }
+                    }
                 }
-            }
-            .padding(.horizontal, 10)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 8)
             }
 
             Spacer()
 
             VStack(spacing: 10) {
+                sidebarButton(for: .settings)
+
+                Rectangle()
+                    .fill(.white.opacity(0.10))
+                    .frame(height: 1)
+
                 Button(action: { ime.toggleLanguage() }) {
                     HStack(spacing: 10) {
                         ZStack {
@@ -96,7 +107,7 @@ public struct MainView: View {
                                 .foregroundColor(.white)
                             Text("Control + Shift")
                                 .font(.system(size: 9, design: .monospaced))
-                                .foregroundColor(.white.opacity(0.46))
+                                .foregroundColor(.white.opacity(0.62))
                         }
                         Spacer()
                     }
@@ -105,11 +116,13 @@ public struct MainView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(!permissions.isAccessibilityGranted)
+                .accessibilityLabel(permissions.isAccessibilityGranted ? "Chuyển bộ gõ giữa Tiếng Việt và English" : "Bộ gõ cần quyền Trợ năng")
+                .accessibilityHint(permissions.isAccessibilityGranted ? "Nhấn để chuyển ngôn ngữ nhập" : "Mở mục Tổng quan để cấp quyền Trợ năng")
 
                 HStack {
                     Text("Xmac \(AppVersionInfo.current.version)")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.white.opacity(0.38))
+                        .foregroundColor(.white.opacity(0.60))
                     Spacer()
                     Button(action: { NSApplication.shared.terminate(nil) }) {
                         Image(systemName: "power")
@@ -119,6 +132,7 @@ public struct MainView: View {
                     }
                     .buttonStyle(.plain)
                     .help("Thoát Xmac")
+                    .accessibilityLabel("Thoát Xmac")
                 }
             }
             .padding(14)
@@ -129,11 +143,23 @@ public struct MainView: View {
         }
     }
 
+    private var sidebarSections: [(title: String, tabs: [NavigationTab])] {
+        [
+            ("TỔNG QUAN", [.overview, .systemMonitor]),
+            ("CÔNG VIỆC", [.downloads, .fileSearch, .clipboard, .organizer]),
+            ("HỆ THỐNG", [.cutPaste, .diskNTFS, .vietnameseIME, .junkCleaner, .appUninstaller])
+        ]
+    }
+
     private func sidebarButton(for tab: NavigationTab) -> some View {
         let isSelected = appState.selectedTab == tab
         return Button(action: {
-            withAnimation(.easeOut(duration: 0.22)) {
+            if reduceMotion {
                 appState.selectedTab = tab
+            } else {
+                withAnimation(.easeOut(duration: 0.22)) {
+                    appState.selectedTab = tab
+                }
             }
         }) {
             HStack(spacing: 11) {
@@ -158,5 +184,6 @@ public struct MainView: View {
             .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(isSelected ? XmacTheme.cyan.opacity(0.18) : .clear, lineWidth: 1))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

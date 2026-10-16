@@ -10,7 +10,6 @@ public struct DiskNTFSView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 BrandPageHeader(
-                    eyebrow: "Storage",
                     title: "Ổ đĩa & NTFS",
                     subtitle: "Theo dõi dung lượng, bật ghi NTFS và ngắt kết nối thiết bị an toàn."
                 ) {
@@ -49,7 +48,7 @@ public struct DiskNTFSView: View {
                                 .foregroundColor(.secondary)
                             Text("Chưa phát hiện ổ cứng ngoại vi")
                                 .font(.system(size: 15, weight: .semibold))
-                            Text("Hãy cắm USB, ổ cứng di động SSD/HDD của bạn vào máy để Xmac nhận diện.")
+                            Text("Kết nối USB hoặc ổ cứng ngoài để Xmac hiển thị tại đây.")
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                         }
@@ -75,13 +74,13 @@ public struct DiskNTFSView: View {
                     BrandSectionTitle("Lưu ý khi dùng NTFS", subtitle: "Ba nguyên tắc để bảo vệ dữ liệu trên ổ ngoài.")
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("• Mặc định hệ điều hành macOS chỉ cho phép ĐỌC (Read-Only) các ổ cứng được định dạng NTFS từ Windows.")
+                        Text("• macOS mặc định chỉ đọc ổ đĩa NTFS được định dạng từ Windows.")
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
-                        Text("• Khi bạn bấm 'Bật Ghi NTFS', Xmac sẽ unmount phân vùng chỉ đọc và remount lại dưới chế độ Đọc - Ghi toàn quyền (Read-Write).")
+                        Text("• Bật Ghi NTFS sẽ gắn kết lại phân vùng ở chế độ đọc và ghi.")
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
-                        Text("• Luôn bấm 'Ngắt kết nối an toàn (Eject)' trước khi rút cáp USB để bảo vệ toàn vẹn dữ liệu của bạn.")
+                        Text("• Luôn ngắt kết nối an toàn trước khi rút cáp để bảo vệ dữ liệu.")
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
@@ -192,6 +191,7 @@ struct DiskVolumeCard: View {
                             .buttonStyle(BrandSecondaryButtonStyle())
                             .disabled(!volume.isMounted)
                             .help("Ngắt kết nối an toàn")
+                            .accessibilityLabel("Ngắt kết nối \(volume.name) an toàn")
                         }
                     }
                 }

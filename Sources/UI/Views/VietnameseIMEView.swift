@@ -12,7 +12,6 @@ public struct VietnameseIMEView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 BrandPageHeader(
-                    eyebrow: "Input engine",
                     title: "Bộ gõ Tiếng Việt",
                     subtitle: "Telex, VNI và gõ tắt với quy tắc dấu linh hoạt."
                 ) {
@@ -23,6 +22,7 @@ public struct VietnameseIMEView: View {
                         isOn: $ime.isVietnameseMode
                     )
                         .toggleStyle(.switch)
+                        .tint(XmacTheme.blue)
                         .disabled(!permissions.isAccessibilityGranted)
                 }
                 
@@ -45,18 +45,11 @@ public struct VietnameseIMEView: View {
                         
                         Divider()
                         
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Kiểu bỏ dấu mới")
-                                    .font(.system(size: 13, weight: .medium))
-                                Text("Bỏ dấu theo chuẩn mới: hòa, thúy, khỏe thay vì hoà, thuý, khoẻ.")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Toggle("", isOn: $ime.modernOrthography)
-                                .labelsHidden()
-                        }
+                        BrandToggleRow(
+                            "Kiểu bỏ dấu mới",
+                            subtitle: "Bỏ dấu theo chuẩn mới: hòa, thúy, khỏe thay vì hoà, thuý, khoẻ.",
+                            isOn: $ime.modernOrthography
+                        )
                         
                         Divider()
                         
@@ -77,26 +70,20 @@ public struct VietnameseIMEView: View {
                 // Macro (Gõ tắt) Management Card
                 ModernCard {
                     HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            BrandSectionTitle("Bảng gõ tắt", subtitle: "Mở rộng cụm từ khi nhấn dấu cách.")
-                            Text("Tự động mở rộng từ viết tắt khi nhấn dấu cách Space.")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                        }
+                        BrandSectionTitle("Bảng gõ tắt", subtitle: "Mở rộng cụm từ khi nhấn dấu cách.")
                         Spacer()
                         Toggle("Bật gõ tắt", isOn: $macroManager.isMacroEnabled)
-                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .tint(XmacTheme.blue)
                     }
                     
                     Divider()
                     
                     // Form thêm mới
                     HStack(spacing: 10) {
-                        TextField("Từ viết tắt (vd: vn)", text: $vm.newShortcut)
-                            .textFieldStyle(.roundedBorder)
+                        BrandTextField("Từ viết tắt (vd: vn)", text: $vm.newShortcut)
                             .frame(width: 140)
-                        TextField("Từ mở rộng (vd: Việt Nam)", text: $vm.newExpansion)
-                            .textFieldStyle(.roundedBorder)
+                        BrandTextField("Từ mở rộng (vd: Việt Nam)", text: $vm.newExpansion)
                         Button("Thêm") {
                             macroManager.addMacro(shortcut: vm.newShortcut, expansion: vm.newExpansion)
                             vm.newShortcut = ""
@@ -107,28 +94,51 @@ public struct VietnameseIMEView: View {
                     }
                     
                     // Danh sách Macro hiện có
-                    VStack(spacing: 6) {
-                        ForEach(macroManager.macros) { item in
-                            HStack {
-                                Text(item.shortcut)
-                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-                                    .frame(width: 100, alignment: .leading)
-                                Image(systemName: "arrow.right")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                                Text(item.expansion)
-                                    .font(.system(size: 13))
-                                Spacer()
-                                Button(action: {
-                                    macroManager.removeMacro(shortcut: item.shortcut)
-                                }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.secondary)
+                    if macroManager.macros.isEmpty {
+                        HStack(spacing: 9) {
+                            Image(systemName: "text.badge.plus")
+                                .foregroundColor(XmacTheme.blue)
+                            Text("Chưa có từ gõ tắt. Thêm mục đầu tiên ở phía trên.")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 8)
+                    } else {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(macroManager.macros.enumerated()), id: \.element.id) { index, item in
+                                BrandListRow {
+                                    HStack(spacing: 12) {
+                                        Text(item.shortcut)
+                                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                            .foregroundColor(XmacTheme.blue)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 5)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                                    .fill(XmacTheme.blue.opacity(0.08))
+                                            )
+                                        Image(systemName: "arrow.right")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.secondary)
+                                        Text(item.expansion)
+                                            .font(.system(size: 13))
+                                        Spacer()
+                                        Button(action: {
+                                            macroManager.removeMacro(shortcut: item.shortcut)
+                                        }) {
+                                            Image(systemName: "trash")
+                                        }
+                                        .buttonStyle(.plain)
+                                        .foregroundColor(.red)
+                                        .help("Xóa gõ tắt")
+                                        .accessibilityLabel("Xóa gõ tắt \(item.shortcut)")
+                                    }
                                 }
-                                .buttonStyle(.plain)
+                                if index < macroManager.macros.count - 1 {
+                                    Divider().opacity(0.55)
+                                }
                             }
-                            .padding(.vertical, 4)
-                            Divider()
                         }
                     }
                 }

@@ -10,8 +10,7 @@ public struct CutPasteView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 BrandPageHeader(
-                    eyebrow: "Finder workflow",
-                    title: "Cut & Paste",
+                    title: "Di chuyển tệp trong Finder",
                     subtitle: "Di chuyển tệp trong Finder bằng phím tắt quen thuộc, có thể hoàn tác an toàn."
                 ) {
                     Toggle(
@@ -19,6 +18,7 @@ public struct CutPasteView: View {
                         isOn: $cutPaste.isEnabled
                     )
                         .toggleStyle(.switch)
+                        .tint(XmacTheme.blue)
                         .disabled(!permissions.isAccessibilityGranted)
                 }
                 
@@ -29,7 +29,7 @@ public struct CutPasteView: View {
                     VStack(spacing: 12) {
                         ShortcutRow(key: "⌘X", title: "Cắt tệp / thư mục", desc: "Chọn các file trong Finder và nhấn ⌘X để đưa vào danh sách di chuyển.")
                         Divider()
-                        ShortcutRow(key: "⌘V", title: "Dán di chuyển", desc: "Mở thư mục đích và nhấn ⌘V để di chuyển file đến (không phải copy).")
+                        ShortcutRow(key: "⌘V", title: "Di chuyển đến đây", desc: "Mở thư mục đích và nhấn ⌘V để chuyển các tệp đã cắt đến đó.")
                         Divider()
                         ShortcutRow(key: "⌘Z", title: "Hoàn tác di chuyển", desc: "Trả các file vừa paste về lại vị trí ban đầu một cách an toàn.")
                         Divider()
@@ -49,12 +49,12 @@ public struct CutPasteView: View {
                         }
                         Spacer()
                         if !cutPaste.cutFiles.isEmpty {
-                            Button("Huỷ bỏ cắt") {
+                            Button("Bỏ danh sách") {
                                 cutPaste.handleCopy()
                             }
                             .buttonStyle(BrandSecondaryButtonStyle())
                             
-                            Button("Dán ngay (⌘V)") {
+                            Button("Di chuyển ngay (⌘V)") {
                                 _ = cutPaste.handlePaste()
                             }
                             .buttonStyle(BrandPrimaryButtonStyle())

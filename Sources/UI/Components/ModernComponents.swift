@@ -50,14 +50,15 @@ private final class PageEntranceState: ObservableObject {
 }
 
 private struct XmacPageModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var entrance = PageEntranceState()
 
     func body(content: Content) -> some View {
         content
             .background(XmacTheme.workspaceBackground.ignoresSafeArea())
-            .opacity(entrance.isVisible ? 1 : 0)
-            .offset(y: entrance.isVisible ? 0 : 10)
-            .animation(.easeOut(duration: 0.32), value: entrance.isVisible)
+            .opacity(entrance.isVisible || reduceMotion ? 1 : 0)
+            .offset(y: entrance.isVisible || reduceMotion ? 0 : 10)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.32), value: entrance.isVisible)
             .onAppear {
                 entrance.isVisible = true
             }
@@ -95,13 +96,13 @@ public struct ModernCard<Content: View>: View {
 }
 
 public struct BrandPageHeader<Trailing: View>: View {
-    let eyebrow: String
+    let eyebrow: String?
     let title: String
     let subtitle: String
     let trailing: Trailing
 
     public init(
-        eyebrow: String,
+        eyebrow: String? = nil,
         title: String,
         subtitle: String,
         @ViewBuilder trailing: () -> Trailing
@@ -115,12 +116,14 @@ public struct BrandPageHeader<Trailing: View>: View {
     public var body: some View {
         HStack(alignment: .center, spacing: 24) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(eyebrow.uppercased())
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .tracking(1.5)
-                    .foregroundColor(XmacTheme.blue)
+                if let eyebrow, !eyebrow.isEmpty {
+                    Text(eyebrow.uppercased())
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(1.5)
+                        .foregroundColor(XmacTheme.blue)
+                }
                 Text(title)
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(.system(size: 25, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 Text(subtitle)
                     .font(.system(size: 13))
@@ -188,6 +191,7 @@ public struct BrandIconTile: View {
 
 public struct BrandPrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init() {}
 
@@ -207,14 +211,15 @@ public struct BrandPrimaryButtonStyle: ButtonStyle {
                 radius: 8,
                 y: 4
             )
-            .scaleEffect(isEnabled && configuration.isPressed ? 0.97 : 1)
-            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
-            .animation(.easeOut(duration: 0.16), value: isEnabled)
+            .scaleEffect(isEnabled && configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: configuration.isPressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: isEnabled)
     }
 }
 
 public struct BrandSecondaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init() {}
 
@@ -243,9 +248,111 @@ public struct BrandSecondaryButtonStyle: ButtonStyle {
                         lineWidth: 1
                     )
             )
-            .scaleEffect(isEnabled && configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
-            .animation(.easeOut(duration: 0.16), value: isEnabled)
+            .scaleEffect(isEnabled && configuration.isPressed && !reduceMotion ? 0.98 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: configuration.isPressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: isEnabled)
+    }
+}
+
+public struct BrandDestructiveButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    public init() {}
+
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(isEnabled ? Color.red : Color.secondary.opacity(0.62))
+            .padding(.horizontal, 13)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isEnabled ? Color.red.opacity(configuration.isPressed ? 0.16 : 0.08) : Color.secondary.opacity(0.06))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(isEnabled ? Color.red.opacity(0.2) : Color.secondary.opacity(0.1), lineWidth: 1)
+            )
+            .scaleEffect(isEnabled && configuration.isPressed && !reduceMotion ? 0.98 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: configuration.isPressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: isEnabled)
+    }
+}
+
+public struct BrandTextField: View {
+    let prompt: String
+    @Binding var text: String
+    let accessibilityLabel: String?
+    @FocusState private var isFocused: Bool
+
+    public init(_ prompt: String, text: Binding<String>, accessibilityLabel: String? = nil) {
+        self.prompt = prompt
+        self._text = text
+        self.accessibilityLabel = accessibilityLabel
+    }
+
+    public var body: some View {
+        TextField(prompt, text: $text)
+            .textFieldStyle(.plain)
+            .font(.system(size: 13))
+            .padding(.horizontal, 11)
+            .frame(minHeight: 36)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(XmacTheme.cardBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(isFocused ? XmacTheme.blue.opacity(0.72) : XmacTheme.cardStroke, lineWidth: isFocused ? 1.5 : 1)
+            )
+            .focused($isFocused)
+            .accessibilityLabel(accessibilityLabel ?? prompt)
+    }
+}
+
+public struct BrandToggleRow: View {
+    let title: String
+    let subtitle: String?
+    @Binding var isOn: Bool
+
+    public init(_ title: String, subtitle: String? = nil, isOn: Binding<Bool>) {
+        self.title = title
+        self.subtitle = subtitle
+        self._isOn = isOn
+    }
+
+    public var body: some View {
+        Toggle(isOn: $isOn) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .toggleStyle(.switch)
+        .tint(XmacTheme.blue)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+public struct BrandListRow<Content: View>: View {
+    let content: Content
+
+    public init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    public var body: some View {
+        content
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
     }
 }
 

@@ -16,40 +16,114 @@ struct ClipboardHistoryView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                BrandPageHeader(eyebrow: "CLIPBOARD", title: "Lịch sử clipboard", subtitle: "Lưu và tìm nội dung đã chép trên máy này.") { EmptyView() }
+                BrandPageHeader(
+                    title: "Lịch sử clipboard",
+                    subtitle: "Tìm lại nội dung đã chép mà không rời khỏi máy Mac."
+                ) {
+                    StatusBadge(
+                        title: history.enabled ? "Đang lưu" : "Đang tắt",
+                        isPositive: history.enabled
+                    )
+                }
                 ModernCard {
-                    Toggle("Bật lưu lịch sử clipboard", isOn: $history.enabled)
-                    Text("Lưu cục bộ dạng không mã hóa, tối đa 100 mục / 16 MB. Mục không ghim được xóa sau 7 ngày; mỗi mục tối đa 1 MB. Bộ lọc không thể nhận diện mọi mật khẩu hoặc bí mật; hãy tạm tắt trước khi chép dữ liệu nhạy cảm.")
-                        .font(.caption).foregroundColor(.secondary)
-                    Text("Ứng dụng loại trừ (bundle ID, cách nhau bằng dấu phẩy)").font(.caption).foregroundColor(.secondary)
-                    TextField("Bundle ID ứng dụng loại trừ, ngăn cách bằng dấu phẩy", text: $history.exclusions)
-                        .textFieldStyle(.roundedBorder)
-                    HStack {
-                        TextField("Tìm nội dung hoặc ứng dụng nguồn", text: $state.query).textFieldStyle(.roundedBorder)
-                        Button("Xóa toàn bộ…") { state.confirmClear = true }.disabled(history.items.isEmpty)
-                    }
+                    BrandToggleRow(
+                        "Lưu lịch sử clipboard",
+                        subtitle: "Tối đa 100 mục; mục không ghim được tự xóa sau 7 ngày.",
+                        isOn: $history.enabled
+                    )
+
+                    Label(
+                        "Dữ liệu được lưu cục bộ, không mã hóa. Hãy tạm tắt trước khi chép mật khẩu hoặc nội dung nhạy cảm.",
+                        systemImage: "lock.shield"
+                    )
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+
+                    Divider().opacity(0.55)
+
+                    Text("Ứng dụng không lưu lịch sử")
+                        .font(.system(size: 12, weight: .semibold))
+                    BrandTextField(
+                        "Bundle ID ứng dụng loại trừ, ngăn cách bằng dấu phẩy",
+                        text: $history.exclusions
+                    )
                     Text(history.message).font(.caption).foregroundColor(.secondary)
                 }
-                if filtered.isEmpty { Text("Chưa có nội dung phù hợp. Bật lưu rồi chép nội dung mới để bắt đầu.").foregroundColor(.secondary) }
-                LazyVStack(spacing: 10) {
-                    ForEach(filtered) { item in
-                        ModernCard {
-                            HStack(alignment: .top) {
-                                if let data = item.png, let image = NSImage(data: data) {
-                                    Image(nsImage: image).resizable().scaledToFit().frame(width: 70, height: 55)
-                                } else { Image(systemName: item.kind == .files ? "doc.on.doc" : "text.alignleft").foregroundColor(XmacTheme.blue) }
-                                VStack(alignment: .leading, spacing: 5) {
-                                    Text(item.title).lineLimit(4).textSelection(.enabled)
-                                    Text("\(item.source) • \(item.date.formatted(date: .abbreviated, time: .shortened))")
-                                        .font(.caption).foregroundColor(.secondary)
-                                    HStack {
-                                        Button("Chép") { history.copy(item) }
-                                        if item.kind == .text { Button("Chép văn bản thuần") { history.copy(item, plainText: true) } }
-                                        Button(item.pinned ? "Bỏ ghim" : "Ghim") { history.togglePin(item.id) }
-                                        Button("Xóa") { history.remove(item.id) }
-                                    }.font(.caption)
+
+                HStack(alignment: .bottom, spacing: 12) {
+                    BrandSectionTitle(
+                        "Nội dung gần đây",
+                        subtitle: "\(filtered.count) mục phù hợp"
+                    )
+                    Spacer()
+                    BrandTextField("Tìm nội dung hoặc ứng dụng nguồn", text: $state.query)
+                        .frame(maxWidth: 360)
+                    Button("Xóa toàn bộ…") { state.confirmClear = true }
+                        .buttonStyle(BrandDestructiveButtonStyle())
+                        .disabled(history.items.isEmpty)
+                }
+
+                if filtered.isEmpty {
+                    ModernCard {
+                        VStack(spacing: 10) {
+                            BrandIconTile(iconName: "doc.on.clipboard", color: XmacTheme.cyan, size: 54)
+                            Text(state.query.isEmpty ? "Clipboard đang trống" : "Không tìm thấy nội dung")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                            Text(state.query.isEmpty
+                                 ? "Bật lưu lịch sử rồi chép nội dung mới để bắt đầu."
+                                 : "Thử một từ khóa hoặc tên ứng dụng nguồn khác.")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 150)
+                    }
+                }
+                if !filtered.isEmpty {
+                    ModernCard {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(filtered.enumerated()), id: \.element.id) { index, item in
+                                BrandListRow {
+                                    HStack(alignment: .top) {
+                                        if let data = item.png, let image = NSImage(data: data) {
+                                            Image(nsImage: image).resizable().scaledToFit().frame(width: 70, height: 55)
+                                        } else {
+                                            Image(systemName: item.kind == .files ? "doc.on.doc" : "text.alignleft")
+                                                .foregroundColor(XmacTheme.blue)
+                                        }
+                                        VStack(alignment: .leading, spacing: 5) {
+                                            Text(item.title).lineLimit(4).textSelection(.enabled)
+                                            Text("\(item.source) • \(item.date.formatted(date: .abbreviated, time: .shortened))")
+                                                .font(.caption).foregroundColor(.secondary)
+                                            HStack(spacing: 8) {
+                                                Button("Chép") { history.copy(item) }
+                                                    .buttonStyle(BrandSecondaryButtonStyle())
+                                                if item.kind == .text {
+                                                    Button("Văn bản thuần") { history.copy(item, plainText: true) }
+                                                        .buttonStyle(.link)
+                                                }
+                                                Spacer()
+                                                Button(action: { history.togglePin(item.id) }) {
+                                                    Image(systemName: item.pinned ? "pin.slash.fill" : "pin.fill")
+                                                }
+                                                .buttonStyle(.plain)
+                                                .foregroundColor(XmacTheme.blue)
+                                                .help(item.pinned ? "Bỏ ghim" : "Ghim")
+                                                .accessibilityLabel(item.pinned ? "Bỏ ghim mục này" : "Ghim mục này")
+                                                Button(action: { history.remove(item.id) }) {
+                                                    Image(systemName: "trash")
+                                                }
+                                                .buttonStyle(.plain)
+                                                .foregroundColor(.red)
+                                                .help("Xóa khỏi lịch sử")
+                                                .accessibilityLabel("Xóa mục này khỏi lịch sử clipboard")
+                                            }
+                                        }
+                                        Spacer(minLength: 0)
+                                    }
                                 }
-                                Spacer(minLength: 0)
+                                if index < filtered.count - 1 {
+                                    Divider().opacity(0.55)
+                                }
                             }
                         }
                     }

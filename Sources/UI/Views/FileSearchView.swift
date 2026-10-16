@@ -9,6 +9,7 @@ private final class FileSearchViewState: ObservableObject {
 }
 
 public struct FileSearchView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var engine = FileSearchEngine.shared
     @StateObject private var viewState = FileSearchViewState()
 
@@ -69,7 +70,6 @@ public struct FileSearchView: View {
 
     private var header: some View {
         BrandPageHeader(
-            eyebrow: "SPOTLIGHT SEARCH",
             title: "Tìm tệp nhanh",
             subtitle: "Tìm tên tệp hoặc nội dung đã được macOS lập chỉ mục, không cần daemon nền."
         ) {
@@ -164,19 +164,24 @@ public struct FileSearchView: View {
 
     private var resultsList: some View {
         ScrollView {
-            LazyVStack(spacing: 8) {
-                ForEach(engine.results) { result in
-                    resultRow(result)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+            ModernCard {
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(engine.results.enumerated()), id: \.element.id) { index, result in
+                        resultRow(result)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        if index < engine.results.count - 1 {
+                            Divider().opacity(0.55)
+                        }
+                    }
                 }
             }
             .padding(.bottom, 24)
-            .animation(.easeOut(duration: 0.2), value: engine.results.map(\.id))
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: engine.results.map(\.id))
         }
     }
 
     private func resultRow(_ result: FileSearchResult) -> some View {
-        ModernCard {
+        BrandListRow {
             HStack(spacing: 13) {
                 Image(nsImage: NSWorkspace.shared.icon(forFile: result.path))
                     .resizable()
@@ -252,6 +257,7 @@ public struct FileSearchView: View {
         .buttonStyle(.plain)
         .foregroundColor(XmacTheme.blue)
         .help(help)
+        .accessibilityLabel(help)
     }
 
     private func chooseFolder() {

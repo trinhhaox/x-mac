@@ -37,6 +37,7 @@ import Testing
     @MainActor @Test(.enabled(if: ProcessInfo.processInfo.environment["XMAC_TEST_DESKTOP_UI"] == "1"))
     func renderNewViewsUsingOnlyIsolatedSampleData() async throws {
         _ = NSApplication.shared
+        let originalTab = AppState.shared.selectedTab
         let name = "XmacDesktopViewTest.\(UUID().uuidString)"
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(name)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -46,6 +47,7 @@ import Testing
         let organizer = DownloadsOrganizer(root: root, store: root.appendingPathComponent("organizer/undo.json"), defaults: defaults)
         defer {
             organizer.stopWatching(); history.stop(); board.releaseGlobally()
+            AppState.shared.selectedTab = originalTab
             defaults.removePersistentDomain(forName: name)
             try? FileManager.default.removeItem(at: root)
         }
@@ -74,6 +76,10 @@ import Testing
         }
         try await render(ClipboardHistoryView(history: history), path: "/tmp/xmac-clipboard-phase3.png")
         try await render(DownloadsOrganizerView(organizer: organizer), path: "/tmp/xmac-organizer-phase3.png")
+        try await render(SettingsView(), path: "/tmp/xmac-settings-phase2.png")
+        try await render(VietnameseIMEView(), path: "/tmp/xmac-ime-phase2.png")
+        AppState.shared.selectedTab = .overview
+        try await render(MainView(), path: "/tmp/xmac-main-phase3.png")
         organizer.requestApply()
         try Data("not part of the confirmed preview".utf8).write(to: root.appendingPathComponent("second.pdf"))
         try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(-10)], ofItemAtPath: root.appendingPathComponent("second.pdf").path)
