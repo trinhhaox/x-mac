@@ -64,10 +64,20 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         let ime = InputHookManager.shared
         let cutPaste = FinderCutPasteManager.shared
         let hasAccessibility = PermissionsManager.shared.isAccessibilityGranted
+        let smartProfiles = SmartProfilesManager.shared
+        let effectiveIME = smartProfiles.effectiveConfiguration(
+            for: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+            globalVietnameseMode: ime.isVietnameseMode,
+            globalTypingMethod: ime.typingMethod,
+            globalMacrosEnabled: MacroManager.shared.isMacroEnabled
+        )
         
         var title = hasAccessibility
-            ? (ime.isVietnameseMode ? "🇻🇳 V" : "🇺🇸 E")
+            ? (effectiveIME.isVietnameseMode ? "🇻🇳 V" : "🇺🇸 E")
             : "⚠︎ Xmac"
+        if smartProfiles.activeProfile != nil {
+            title += " •"
+        }
         if !cutPaste.cutFiles.isEmpty {
             title += " [✂︎\(cutPaste.cutFiles.count)]"
         }
@@ -110,6 +120,19 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         let typingItem = NSMenuItem(title: L10n.format("Kiểu gõ: %@", ime.typingMethod.rawValue), action: nil, keyEquivalent: "")
         typingItem.submenu = methodMenu
         menu.addItem(typingItem)
+
+        let smartProfiles = SmartProfilesManager.shared
+        let profileTitle = smartProfiles.isEnabled
+            ? L10n.text("Smart Profiles: Đang bật")
+            : L10n.text("Smart Profiles: Đã tạm dừng")
+        let profileItem = NSMenuItem(title: profileTitle, action: #selector(toggleSmartProfiles), keyEquivalent: "")
+        profileItem.target = self
+        profileItem.state = smartProfiles.isEnabled ? .on : .off
+        menu.addItem(profileItem)
+
+        let manageProfilesItem = NSMenuItem(title: L10n.text("Quản lý Smart Profiles…"), action: #selector(openSmartProfiles), keyEquivalent: "")
+        manageProfilesItem.target = self
+        menu.addItem(manageProfilesItem)
         
         menu.addItem(NSMenuItem.separator())
 
@@ -209,6 +232,15 @@ public class StatusBarController: NSObject, NSMenuDelegate {
     @objc private func toggleCutPaste() {
         FinderCutPasteManager.shared.isEnabled.toggle()
         updateStatusBarTitle()
+    }
+
+    @objc private func toggleSmartProfiles() {
+        SmartProfilesManager.shared.setEnabled(!SmartProfilesManager.shared.isEnabled)
+    }
+
+    @objc private func openSmartProfiles() {
+        AppState.shared.selectedTab = .smartProfiles
+        openMainWindow()
     }
     
     @objc private func pasteNowAction() {

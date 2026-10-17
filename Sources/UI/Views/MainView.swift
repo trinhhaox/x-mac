@@ -24,6 +24,7 @@ public struct MainView: View {
                 case .cutPaste: CutPasteView()
                 case .diskNTFS: DiskNTFSView()
                 case .vietnameseIME: VietnameseIMEView()
+                case .smartProfiles: SmartProfilesView()
                 case .junkCleaner: JunkCleanerView()
                 case .appUninstaller: AppUninstallerView()
                 case .settings: SettingsView()
@@ -156,7 +157,7 @@ public struct MainView: View {
         [
             ("TỔNG QUAN", [.overview, .systemMonitor]),
             ("CÔNG VIỆC", [.downloads, .fileSearch, .clipboard, .organizer]),
-            ("HỆ THỐNG", [.cutPaste, .diskNTFS, .vietnameseIME, .junkCleaner, .appUninstaller])
+            ("HỆ THỐNG", [.cutPaste, .diskNTFS, .vietnameseIME, .smartProfiles, .junkCleaner, .appUninstaller])
         ]
     }
 

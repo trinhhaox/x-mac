@@ -30,6 +30,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         createMainWindow()
         AppUpdateManager.shared.start()
         QuickLauncher.shared.start()
+        SmartProfilesManager.shared.start()
         ClipboardHistory.shared.start()
         
     }
@@ -95,6 +96,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     public func applicationWillTerminate(_ notification: Notification) {
         GlobalEventTap.shared.stop()
         QuickLauncher.shared.stop()
+        SmartProfilesManager.shared.stop()
         ClipboardHistory.shared.stop()
         DownloadsOrganizer.shared.stopWatching()
         DownloadManager.shared.shutdown()

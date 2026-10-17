@@ -110,6 +110,15 @@ public class InputHookManager: ObservableObject {
     private func handleKeyDown(event: CGEvent) -> Unmanaged<CGEvent>? {
         syncActiveApplication()
 
+        let frontBundleIdentifier = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        let smartProfiles = SmartProfilesManager.shared
+        let effectiveConfiguration = smartProfiles.effectiveConfiguration(
+            for: frontBundleIdentifier,
+            globalVietnameseMode: isVietnameseMode,
+            globalTypingMethod: typingMethod,
+            globalMacrosEnabled: MacroManager.shared.isMacroEnabled
+        )
+
         let flags = event.flags
         // Nếu có Command, Option hoặc Control -> Phím tắt ứng dụng, reset buffer và bỏ qua
         if flags.contains(.maskCommand) || flags.contains(.maskAlternate) || flags.contains(.maskControl) {
@@ -120,8 +129,9 @@ public class InputHookManager: ObservableObject {
         }
         
         // Kiểm tra App đang active
-        if let frontApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier {
-            if excludedApps.contains(frontApp) {
+        if let frontApp = frontBundleIdentifier {
+            let hasExplicitProfile = smartProfiles.isEnabled && smartProfiles.profile(for: frontApp) != nil
+            if excludedApps.contains(frontApp) && !hasExplicitProfile {
                 currentBuffer = ""
                 rawBuffer = ""
                 lastActionWasExplicitCancellation = false
@@ -196,7 +206,7 @@ public class InputHookManager: ObservableObject {
             String($0).lowercased() == String(char).lowercased()
         } ?? false
         rawBuffer.append(char)
-        guard isVietnameseMode else {
+        guard effectiveConfiguration.isVietnameseMode else {
             currentBuffer.append(char)
             lastActionWasExplicitCancellation = false
             return Unmanaged.passUnretained(event)
@@ -206,7 +216,7 @@ public class InputHookManager: ObservableObject {
         let (transformed, didTransform) = VietnameseEngine.shared.processWord(
             currentWord: currentBuffer,
             newChar: char,
-            method: typingMethod,
+            method: effectiveConfiguration.typingMethod,
             modernOrthography: modernOrthography
         )
         
@@ -228,10 +238,11 @@ public class InputHookManager: ObservableObject {
         for buffer: String,
         boundaryKeyCode: Int64,
         character: Character?,
-        manager: MacroManager
+        manager: MacroManager,
+        enabledOverride: Bool? = nil
     ) -> String? {
         let isSpace = boundaryKeyCode == 49 || character == " "
-        guard isSpace, manager.isMacroEnabled else { return nil }
+        guard isSpace, enabledOverride ?? manager.isMacroEnabled else { return nil }
         return manager.getExpansion(for: buffer)
     }
 
@@ -240,11 +251,18 @@ public class InputHookManager: ObservableObject {
         event: CGEvent
     ) -> Unmanaged<CGEvent>? {
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+        let effectiveConfiguration = SmartProfilesManager.shared.effectiveConfiguration(
+            for: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+            globalVietnameseMode: isVietnameseMode,
+            globalTypingMethod: typingMethod,
+            globalMacrosEnabled: MacroManager.shared.isMacroEnabled
+        )
         if let expansion = Self.macroExpansion(
             for: currentBuffer,
             boundaryKeyCode: keyCode,
             character: character,
-            manager: MacroManager.shared
+            manager: MacroManager.shared,
+            enabledOverride: effectiveConfiguration.macrosEnabled
         ) {
             let oldLen = currentBuffer.count
             currentBuffer = ""
@@ -254,7 +272,7 @@ public class InputHookManager: ObservableObject {
             return nil
         }
 
-        if isVietnameseMode, !lastActionWasExplicitCancellation,
+        if effectiveConfiguration.isVietnameseMode, !lastActionWasExplicitCancellation,
            EnglishWordRestoration.shouldRestore(raw: rawBuffer, composed: currentBuffer) {
             let oldLength = currentBuffer.count
             let restored = rawBuffer + String(character)
@@ -323,5 +341,9 @@ public class InputHookManager: ObservableObject {
         rawBuffer = ""
         lastActionWasExplicitCancellation = false
         activeProcessIdentifier = NSWorkspace.shared.frontmostApplication?.processIdentifier
+    }
+
+    public func resetForApplicationChange() {
+        resetComposition()
     }
 }

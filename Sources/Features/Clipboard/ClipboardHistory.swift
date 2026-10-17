@@ -40,6 +40,7 @@ final class ClipboardHistory: ObservableObject {
     private let store: URL
     private let board: NSPasteboard
     private let onCopy: () -> Void
+    private let profileAllowsCapture: (String) -> Bool
     private var lastChange: Int
     private var lastPrune = Date.distantPast
     private var timer: Timer?
@@ -51,11 +52,13 @@ final class ClipboardHistory: ObservableObject {
     static let maxItems = 100
 
     init(defaults: UserDefaults = .standard, store: URL? = nil, board: NSPasteboard = .general,
-         onCopy: @escaping () -> Void = { FinderCutPasteManager.shared.handleCopy() }) {
+         onCopy: @escaping () -> Void = { FinderCutPasteManager.shared.handleCopy() },
+         profileAllowsCapture: @escaping (String) -> Bool = { SmartProfilesManager.shared.isClipboardCaptureAllowed(for: $0) }) {
         self.defaults = defaults
         self.store = store ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Xmac/Clipboard/history.json")
         self.board = board
         self.onCopy = onCopy
+        self.profileAllowsCapture = profileAllowsCapture
         lastChange = board.changeCount
         enabled = defaults.bool(forKey: "Clipboard.Enabled")
         exclusions = defaults.string(forKey: "Clipboard.Exclusions") ?? "com.1password.1password, com.agilebits.onepassword7, com.bitwarden.desktop, com.apple.Passwords, com.apple.keychainaccess"
@@ -104,7 +107,8 @@ final class ClipboardHistory: ObservableObject {
         lastChange = change
         let types = Set((board.types ?? []).map(\.rawValue))
         let reportedSource = board.string(forType: NSPasteboard.PasteboardType("org.nspasteboard.source")) ?? source
-        guard !locked, !Self.blocked(types: types, source: source, exclusions: exclusions, secure: secureInput),
+        guard profileAllowsCapture(source), profileAllowsCapture(reportedSource),
+              !locked, !Self.blocked(types: types, source: source, exclusions: exclusions, secure: secureInput),
               !Self.blocked(types: types, source: reportedSource, exclusions: exclusions, secure: secureInput) else { return }
         let text = board.string(forType: .string)
         let html = board.data(forType: .html)

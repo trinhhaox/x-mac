@@ -46,6 +46,23 @@ import Testing
         let board = NSPasteboard.withUniqueName()
         let history = ClipboardHistory(defaults: defaults, store: root.appendingPathComponent("clipboard/history.json"), board: board, onCopy: {})
         let organizer = DownloadsOrganizer(root: root, store: root.appendingPathComponent("organizer/undo.json"), defaults: defaults)
+        let smartProfiles = SmartProfilesManager(defaults: defaults, observeWorkspace: false)
+        smartProfiles.save(SmartAppProfile(
+            displayName: "Google Chrome",
+            bundleIdentifier: "com.google.Chrome",
+            imePolicy: .vietnamese,
+            typingPolicy: .telex,
+            macroPolicy: .enabled,
+            clipboardPolicy: .allow
+        ))
+        smartProfiles.save(SmartAppProfile(
+            displayName: "Xcode",
+            bundleIdentifier: "com.apple.dt.Xcode",
+            imePolicy: .english,
+            typingPolicy: .inherit,
+            macroPolicy: .disabled,
+            clipboardPolicy: .inherit
+        ))
         defer {
             organizer.stopWatching(); history.stop(); board.releaseGlobally()
             AppState.shared.selectedTab = originalTab
@@ -80,6 +97,11 @@ import Testing
         try await render(DownloadsOrganizerView(organizer: organizer), path: "/tmp/xmac-organizer-phase3.png")
         try await render(SettingsView(), path: "/tmp/xmac-settings-phase2.png")
         try await render(VietnameseIMEView(), path: "/tmp/xmac-ime-phase2.png")
+        try await render(SmartProfilesView(manager: smartProfiles), path: "/tmp/xmac-smart-profiles.png")
+        try await render(
+            SmartProfilesView(manager: smartProfiles).preferredColorScheme(.dark),
+            path: "/tmp/xmac-smart-profiles-dark.png"
+        )
         AppState.shared.selectedTab = .overview
         try await render(MainView(), path: "/tmp/xmac-main-phase3.png")
         LocalizationManager.shared.language = .english
