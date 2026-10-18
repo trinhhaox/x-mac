@@ -92,14 +92,14 @@ struct SmartProfileApplicationPicker: View {
                                         Text(application.displayName)
                                             .font(.system(size: 13, weight: .semibold))
                                         Text(application.bundleIdentifier)
-                                            .font(.system(size: 10, design: .monospaced))
+                                            .font(.system(size: 11, design: .monospaced))
                                             .foregroundColor(.secondary)
                                             .lineLimit(1)
                                     }
                                     Spacer()
                                     if application.isRunning {
                                         Text(L10n.text("Đang chạy"))
-                                            .font(.system(size: 10, weight: .semibold))
+                                            .font(.system(size: 11, weight: .semibold))
                                             .foregroundColor(.green)
                                     }
                                     Image(systemName: "plus.circle.fill")

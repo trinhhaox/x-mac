@@ -8,7 +8,7 @@ public struct JunkItem: Identifiable, Hashable {
     public var isSelected: Bool
     
     public var formattedSize: String {
-        return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+        return ByteSize.string(size, countStyle: .file)
     }
 }
 
@@ -31,7 +31,7 @@ public struct JunkCategory: Identifiable, Hashable {
     public var rawTotalSize: Int64 { totalSize }
     
     public var formattedTotalSize: String {
-        return ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
+        return ByteSize.string(totalSize, countStyle: .file)
     }
 }
 
@@ -128,7 +128,7 @@ public struct AppAssociatedFile: Identifiable, Hashable {
     public var isSelected: Bool
     
     public var formattedSize: String {
-        return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+        return ByteSize.string(size, countStyle: .file)
     }
 }
 
@@ -204,6 +204,6 @@ public struct InstalledAppItem: Identifiable, Hashable {
     }
     
     public var formattedTotalSize: String {
-        return ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
+        return ByteSize.string(totalSize, countStyle: .file)
     }
 }

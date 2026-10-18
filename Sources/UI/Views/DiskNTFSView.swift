@@ -146,14 +146,14 @@ struct DiskVolumeCard: View {
                             
                             if volume.isNTFS {
                                 Text("NTFS")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.system(size: 11, weight: .bold))
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
                                     .background(Capsule().fill(XmacTheme.violet.opacity(0.13)))
                                     .foregroundColor(XmacTheme.violet)
                             } else {
                                 Text(volume.fileSystem)
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.system(size: 11, weight: .bold))
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
                                     .background(Capsule().fill(Color.gray.opacity(0.15)))

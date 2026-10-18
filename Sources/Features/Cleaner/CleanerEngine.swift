@@ -31,7 +31,7 @@ public class CleanerEngine: ObservableObject {
     }
     
     public var formattedTotalSelectedSize: String {
-        return ByteCountFormatter.string(fromByteCount: totalSelectedSize, countStyle: .file)
+        return ByteSize.string(totalSelectedSize, countStyle: .file)
     }
 
     public var totalDiscoveredSize: Int64 {
@@ -39,7 +39,7 @@ public class CleanerEngine: ObservableObject {
     }
 
     public var formattedTotalDiscoveredSize: String {
-        ByteCountFormatter.string(fromByteCount: totalDiscoveredSize, countStyle: .file)
+        ByteSize.string(totalDiscoveredSize, countStyle: .file)
     }
     
     public func startScan() {

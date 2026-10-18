@@ -118,7 +118,7 @@ public struct BrandPageHeader<Trailing: View>: View {
             VStack(alignment: .leading, spacing: 6) {
                 if let eyebrow, !eyebrow.isEmpty {
                     Text(L10n.text(eyebrow).uppercased())
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
                         .tracking(1.5)
                         .foregroundColor(XmacTheme.blue)
                 }
@@ -402,7 +402,7 @@ public struct MetricCard: View {
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 7) {
                     Text(L10n.text(title).uppercased())
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
                         .tracking(0.8)
                         .foregroundColor(.secondary)
                     Text(L10n.text(value))

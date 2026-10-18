@@ -249,10 +249,10 @@ struct AppDetailView: View {
                                     Text(file.name)
                                         .font(.system(size: 12, weight: .medium))
                                     Text("(\(file.fileType))")
-                                        .font(.system(size: 10))
+                                        .font(.system(size: 11))
                                         .foregroundColor(.secondary)
                                     Text(file.confidence.title)
-                                        .font(.system(size: 9, weight: .medium))
+                                        .font(.system(size: 10, weight: .medium))
                                         .padding(.horizontal, 5)
                                         .padding(.vertical, 2)
                                         .background(Capsule().fill(
@@ -263,7 +263,7 @@ struct AppDetailView: View {
                                         .foregroundColor(file.confidence == .verified ? .green : .orange)
                                 }
                                 Text(file.path)
-                                    .font(.system(size: 10, design: .monospaced))
+                                    .font(.system(size: 11, design: .monospaced))
                                     .foregroundColor(.secondary)
                                     .lineLimit(1)
                                     .truncationMode(.middle)

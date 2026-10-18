@@ -20,9 +20,7 @@ public struct FileSearchView: View {
             header
                 .padding(.horizontal, 26)
                 .padding(.top, 24)
-                .padding(.bottom, 18)
-
-            Divider().opacity(0.45)
+                .padding(.bottom, 4)
 
             VStack(spacing: 14) {
                 searchPanel
@@ -42,8 +40,8 @@ public struct FileSearchView: View {
                     }
                     Spacer()
                     Text("Tối đa 200 kết quả")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(.secondary.opacity(0.72))
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
                 .padding(.horizontal, 2)
 
@@ -55,6 +53,7 @@ public struct FileSearchView: View {
             }
             .padding(.horizontal, 26)
             .padding(.top, 16)
+            .padding(.bottom, 20)
         }
         .onChange(of: viewState.query) { _ in scheduleSearch() }
         .onChange(of: viewState.scope) { scope in
@@ -114,19 +113,23 @@ public struct FileSearchView: View {
                 )
 
                 HStack(spacing: 12) {
+                    // Pickers size to their longest option so "Thư mục người dùng"
+                    // is never truncated at the minimum window width.
                     Picker("Phạm vi", selection: $viewState.scope) {
                         ForEach(FileSearchScope.allCases) { scope in
                             Text(scope.title).tag(scope)
                         }
                     }
-                    .frame(maxWidth: .infinity)
+                    .fixedSize()
 
                     Picker("Loại", selection: $viewState.kind) {
                         ForEach(FileSearchKind.allCases) { kind in
                             Text(kind.title).tag(kind)
                         }
                     }
-                    .frame(maxWidth: .infinity)
+                    .fixedSize()
+
+                    Spacer(minLength: 0)
 
                     Toggle("Trong nội dung", isOn: $viewState.includeContents)
                         .toggleStyle(.switch)
@@ -158,7 +161,7 @@ public struct FileSearchView: View {
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 470)
             }
-            .frame(maxWidth: .infinity, minHeight: 250)
+            .frame(maxWidth: .infinity, minHeight: 150, maxHeight: .infinity)
         }
     }
 
@@ -195,7 +198,7 @@ public struct FileSearchView: View {
                             .lineLimit(1)
                         if result.isDirectory {
                             Text("THƯ MỤC")
-                                .font(.system(size: 8, weight: .bold, design: .rounded))
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
                                 .foregroundColor(XmacTheme.blue)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3)
@@ -203,20 +206,20 @@ public struct FileSearchView: View {
                         }
                     }
                     Text(result.path)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                     HStack(spacing: 8) {
                         Text(result.kind)
                         if !result.isDirectory, result.size > 0 {
-                            Text(ByteCountFormatter.string(fromByteCount: result.size, countStyle: .file))
+                            Text(ByteSize.string(result.size, countStyle: .file))
                         }
                         if let modified = result.modifiedAt {
                             Text(modified, style: .relative)
                         }
                     }
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundColor(.secondary.opacity(0.78))
                 }
 
@@ -239,8 +242,8 @@ public struct FileSearchView: View {
     }
 
     private func queryHint(_ token: String, _ meaning: String) -> some View {
-        Text("\(token) · \(meaning)")
-            .font(.system(size: 9, weight: .medium, design: .monospaced))
+        (Text(verbatim: token).font(.system(size: 11, weight: .medium, design: .monospaced))
+            + Text(verbatim: " · \(L10n.text(meaning))").font(.system(size: 11)))
             .foregroundColor(.secondary)
             .padding(.horizontal, 7)
             .padding(.vertical, 5)

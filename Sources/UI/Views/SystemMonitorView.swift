@@ -44,7 +44,7 @@ import SwiftUI
   private func bytes(_ value: UInt64?) -> String {
     guard let value else { return "—" }
     if value == 0 { return "0 B" }
-    return ByteCountFormatter.string(fromByteCount: Int64(clamping: value), countStyle: .memory)
+    return ByteSize.string(Int64(clamping: value), countStyle: .memory)
   }
   private func diskBytes(_ value: Int64?) -> String {
     bytes(value.flatMap { $0 >= 0 ? UInt64($0) : nil })

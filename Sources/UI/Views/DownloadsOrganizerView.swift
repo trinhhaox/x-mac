@@ -102,7 +102,7 @@ struct DownloadsOrganizerView: View {
                 Text(organizer.rules[index].folder)
                     .font(.system(size: 12, weight: .semibold))
                 Text(organizer.rules[index].extensions.sorted().joined(separator: ", "))
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
@@ -163,7 +163,7 @@ struct DownloadsOrganizerView: View {
                         .disabled(organizer.busy)
                 }
                 Text(organizer.undoRoot)
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)

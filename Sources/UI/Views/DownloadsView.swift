@@ -57,9 +57,7 @@ public struct DownloadsView: View {
             header
                 .padding(.horizontal, 26)
                 .padding(.top, 24)
-                .padding(.bottom, 18)
-
-            Divider().opacity(0.45)
+                .padding(.bottom, 4)
 
             VStack(spacing: 14) {
                 controls
@@ -108,14 +106,17 @@ public struct DownloadsView: View {
     }
 
     private var controls: some View {
-        VStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 10) {
+            // Leading-aligned like the search field and list below it; the
+            // label stays available to VoiceOver.
             Picker("Trạng thái", selection: $viewState.filter) {
                 ForEach(DownloadFilter.allCases) { option in
                     Text(option.title).tag(option)
                 }
             }
             .pickerStyle(.segmented)
-            .frame(maxWidth: .infinity)
+            .labelsHidden()
+            .fixedSize()
 
             HStack(spacing: 8) {
                 HStack(spacing: 8) {
@@ -379,7 +380,7 @@ public struct DownloadsView: View {
 
     private func statusBadge(_ status: ManagedDownloadStatus) -> some View {
         Text(statusLabel(status))
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 11, weight: .semibold))
             .foregroundColor(statusColor(status))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
@@ -420,9 +421,9 @@ public struct DownloadsView: View {
     }
 
     private func progressLabel(_ item: ManagedDownload) -> String {
-        let received = ByteCountFormatter.string(fromByteCount: item.receivedBytes, countStyle: .file)
+        let received = ByteSize.string(item.receivedBytes, countStyle: .file)
         guard item.expectedBytes > 0 else { return received }
-        let expected = ByteCountFormatter.string(fromByteCount: item.expectedBytes, countStyle: .file)
+        let expected = ByteSize.string(item.expectedBytes, countStyle: .file)
         return "\(received) / \(expected)"
     }
 }

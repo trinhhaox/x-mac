@@ -50,7 +50,8 @@ public struct JunkCleanerView: View {
                             Text("Tổng tệp rác đã phát hiện")
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
-                            Text(cleaner.formattedTotalDiscoveredSize)
+                            // A size shown mid-scan reads as a finished "nothing found".
+                            Text(cleaner.isScanning ? "—" : cleaner.formattedTotalDiscoveredSize)
                                 .font(.system(size: 28, weight: .bold, design: .rounded))
                                 .foregroundColor(.primary)
                         }

@@ -27,7 +27,7 @@ struct SmartProfileEditor: View {
                     Text(state.draft.displayName)
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                     Text(state.draft.bundleIdentifier)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .foregroundColor(.secondary)
                         .textSelection(.enabled)
                 }
@@ -129,7 +129,7 @@ struct SmartProfileEditor: View {
 
             HStack(spacing: 9) {
                 Text(L10n.text("Thay đổi chỉ áp dụng sau khi lưu."))
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 Spacer()
                 Button(L10n.text("Hoàn tác")) {
@@ -146,6 +146,7 @@ struct SmartProfileEditor: View {
                 .buttonStyle(BrandPrimaryButtonStyle())
                 .disabled(!hasChanges)
             }
+            Spacer(minLength: 0) // lets the card match the list column height
         }
         .alert(L10n.format("Xóa profile %@?", state.draft.displayName), isPresented: $state.showingDeleteConfirmation) {
             Button(L10n.text("Hủy"), role: .cancel) {}

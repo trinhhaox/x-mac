@@ -30,14 +30,14 @@ public struct DiskVolume: Identifiable, Hashable {
     }
     
     public var formattedTotalSize: String {
-        return ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
+        return ByteSize.string(totalSize, countStyle: .file)
     }
     
     public var formattedFreeSize: String {
-        return ByteCountFormatter.string(fromByteCount: freeSize, countStyle: .file)
+        return ByteSize.string(freeSize, countStyle: .file)
     }
     
     public var formattedUsedSize: String {
-        return ByteCountFormatter.string(fromByteCount: usedSize, countStyle: .file)
+        return ByteSize.string(usedSize, countStyle: .file)
     }
 }

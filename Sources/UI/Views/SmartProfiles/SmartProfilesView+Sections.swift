@@ -47,6 +47,7 @@ extension SmartProfilesView {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 28)
+                Spacer(minLength: 0)
             } else if filteredProfiles.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
@@ -59,6 +60,7 @@ extension SmartProfilesView {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 28)
+                Spacer(minLength: 0)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 4) {
@@ -67,7 +69,7 @@ extension SmartProfilesView {
                         }
                     }
                 }
-                .frame(maxHeight: 430)
+                .frame(maxHeight: .infinity)
             }
         }
     }
@@ -85,14 +87,14 @@ extension SmartProfilesView {
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
                     Text(profile.imePolicy.title)
-                        .font(.system(size: 10))
+                        .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
                 Spacer(minLength: 4)
                 if isActive {
                     Text(L10n.text("Đang dùng"))
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundColor(.green)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
@@ -129,7 +131,7 @@ extension SmartProfilesView {
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
-            .frame(maxWidth: .infinity, minHeight: 390)
+            .frame(maxWidth: .infinity, minHeight: 390, maxHeight: .infinity)
         }
     }
 

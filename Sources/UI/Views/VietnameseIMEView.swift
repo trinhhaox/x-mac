@@ -62,7 +62,7 @@ public struct VietnameseIMEView: View {
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
-                            BrandKeycap("⌃⇧")
+                            BrandKeycap("Control + Shift")
                         }
                     }
                 }
@@ -118,21 +118,17 @@ public struct VietnameseIMEView: View {
                                                 RoundedRectangle(cornerRadius: 7, style: .continuous)
                                                     .fill(XmacTheme.blue.opacity(0.08))
                                             )
+                                            // Fixed column so arrows and expansions line up.
+                                            .frame(minWidth: 64, alignment: .leading)
                                         Image(systemName: "arrow.right")
                                             .font(.system(size: 11))
                                             .foregroundColor(.secondary)
                                         Text(item.expansion)
                                             .font(.system(size: 13))
                                         Spacer()
-                                        Button(action: {
+                                        MacroDeleteButton(shortcut: item.shortcut) {
                                             macroManager.removeMacro(shortcut: item.shortcut)
-                                        }) {
-                                            Image(systemName: "trash")
                                         }
-                                        .buttonStyle(.plain)
-                                        .foregroundColor(.red)
-                                        .help("Xóa gõ tắt")
-                                        .accessibilityLabel(L10n.format("Xóa gõ tắt %@", item.shortcut))
                                     }
                                 }
                                 if index < macroManager.macros.count - 1 {
@@ -167,5 +163,25 @@ public struct VietnameseIMEView: View {
             .padding(26)
         }
         .xmacPage()
+    }
+}
+
+/// Neutral until hovered, so a column of red icons does not outweigh the macros.
+private struct MacroDeleteButton: View {
+    let shortcut: String
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "trash")
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(isHovered ? .red : .secondary)
+        .onHover { isHovered = $0 }
+        .help("Xóa gõ tắt")
+        .accessibilityLabel(L10n.format("Xóa gõ tắt %@", shortcut))
     }
 }

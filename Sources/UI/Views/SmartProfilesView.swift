@@ -46,13 +46,17 @@ public struct SmartProfilesView: View {
                     }
                     .buttonStyle(BrandSecondaryButtonStyle())
 
-                    Button {
-                        manager.refreshAvailableApplications()
-                        viewState.showingApplicationPicker = true
-                    } label: {
-                        Label(L10n.text("Thêm ứng dụng"), systemImage: "plus")
+                    // With no profiles the empty list already offers "Thêm ứng dụng";
+                    // one entry point avoids two identical buttons on screen.
+                    if !manager.profiles.isEmpty {
+                        Button {
+                            manager.refreshAvailableApplications()
+                            viewState.showingApplicationPicker = true
+                        } label: {
+                            Label(L10n.text("Thêm ứng dụng"), systemImage: "plus")
+                        }
+                        .buttonStyle(BrandPrimaryButtonStyle())
                     }
-                    .buttonStyle(BrandPrimaryButtonStyle())
                 }
             }
 
@@ -62,8 +66,10 @@ public struct SmartProfilesView: View {
                 loadFailureCard
             } else {
                 HStack(alignment: .top, spacing: 16) {
+                    // Both columns fill the remaining height so their bottoms line up.
                     profileList
                         .frame(width: 286)
+                        .frame(maxHeight: .infinity, alignment: .top)
 
                     Group {
                         if let selectedProfile {
@@ -73,7 +79,7 @@ public struct SmartProfilesView: View {
                             emptyDetail
                         }
                     }
-                    .frame(maxWidth: .infinity, minHeight: 430, alignment: .top)
+                    .frame(maxWidth: .infinity, minHeight: 430, maxHeight: .infinity, alignment: .top)
                 }
             }
         }

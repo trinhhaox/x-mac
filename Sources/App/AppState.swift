@@ -72,7 +72,7 @@ public class AppState: ObservableObject {
         DispatchQueue.global(qos: .utility).async {
             // Lấy dung lượng đĩa chính
             if let space = try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeAvailableCapacityKey]).volumeAvailableCapacity {
-                let formatted = ByteCountFormatter.string(fromByteCount: Int64(space), countStyle: .file)
+                let formatted = ByteSize.string(Int64(space), countStyle: .file)
                 DispatchQueue.main.async {
                     self.diskFreeSpace = L10n.format("%@ khả dụng", formatted)
                 }
@@ -94,7 +94,7 @@ public class AppState: ObservableObject {
                 let wired = Int64(stats.wire_count) * Int64(pageSize)
                 let compressed = Int64(stats.compressor_page_count) * Int64(pageSize)
                 let used = active + wired + compressed
-                let formattedUsed = ByteCountFormatter.string(fromByteCount: used, countStyle: .memory)
+                let formattedUsed = ByteSize.string(used, countStyle: .memory)
                 DispatchQueue.main.async {
                     self.systemRAMUsage = L10n.format("%@ đang dùng", formattedUsed)
                 }

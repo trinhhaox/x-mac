@@ -30,7 +30,8 @@ public struct MainView: View {
                 case .settings: SettingsView()
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Top-aligned so short pages keep their header where every other page has it.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(XmacTheme.workspaceBackground)
         }
         .frame(minWidth: 900, minHeight: 600)
@@ -50,7 +51,7 @@ public struct MainView: View {
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
                     .interpolation(.high)
-                    .frame(width: 42, height: 42)
+                    .frame(width: 32, height: 32)
                     .shadow(color: XmacTheme.cyan.opacity(0.28), radius: 10, y: 5)
 
                 VStack(alignment: .leading, spacing: 1) {
@@ -58,7 +59,7 @@ public struct MainView: View {
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                     Text(L10n.text("BỘ CÔNG CỤ MAC"))
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
                         .tracking(1.5)
                         .foregroundColor(.white.opacity(0.52))
                 }
@@ -66,17 +67,20 @@ public struct MainView: View {
             }
             .padding(.horizontal, 18)
             .padding(.top, 26)
-            .padding(.bottom, 24)
+            .padding(.bottom, 14)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 15) {
+                // Rows stay compact so all 13 destinations fit the 600pt minimum
+                // window; the scroll view is only a fallback for large text.
+                VStack(alignment: .leading, spacing: 8) {
                     ForEach(Array(sidebarSections.enumerated()), id: \.offset) { _, section in
-                        VStack(alignment: .leading, spacing: 5) {
+                        VStack(alignment: .leading, spacing: 0) {
                             Text(L10n.text(section.title))
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
-                                .tracking(1.3)
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .tracking(1.2)
                                 .foregroundColor(.white.opacity(0.62))
                                 .padding(.horizontal, 10)
+                                .padding(.bottom, 3)
 
                             ForEach(section.tabs) { tab in
                                 sidebarButton(for: tab)
@@ -85,14 +89,10 @@ public struct MainView: View {
                     }
                 }
                 .padding(.horizontal, 10)
-                .padding(.bottom, 8)
+                .padding(.bottom, 4)
             }
 
-            Spacer()
-
-            VStack(spacing: 10) {
-                sidebarButton(for: .settings)
-
+            VStack(spacing: 8) {
                 Rectangle()
                     .fill(.white.opacity(0.10))
                     .frame(height: 1)
@@ -116,12 +116,12 @@ public struct MainView: View {
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.white)
                             Text("Control + Shift")
-                                .font(.system(size: 9, design: .monospaced))
+                                .font(.system(size: 10, design: .monospaced))
                                 .foregroundColor(.white.opacity(0.62))
                         }
                         Spacer()
                     }
-                    .padding(10)
+                    .padding(8)
                     .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.white.opacity(0.07)))
                 }
                 .buttonStyle(.plain)
@@ -129,11 +129,14 @@ public struct MainView: View {
                 .accessibilityLabel(L10n.text(permissions.isAccessibilityGranted ? "Chuyển bộ gõ giữa Tiếng Việt và English" : "Bộ gõ cần quyền Trợ năng"))
                 .accessibilityHint(L10n.text(permissions.isAccessibilityGranted ? "Nhấn để chuyển ngôn ngữ nhập" : "Mở mục Tổng quan để cấp quyền Trợ năng"))
 
-                HStack {
+                HStack(spacing: 4) {
+                    sidebarButton(for: .settings)
+                        .layoutPriority(1)
                     Text("Xmac \(L10n.text(AppVersionInfo.current.version))")
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.white.opacity(0.60))
-                    Spacer()
+                        .lineLimit(1)
+                        .truncationMode(.middle)
                     Button(action: { NSApplication.shared.terminate(nil) }) {
                         Image(systemName: "power")
                             .font(.system(size: 12, weight: .semibold))
@@ -145,7 +148,8 @@ public struct MainView: View {
                     .accessibilityLabel(L10n.text("Thoát Xmac"))
                 }
             }
-            .padding(14)
+            .padding(.horizontal, 10)
+            .padding(.bottom, 12)
         }
         .background(XmacTheme.sidebarGradient.ignoresSafeArea())
         .overlay(alignment: .trailing) {
@@ -174,7 +178,7 @@ public struct MainView: View {
         }) {
             HStack(spacing: 11) {
                 Image(systemName: tab.iconName)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(isSelected ? XmacTheme.cyan : .white.opacity(0.58))
                     .frame(width: 22)
                 Text(tab.title)
@@ -188,10 +192,11 @@ public struct MainView: View {
                         .shadow(color: XmacTheme.cyan, radius: 5)
                 }
             }
-            .padding(.horizontal, 11)
-            .frame(height: 38)
-            .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(isSelected ? .white.opacity(0.12) : .clear))
-            .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(isSelected ? XmacTheme.cyan.opacity(0.18) : .clear, lineWidth: 1))
+            .padding(.horizontal, 10)
+            .frame(height: 27)
+            .contentShape(Rectangle())
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(isSelected ? .white.opacity(0.12) : .clear))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(isSelected ? XmacTheme.cyan.opacity(0.18) : .clear, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
