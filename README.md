@@ -61,12 +61,14 @@ Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
   - Cho phép chọn riêng báo cáo lỗi (Diagnostic & Crash Reports).
   - Quét dữ liệu biên dịch khổng lồ của lập trình viên (Xcode DerivedData).
   - Làm sạch Thùng rác (Trash).
+  - Các mục được chuyển vào Thùng rác (riêng mục đã ở trong Thùng rác bị xóa vĩnh viễn); cache của ứng dụng đang chạy được bỏ qua.
 - **Giải phóng bộ nhớ RAM (Purge Memory)**: Nút giải phóng RAM Inactive tức thì giúp máy tính nhẹ và mượt mà hơn.
 - **Gỡ ứng dụng có kiểm soát (App Uninstaller)**:
   - Tự động dò tìm toàn bộ các file phụ trợ nằm ẩn sâu trong thư viện: `Application Support`, `Caches`, `Preferences .plist`, `Saved State`, `WebKit`, `Sandbox Containers`.
   - Tính toán tổng dung lượng thực tế của ứng dụng.
   - Mặc định chọn các đường dẫn xác định bằng bundle identifier; đường dẫn suy đoán theo tên ứng dụng phải được người dùng chọn thủ công.
-  - Chuyển các mục đã chọn vào Thùng rác; chỉ chuyển app bundle sau khi các file phụ trợ đã xử lý thành công.
+  - Từ chối gỡ khi ứng dụng đang chạy; gỡ được cả ứng dụng Apple cài trong `/Applications` (Xcode, Pages…), chỉ chặn ứng dụng hệ thống.
+  - Chuyển app bundle vào Thùng rác trước; nếu thất bại thì không đụng tới file phụ trợ, và báo rõ file phụ trợ nào chưa chuyển được.
 
 ---
 
@@ -83,13 +85,13 @@ Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
 ## 🚀 Cài Đặt & Sử Dụng
 
 Trong **Cài đặt → Cập nhật ứng dụng**, Xmac có thể kiểm tra, tải, xác minh
-SHA-256 và cài bản mới từ GitHub Releases, giữ bản cũ để khôi phục thủ công.
+SHA-256, kiểm tra chữ ký (cùng Team ID và bundle identifier với bản đang chạy) rồi cài bản mới từ GitHub Releases; bản cũ được chuyển vào Thùng rác sau khi cài thành công.
 Tự kiểm tra mỗi ngày là tùy chọn; cài đặt cần xác nhận. Xem
 [`docs/DESKTOP_PHASE1.md`](docs/DESKTOP_PHASE1.md) về điều kiện cập nhật,
 mô hình tin cậy chữ ký và giới hạn phục hồi tải.
 
 ### 1. Cài đặt từ DMG (Khuyến nghị)
-1. Tải file `Xmac-1.6.0.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
+1. Tải file `Xmac-1.7.0.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
 2. Kéo thả `Xmac.app` vào thư mục `Applications`.
 3. Mở ứng dụng và làm theo hướng dẫn cấp quyền.
 
@@ -100,7 +102,7 @@ cd x-mac
 chmod +x Scripts/build.sh
 ./Scripts/build.sh
 ```
-Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.6.0.dmg` sẽ được tạo trong thư mục `build/`.
+Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.7.0.dmg` sẽ được tạo trong thư mục `build/`.
 
 Mặc định script ký ad-hoc để kiểm thử local. Nếu máy đã có sẵn chứng thư và hồ sơ notarization trong Keychain, có thể tạo bản phát hành bằng:
 
@@ -121,6 +123,8 @@ Script không tạo hoặc thay đổi chứng thư/thông tin xác thực. Khi 
 Script sử dụng Swift Testing từ toolchain đang active và tự nạp macro plugin khi chỉ cài Command Line Tools.
 
 GitHub Actions chạy kiểm thử, dựng Universal Binary (`arm64` + `x86_64`), xác minh chữ ký ad-hoc và DMG trên mỗi push/pull request. Artifact CI không phải bản phân phối notarized.
+
+Khi push tag `v*`, workflow `release.yml` ký Developer ID, notarize và đăng DMG lên GitHub Releases nếu repo có đủ secrets `MACOS_CERT_P12_BASE64`, `MACOS_CERT_PASSWORD`, `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD`; thiếu secrets thì workflow bỏ qua và bản phát hành ad-hoc được đăng thủ công.
 
 ---
 

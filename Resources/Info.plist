@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>vi</string>
 	<key>CFBundleExecutable</key>
 	<string>Xmac</string>
 	<key>CFBundleIconFile</key>
@@ -10,21 +12,19 @@
 	<string>vn.xmac.app</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>Xmac</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>vi</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>vi</string>
 		<string>en</string>
 	</array>
+	<key>CFBundleName</key>
+	<string>Xmac</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.6.0</string>
+	<string>1.7.0</string>
 	<key>CFBundleVersion</key>
-	<string>1.6.0</string>
+	<string>1.7.0</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSUIElement</key>
@@ -32,7 +32,7 @@
 	<key>NSAccessibilityUsageDescription</key>
 	<string>Xmac cần quyền Accessibility để nhận diện phím tắt di chuyển file trong Finder và gõ Tiếng Việt.</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>Xmac cần quyền điều khiển Finder để hỗ trợ tính năng Cắt và Dán file (⌘X, ⌘V).</string>
+	<string>Xmac cần quyền điều khiển Finder để hỗ trợ tính năng Cắt và Dán file (⌘X, ⌘V), và hiển thị hộp thoại yêu cầu quyền quản trị khi gắn kết ổ NTFS ở chế độ ghi.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 </dict>
