@@ -52,7 +52,7 @@ public class AppUninstallerEngine: ObservableObject {
             ?? (bundlePath as NSString).lastPathComponent.replacingOccurrences(of: ".app", with: "")
         let version = (bundle.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "1.0"
         
-        let isSystemApp = bundlePath.hasPrefix("/System/") || bundleId.hasPrefix("com.apple.")
+        let isSystemApp = AppUninstallPolicy.isSystemApp(bundlePath: bundlePath, bundleIdentifier: bundleId)
         
         var associatedFiles: [AppAssociatedFile] = []
         
@@ -68,7 +68,8 @@ public class AppUninstallerEngine: ObservableObject {
         ))
         
         // 2. Quét các file phụ trợ nếu có bundleIdentifier hợp lệ
-        if !bundleId.isEmpty {
+        // Info.plist là dữ liệu không tin cậy: bỏ qua tệp phụ trợ nếu id/tên có thể thoát khỏi thư mục Library
+        if AppUninstallPolicy.isSafePathComponent(bundleId) && AppUninstallPolicy.isSafePathComponent(appName) {
             let libraryPath = ("~/Library" as NSString).expandingTildeInPath
             
             // Application Support
@@ -138,77 +139,100 @@ public class AppUninstallerEngine: ObservableObject {
         ))
     }
     
-    public func uninstallApp(_ app: InstalledAppItem, completion: @escaping (Bool) -> Void) {
+    public func uninstallApp(_ app: InstalledAppItem, completion: @escaping (UninstallResult) -> Void) {
         guard !isUninstalling, !app.isSystemApp else {
-            completion(false)
+            completion(UninstallResult(success: false, errorMessage: nil, failedPaths: []))
             return
         }
         guard let currentBundle = Bundle(path: app.bundlePath),
               app.bundleIdentifier.isEmpty || currentBundle.bundleIdentifier == app.bundleIdentifier else {
-            completion(false)
+            completion(UninstallResult(success: false, errorMessage: nil, failedPaths: []))
+            return
+        }
+        if Self.isRunning(bundleIdentifier: app.bundleIdentifier) {
+            completion(UninstallResult(
+                success: false,
+                errorMessage: L10n.format("%@ đang chạy. Hãy thoát ứng dụng trước khi gỡ bỏ.", app.name),
+                failedPaths: []
+            ))
             return
         }
         self.isUninstalling = true
         
         DispatchQueue.global(qos: .userInitiated).async {
-            var allSucceeded = true
-            let selectedFiles = app.associatedFiles.filter(\.isSelected)
-            guard !selectedFiles.isEmpty else {
-                DispatchQueue.main.async {
-                    self.isUninstalling = false
-                    completion(false)
-                }
-                return
+            let result = Self.performUninstall(app) { url in
+                // Chuyển vào Thùng rác để đảm bảo an toàn
+                try self.fileManager.trashItem(at: url, resultingItemURL: nil)
             }
-            let auxiliaryFiles = selectedFiles.filter { $0.path != app.bundlePath }
-            let applicationBundle = selectedFiles.first { $0.path == app.bundlePath }
-
-            for file in auxiliaryFiles {
-                guard UninstallPathPolicy.isAllowed(path: file.path, bundlePath: app.bundlePath) else {
-                    NSLog("Xmac Uninstall rejected unsafe path: \(file.path)")
-                    allSucceeded = false
-                    continue
-                }
-                let url = URL(fileURLWithPath: file.path)
-                do {
-                    // Chuyển vào Thùng rác để đảm bảo an toàn
-                    try self.fileManager.trashItem(at: url, resultingItemURL: nil)
-                } catch {
-                    NSLog("Xmac Uninstall error moving \(file.path) to Trash: \(error)")
-                    allSucceeded = false
-                }
+            if result.success {
+                SoundEffectManager.shared.play(.clean)
             }
-
-            if allSucceeded, let applicationBundle {
-                guard UninstallPathPolicy.isAllowed(
-                    path: applicationBundle.path,
-                    bundlePath: app.bundlePath
-                ) else {
-                    DispatchQueue.main.async {
-                        self.isUninstalling = false
-                        completion(false)
-                    }
-                    return
-                }
-                do {
-                    try self.fileManager.trashItem(
-                        at: URL(fileURLWithPath: applicationBundle.path),
-                        resultingItemURL: nil
-                    )
-                } catch {
-                    NSLog("Xmac Uninstall error moving app bundle to Trash: \(error)")
-                    allSucceeded = false
-                }
-            }
-            
-            SoundEffectManager.shared.play(.clean)
             
             DispatchQueue.main.async {
                 self.isUninstalling = false
                 self.scanApps() // Quét lại danh sách app
-                completion(allSucceeded)
+                completion(result)
             }
         }
+    }
+
+    private static func isRunning(bundleIdentifier: String) -> Bool {
+        guard !bundleIdentifier.isEmpty else { return false }
+        return !NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).isEmpty
+    }
+
+    /// Gỡ app bundle trước; nếu thất bại thì dừng, không đụng tới tệp phụ trợ.
+    static func performUninstall(_ app: InstalledAppItem, trash: (URL) throws -> Void) -> UninstallResult {
+        let selectedFiles = app.associatedFiles.filter(\.isSelected)
+        guard !selectedFiles.isEmpty else {
+            return UninstallResult(success: false, errorMessage: nil, failedPaths: [])
+        }
+        let auxiliaryFiles = selectedFiles.filter { $0.path != app.bundlePath }
+
+        if selectedFiles.contains(where: { $0.path == app.bundlePath }) {
+            guard UninstallPathPolicy.isAllowed(path: app.bundlePath, bundlePath: app.bundlePath) else {
+                NSLog("Xmac Uninstall rejected unsafe bundle path: \(app.bundlePath)")
+                return UninstallResult(
+                    success: false,
+                    errorMessage: L10n.format("Không thể gỡ %@: đường dẫn ứng dụng không hợp lệ.", app.name),
+                    failedPaths: [app.bundlePath]
+                )
+            }
+            do {
+                try trash(URL(fileURLWithPath: app.bundlePath))
+            } catch {
+                NSLog("Xmac Uninstall error moving app bundle to Trash: \(error)")
+                return UninstallResult(
+                    success: false,
+                    errorMessage: L10n.format("Không thể chuyển %@ vào Thùng rác. Chưa có tệp nào bị thay đổi.", app.name),
+                    failedPaths: [app.bundlePath]
+                )
+            }
+        }
+
+        var failedPaths: [String] = []
+        for file in auxiliaryFiles {
+            guard UninstallPathPolicy.isAllowed(path: file.path, bundlePath: app.bundlePath) else {
+                NSLog("Xmac Uninstall rejected unsafe path: \(file.path)")
+                failedPaths.append(file.path)
+                continue
+            }
+            do {
+                try trash(URL(fileURLWithPath: file.path))
+            } catch {
+                NSLog("Xmac Uninstall error moving \(file.path) to Trash: \(error)")
+                failedPaths.append(file.path)
+            }
+        }
+        guard failedPaths.isEmpty else {
+            let names = failedPaths.map { ($0 as NSString).lastPathComponent }.joined(separator: ", ")
+            return UninstallResult(
+                success: false,
+                errorMessage: L10n.format("Đã gỡ %@ nhưng %lld tệp phụ trợ không chuyển được vào Thùng rác: %@", app.name, Int64(failedPaths.count), names),
+                failedPaths: failedPaths
+            )
+        }
+        return .ok
     }
     
     private func getFileSize(atPath path: String) -> Int64 {

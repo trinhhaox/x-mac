@@ -1,11 +1,25 @@
 import Cocoa
 
+/// Tags each refresh so results from an older, slower scan never overwrite a newer one.
+struct ScanGeneration {
+    private(set) var current = 0
+
+    mutating func advance() -> Int {
+        current += 1
+        return current
+    }
+
+    func isCurrent(_ generation: Int) -> Bool { generation == current }
+}
+
 public class DiskManager: ObservableObject {
     public static let shared = DiskManager()
     
     @Published public var volumes: [DiskVolume] = []
     @Published public var isLoading: Bool = false
     
+    private var scanGeneration = ScanGeneration()
+
     private init() {
         refreshVolumes()
         setupDiskNotifications()
@@ -24,31 +38,41 @@ public class DiskManager: ObservableObject {
     }
     
     public func refreshVolumes() {
-        self.isLoading = true
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { self.refreshVolumes() }
+            return
+        }
+        let generation = scanGeneration.advance()
+        isLoading = true
         DispatchQueue.global(qos: .userInitiated).async {
             let scanned = self.scanAllVolumes()
             DispatchQueue.main.async {
+                // A newer refresh is in flight; its result (and isLoading reset) supersedes this one.
+                guard self.scanGeneration.isCurrent(generation) else { return }
                 self.volumes = scanned
                 self.isLoading = false
             }
         }
     }
+
+    /// Reads stdout to EOF before waiting, so output larger than the pipe buffer cannot deadlock the child.
+    private func diskutilOutput(_ arguments: [String]) throws -> Data {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/diskutil")
+        process.arguments = arguments
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        try process.run()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        return data
+    }
     
     private func scanAllVolumes() -> [DiskVolume] {
         var results: [DiskVolume] = []
-        
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/diskutil")
-        process.arguments = ["list", "-plist", "external"]
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        
+
         do {
-            try process.run()
-            process.waitUntilExit()
-            
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let data = try diskutilOutput(["list", "-plist", "external"])
             if let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
                let allDisksAndPartitions = plist["AllDisksAndPartitions"] as? [[String: Any]] {
                 
@@ -76,18 +100,8 @@ public class DiskManager: ObservableObject {
     }
 
     public func getVolumeInfo(bsdName: String) -> DiskVolume? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/diskutil")
-        process.arguments = ["info", "-plist", bsdName]
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        
         do {
-            try process.run()
-            process.waitUntilExit()
-            
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let data = try diskutilOutput(["info", "-plist", bsdName])
             guard let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] else {
                 return nil
             }

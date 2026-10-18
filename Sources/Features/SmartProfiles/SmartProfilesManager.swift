@@ -131,6 +131,7 @@ public final class SmartProfilesManager: ObservableObject {
     private let defaults: UserDefaults
     private let enabledKey = "SmartProfiles.Enabled"
     private let profilesKey = "SmartProfiles.Profiles"
+    let unreadableBackupKey = "SmartProfiles.Profiles.unreadableBackup"
     private var activationObserver: NSObjectProtocol?
 
     public var activeProfile: SmartAppProfile? {
@@ -145,10 +146,19 @@ public final class SmartProfilesManager: ObservableObject {
             : defaults.bool(forKey: enabledKey)
 
         if let data = defaults.data(forKey: profilesKey) {
-            do {
-                self.profiles = try JSONDecoder().decode([SmartAppProfile].self, from: data)
-            } catch {
-                self.profiles = []
+            let decoded = Self.decodeLossy(data)
+            self.profiles = decoded.profiles
+            if decoded.hadFailures {
+                // Giữ bản gốc để không bị ghi đè khi lưu lần đầu
+                // Một bản sao lưu cũ khác nội dung được giữ nguyên; bản mới lưu
+                // thêm khóa có dấu thời gian để không mất dữ liệu của lần lỗi trước.
+                let existing = defaults.data(forKey: unreadableBackupKey)
+                if existing == nil {
+                    defaults.set(data, forKey: unreadableBackupKey)
+                } else if existing != data {
+                    let stamp = Int(Date().timeIntervalSince1970)
+                    defaults.set(data, forKey: "\(unreadableBackupKey).\(stamp)")
+                }
                 self.loadFailed = true
             }
         } else {
@@ -329,6 +339,23 @@ public final class SmartProfilesManager: ObservableObject {
         activeBundleIdentifier = application?.bundleIdentifier
         InputHookManager.shared.resetForApplicationChange()
         StatusBarController.shared.updateStatusBarTitle()
+    }
+
+    /// Giải mã từng phần tử; phần tử lỗi bị bỏ qua thay vì làm mất cả danh sách.
+    static func decodeLossy(_ data: Data) -> (profiles: [SmartAppProfile], hadFailures: Bool) {
+        guard let elements = try? JSONDecoder().decode([LossyElement].self, from: data) else {
+            return ([], true)
+        }
+        let profiles = elements.compactMap(\.profile)
+        return (profiles, profiles.count != elements.count)
+    }
+
+    private struct LossyElement: Decodable {
+        let profile: SmartAppProfile?
+
+        init(from decoder: Decoder) throws {
+            profile = try? SmartAppProfile(from: decoder)
+        }
     }
 
     private func persist() {

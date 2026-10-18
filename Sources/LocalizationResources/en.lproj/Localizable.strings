@@ -452,8 +452,8 @@
 "Còn trống: %@ / Tổng: %@" = "Free: %@ / Total: %@";
 "Tổng: %@" = "Total: %@";
 "Dọn %@" = "Clean %@";
-"Đã xóa %lld mục, giải phóng %@." = "Deleted %lld items and freed %@.";
-"Đã xóa %lld mục (%@); %lld mục thất bại hoặc bị từ chối." = "Deleted %lld items (%@); %lld items failed or were denied.";
+"Đã chuyển %lld mục (%@) vào Thùng rác. Dọn sạch Thùng rác để lấy lại dung lượng." = "Moved %lld items (%@) to the Trash. Empty the Trash to reclaim the space.";
+"Đã chuyển %lld mục (%@) vào Thùng rác; %lld mục thất bại hoặc bị từ chối." = "Moved %lld items (%@) to the Trash; %lld items failed or were denied.";
 "Chọn tất cả trong %@" = "Select all in %@";
 "Thu gọn %@" = "Collapse %@";
 "Mở rộng %@" = "Expand %@";
@@ -568,3 +568,24 @@
 "Smart Profiles: Đang bật" = "Smart Profiles: Active";
 "Smart Profiles: Đã tạm dừng" = "Smart Profiles: Paused";
 "Quản lý Smart Profiles…" = "Manage Smart Profiles…";
+
+/* Status bar & misc */
+"Tổng %@" = "Total %@";
+"Bật" = "On";
+"Tắt" = "Off";
+"🇻🇳 Đang gõ: Tiếng Việt (do profile %@)" = "🇻🇳 Typing: Vietnamese (set by profile %@)";
+"🇺🇸 Đang gõ: Tiếng Anh (do profile %@)" = "🇺🇸 Typing: English (set by profile %@)";
+"Đã giải phóng bộ nhớ RAM" = "Memory freed";
+"Không thể giải phóng bộ nhớ RAM" = "Could not free memory";
+"Lệnh purge không chạy thành công. Hãy thử lại sau." = "The purge command did not succeed. Please try again later.";
+
+/* Cleaner, uninstaller, update and download safety */
+"%@ đang chạy. Hãy thoát ứng dụng trước khi gỡ bỏ." = "%@ is running. Quit the app before uninstalling.";
+"Không thể gỡ %@: đường dẫn ứng dụng không hợp lệ." = "Cannot uninstall %@: invalid app path.";
+"Không thể chuyển %@ vào Thùng rác. Chưa có tệp nào bị thay đổi." = "Could not move %@ to the Trash. Nothing was changed.";
+"Đã gỡ %@ nhưng %lld tệp phụ trợ không chuyển được vào Thùng rác: %@" = "%@ was removed but %lld support files could not be moved to the Trash: %@";
+"Không thể gỡ bỏ đầy đủ %@." = "Could not fully uninstall %@.";
+"Bỏ qua %lld mục của ứng dụng đang chạy." = "Skipped %lld items of running apps.";
+"Các mục đã chọn sẽ được chuyển vào Thùng rác (riêng mục trong Thùng rác sẽ bị xóa vĩnh viễn). Cache của ứng dụng đang chạy sẽ được bỏ qua." = "Selected items will be moved to the Trash (items already in the Trash are deleted permanently). Caches of running apps are skipped.";
+"Đã chặn chuyển hướng từ HTTPS sang HTTP không an toàn." = "Blocked an insecure redirect from HTTPS to HTTP.";
+"Chữ ký của bản cập nhật không khớp với ứng dụng đang chạy. Đã hủy cài đặt." = "The update's signature does not match the running app. Installation cancelled.";

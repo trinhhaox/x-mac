@@ -183,7 +183,7 @@ public struct FileSearchView: View {
     private func resultRow(_ result: FileSearchResult) -> some View {
         BrandListRow {
             HStack(spacing: 13) {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: result.path))
+                Image(nsImage: AppIconCache.shared.icon(forFile: result.path))
                     .resizable()
                     .interpolation(.high)
                     .frame(width: 38, height: 38)

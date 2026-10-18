@@ -24,6 +24,15 @@ import Testing
         #expect(type("awws", method: .telex) == "áw")
     }
 
+    @Test func telexWOnUOClusterProducesUHornOHorn() {
+        #expect(type("nguowif", method: .telex) == "người")
+        #expect(type("duowngf", method: .telex) == "dường")
+        #expect(type("uwow", method: .telex) == "ươ")
+        #expect(type("NGUOWI", method: .telex) == "NGƯƠI")
+        #expect(type("quow", method: .telex) == "quơ")
+        #expect(type("uoww", method: .telex) == "uow")
+    }
+
     @Test func repeatedVNIKeyCancelsToneForLiteralInput() {
         #expect(type("a11", method: .vni) == "a1")
         #expect(type("a66", method: .vni) == "a6")

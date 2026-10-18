@@ -1,6 +1,7 @@
 import AppKit
 import CryptoKit
 import Foundation
+import Security
 
 struct XmacRelease: Decodable {
     struct Asset: Decodable {
@@ -127,6 +128,87 @@ struct XmacRelease: Decodable {
     }
 }
 
+/// Code-signing identity of an app bundle, as far as the update decision needs it.
+struct UpdateIdentity: Equatable {
+    var bundleIdentifier: String?
+    /// nil for ad-hoc or unsigned code.
+    var teamIdentifier: String?
+    /// false when Security could not read the signature at all; trust then fails closed
+    /// instead of silently dropping to bundle-identifier-only checks.
+    var signingInfoReadable = true
+
+    static func read(from url: URL) -> UpdateIdentity {
+        var teamID: String?
+        var readable = false
+        var code: SecStaticCode?
+        if SecStaticCodeCreateWithPath(url as CFURL, [], &code) == errSecSuccess, let code {
+            var info: CFDictionary?
+            if SecCodeCopySigningInformation(code, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess {
+                readable = true
+                teamID = (info as? [String: Any])?[kSecCodeInfoTeamIdentifier as String] as? String
+            }
+        }
+        return UpdateIdentity(
+            bundleIdentifier: Bundle(url: url)?.bundleIdentifier,
+            teamIdentifier: teamID,
+            signingInfoReadable: readable
+        )
+    }
+}
+
+enum UpdateTrust {
+    enum Policy: Equatable {
+        /// The running app has a Team ID: the update must be signed by Apple-issued certificate of that team.
+        case teamPinned(String)
+        /// Ad-hoc running app: only the bundle identifier can be compared (limited trust).
+        case bundleIdentifierOnly
+    }
+
+    /// nil when the running app reports a Team ID that is not a well-formed 10-character identifier (fail closed).
+    static func policy(runningTeamID: String?) -> Policy? {
+        guard let team = runningTeamID, !team.isEmpty else { return .bundleIdentifierOnly }
+        guard team.range(of: "^[A-Z0-9]{10}$", options: .regularExpression) != nil else { return nil }
+        return .teamPinned(team)
+    }
+
+    static func requirement(teamID: String) -> String {
+        "anchor apple generic and certificate leaf[subject.OU] = \"\(teamID)\""
+    }
+
+    static func isAcceptable(policy: Policy, runningBundleID: String?, candidateBundleID: String?, candidateMeetsTeamRequirement: Bool) -> Bool {
+        guard let running = runningBundleID, !running.isEmpty, running == candidateBundleID else { return false }
+        switch policy {
+        case .teamPinned: return candidateMeetsTeamRequirement
+        case .bundleIdentifierOnly: return true
+        }
+    }
+
+    static func verify(candidate: URL, running: UpdateIdentity) throws {
+        let failure = UpdateFailure(L10n.text("Chữ ký của bản cập nhật không khớp với ứng dụng đang chạy. Đã hủy cài đặt."))
+        guard running.signingInfoReadable,
+              let policy = policy(runningTeamID: running.teamIdentifier) else { throw failure }
+        var meetsTeam = false
+        if case .teamPinned(let team) = policy {
+            meetsTeam = candidateSatisfies(requirement(teamID: team), at: candidate)
+        } else {
+            NSLog("Xmac update: running app is ad-hoc signed; only the bundle identifier is checked (limited trust).")
+        }
+        let candidateID = UpdateIdentity.read(from: candidate).bundleIdentifier
+        guard isAcceptable(policy: policy, runningBundleID: running.bundleIdentifier,
+                           candidateBundleID: candidateID, candidateMeetsTeamRequirement: meetsTeam) else { throw failure }
+    }
+
+    private static func candidateSatisfies(_ requirementText: String, at url: URL) -> Bool {
+        var code: SecStaticCode?
+        var requirement: SecRequirement?
+        guard SecStaticCodeCreateWithPath(url as CFURL, [], &code) == errSecSuccess, let code,
+              SecRequirementCreateWithString(requirementText as CFString, [], &requirement) == errSecSuccess,
+              let requirement else { return false }
+        let flags = SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSStrictValidate | kSecCSCheckNestedCode)
+        return SecStaticCodeCheckValidity(code, flags, requirement) == errSecSuccess
+    }
+}
+
 struct UpdateFailure: LocalizedError {
     let text: String
     init(_ text: String) { self.text = text }
@@ -169,21 +251,36 @@ enum UpdateInstaller {
         try installBundle(source: source, version: version, target: target)
     }
 
-    static func installBundle(source: URL, version: String, target: URL) throws {
+    /// `running` is the identity of the app being replaced; defaults to the current process's bundle.
+    static func installBundle(source: URL, version: String, target: URL, running: UpdateIdentity? = nil) throws {
         let fm = FileManager.default
         guard (try fm.attributesOfItem(atPath: source.path)[.type] as? FileAttributeType) == .typeDirectory,
               let bundle = Bundle(url: source), bundle.bundleIdentifier == "vn.xmac.app",
               bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String == version else {
             throw UpdateFailure(L10n.text("Ứng dụng trong bản cập nhật không đúng định danh hoặc phiên bản."))
         }
+        let identity = running ?? UpdateIdentity.read(from: Bundle.main.bundleURL)
         try run("/usr/bin/codesign", ["--verify", "--deep", "--strict", source.path])
+        try UpdateTrust.verify(candidate: source, running: identity)
         let parent = target.deletingLastPathComponent()
         let staged = parent.appendingPathComponent(".Xmac-update-\(UUID().uuidString).app")
         let backup = parent.appendingPathComponent("Xmac-before-update-\(UUID().uuidString).app")
         defer { try? fm.removeItem(at: staged) }
         try fm.copyItem(at: source, to: staged)
         try run("/usr/bin/codesign", ["--verify", "--deep", "--strict", staged.path])
+        try UpdateTrust.verify(candidate: staged, running: identity)
         try replaceBundle(staged: staged, target: target, backup: backup)
+        // The new bundle is in place and verified; the backup is only needed while a rollback is still possible.
+        discardBackup(backup)
+    }
+
+    private static func discardBackup(_ backup: URL) {
+        let fm = FileManager.default
+        do { try fm.trashItem(at: backup, resultingItemURL: nil) }
+        catch {
+            do { try fm.removeItem(at: backup) }
+            catch { NSLog("Xmac update: could not remove backup %@: %@", backup.path, error.localizedDescription) }
+        }
     }
 
     static func replaceBundle(staged: URL, target: URL, backup: URL) throws {

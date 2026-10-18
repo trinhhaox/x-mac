@@ -53,6 +53,25 @@ import Testing
         #expect(!mover.canUndo)
     }
 
+    @Test func undoExpiresSoFinderKeepsItsOwnUndo() throws {
+        let (fileManager, rootURL, _) = try makeFixture()
+        defer { try? fileManager.removeItem(at: rootURL) }
+        var clock = Date(timeIntervalSince1970: 1_000)
+        let mover = FileMover(fileManager: fileManager, undoWindow: 60, now: { clock })
+        let destination = rootURL.appendingPathComponent("destination", isDirectory: true)
+        try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
+        let source = rootURL.appendingPathComponent("late.txt")
+        try Data("payload".utf8).write(to: source)
+
+        #expect(mover.moveFiles(sources: [source.path], destinationFolder: destination.path).count == 1)
+        clock.addTimeInterval(59)
+        #expect(mover.canUndo)
+        clock.addTimeInterval(1)
+        #expect(!mover.canUndo)
+        #expect(mover.undoLastMove() == 0)
+        #expect(fileManager.fileExists(atPath: destination.appendingPathComponent("late.txt").path))
+    }
+
     @Test func failedUndoRemainsAvailableForRetry() throws {
         let (fileManager, rootURL, mover) = try makeFixture()
         defer { try? fileManager.removeItem(at: rootURL) }

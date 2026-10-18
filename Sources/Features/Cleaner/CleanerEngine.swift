@@ -146,6 +146,8 @@ public class CleanerEngine: ObservableObject {
             var freedBytes: Int64 = 0
             var deletedCount = 0
             var failedCount = 0
+            var skippedCount = 0
+            let runningIds = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
             
             for item in Self.selectedItems(in: selectedCategories) {
                 guard CleanerPathPolicy.isAllowed(itemPath: item.path) else {
@@ -153,8 +155,17 @@ public class CleanerEngine: ObservableObject {
                     failedCount += 1
                     continue
                 }
+                let inTrash = CleanerItemPolicy.isInTrash(path: item.path)
+                if !inTrash, CleanerItemPolicy.shouldSkip(itemName: item.name, runningBundleIdentifiers: runningIds) {
+                    skippedCount += 1
+                    continue
+                }
                 do {
-                    try self.fileManager.removeItem(atPath: item.path)
+                    if inTrash {
+                        try self.fileManager.removeItem(atPath: item.path)
+                    } else {
+                        try self.fileManager.trashItem(at: URL(fileURLWithPath: item.path), resultingItemURL: nil)
+                    }
                     freedBytes += item.size
                     deletedCount += 1
                 } catch {
@@ -174,7 +185,8 @@ public class CleanerEngine: ObservableObject {
                 completion(CleanResult(
                     deletedBytes: freedBytes,
                     deletedCount: deletedCount,
-                    failedCount: failedCount
+                    failedCount: failedCount,
+                    skippedCount: skippedCount
                 ))
             }
         }

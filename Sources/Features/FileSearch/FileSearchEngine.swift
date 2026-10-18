@@ -180,6 +180,8 @@ public final class FileSearchEngine: NSObject, ObservableObject {
     private var observers: [NSObjectProtocol] = []
     private var activeExpression = FileSearchExpression.parse("")
     private let maximumResults = 200
+    /// Spotlight returns results by recency; rank a wider window so older exact-name matches are not dropped.
+    private let rankingWindow = 2_000
 
     override init() {
         super.init()
@@ -367,30 +369,31 @@ public final class FileSearchEngine: NSObject, ObservableObject {
         defer { query.enableUpdates() }
 
         var items: [FileSearchResult] = []
-        let count = min(query.resultCount, maximumResults)
+        let count = min(query.resultCount, rankingWindow)
         for index in 0..<count {
             guard let item = query.result(at: index) as? NSMetadataItem,
                   let path = item.value(forAttribute: kMDItemPath as String) as? String else { continue }
-            let url = URL(fileURLWithPath: path)
-            let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey])
+            // Everything comes from the Spotlight index; no per-result disk reads on the main thread.
+            let isDirectory = (item.value(forAttribute: kMDItemContentType as String) as? String) == "public.folder"
             items.append(FileSearchResult(
                 path: path,
-                name: (item.value(forAttribute: kMDItemFSName as String) as? String) ?? url.lastPathComponent,
-                kind: (item.value(forAttribute: kMDItemKind as String) as? String) ?? L10n.text(values?.isDirectory == true ? "Thư mục" : "Tệp"),
-                size: Int64(values?.fileSize ?? 0),
-                modifiedAt: values?.contentModificationDate,
-                isDirectory: values?.isDirectory == true
+                name: (item.value(forAttribute: kMDItemFSName as String) as? String) ?? URL(fileURLWithPath: path).lastPathComponent,
+                kind: (item.value(forAttribute: kMDItemKind as String) as? String) ?? L10n.text(isDirectory ? "Thư mục" : "Tệp"),
+                size: (item.value(forAttribute: kMDItemFSSize as String) as? NSNumber)?.int64Value ?? 0,
+                modifiedAt: (item.value(forAttribute: kMDItemContentModificationDate as String) as? Date)
+                    ?? (item.value(forAttribute: kMDItemFSContentChangeDate as String) as? Date),
+                isDirectory: isDirectory
             ))
         }
 
-        results = Self.rank(items, expression: activeExpression)
+        results = Self.rank(items, expression: activeExpression, limit: maximumResults)
         isSearching = !finished
         statusMessage = finished
             ? (results.isEmpty ? L10n.text("Không tìm thấy kết quả phù hợp") : L10n.format("%lld kết quả từ Spotlight", Int64(results.count)))
             : L10n.format("Đang cập nhật %lld kết quả…", Int64(results.count))
     }
 
-    private static func rank(_ results: [FileSearchResult], expression: FileSearchExpression) -> [FileSearchResult] {
+    static func rank(_ results: [FileSearchResult], expression: FileSearchExpression, limit: Int) -> [FileSearchResult] {
         let positive = expression.terms.filter { !$0.excluded }.map { $0.value.lowercased() }
         func score(_ item: FileSearchResult) -> Int {
             let name = item.name.lowercased()
@@ -405,10 +408,11 @@ public final class FileSearchEngine: NSObject, ObservableObject {
             }
             return value
         }
-        return results.sorted {
+        let ranked = results.sorted {
             let left = score($0), right = score($1)
             return left == right ? $0.name.localizedStandardCompare($1.name) == .orderedAscending : left > right
         }
+        return Array(ranked.prefix(limit))
     }
 
     private func stopQuery() {

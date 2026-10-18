@@ -44,6 +44,10 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
     private let notificationsEnabled: Bool
     private var networkRetries: [UUID: Int] = [:]
     private var pendingPauses = Set<UUID>()
+    /// Resume requested while a pause is still delivering its resume data; replayed when the pause settles.
+    private var pendingResumes = Set<UUID>()
+    /// Task identifiers whose redirect was refused as an HTTPS to HTTP downgrade.
+    private var downgradedTasks = Set<Int>()
 
     private lazy var session: URLSession = {
         let configuration = self.configuration
@@ -112,6 +116,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
             return
         }
         pendingPauses.insert(id)
+        pendingResumes.remove(id)
         update(id) { item in
             item.status = .paused
             item.errorMessage = nil
@@ -123,14 +128,18 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
                 if let data, self.item(id)?.status == .paused { self.resumeData[id] = data }
                 if self.tasks[id] === task { self.tasks.removeValue(forKey: id) }
                 self.pendingPauses.remove(id)
+                if self.pendingResumes.remove(id) != nil { self.resume(id) }
             }
         }
     }
 
     public func resume(_ id: UUID, automatically: Bool = false) {
         guard let item = item(id),
-              !pendingPauses.contains(id),
               item.status == .paused || item.status == .failed || item.status == .cancelled || item.status == .waitingForNetwork else { return }
+        if pendingPauses.contains(id) {
+            if !automatically { pendingResumes.insert(id) }
+            return
+        }
         if !automatically { networkRetries[id] = 0 }
         guard environment.online, !(environment.avoidMetered && environment.metered) else {
             update(id) { $0.status = .waitingForNetwork; $0.errorMessage = L10n.text("Chờ kết nối phù hợp để tải xuống.") }
@@ -173,6 +182,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
 
     public func cancel(_ id: UUID) {
         networkRetries.removeValue(forKey: id)
+        pendingResumes.remove(id)
         tasks.removeValue(forKey: id)?.cancel()
         resumeData.removeValue(forKey: id)
         update(id) { item in
@@ -184,6 +194,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
 
     public func remove(_ id: UUID) {
         networkRetries.removeValue(forKey: id)
+        pendingResumes.remove(id)
         tasks.removeValue(forKey: id)?.cancel()
         resumeData.removeValue(forKey: id)
         items.removeAll { $0.id == id }
@@ -367,6 +378,26 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
         }
     }
 
+    /// Tags the file the way Safari does, so Gatekeeper checks downloaded
+    /// apps, scripts and installers on first open.
+    static func markAsDownloadedFromInternet(_ fileURL: URL, sourceURL: String) {
+        var properties: [String: Any] = [
+            kLSQuarantineAgentNameKey as String: "Xmac",
+            kLSQuarantineTypeKey as String: kLSQuarantineTypeWebDownload as String
+        ]
+        if let origin = URL(string: sourceURL) {
+            properties[kLSQuarantineDataURLKey as String] = origin
+        }
+        var url = fileURL
+        var values = URLResourceValues()
+        values.quarantineProperties = properties
+        do {
+            try url.setResourceValues(values)
+        } catch {
+            NSLog("Xmac could not quarantine \(fileURL.path): \(error)")
+        }
+    }
+
     public func urlSession(
         _ session: URLSession,
         downloadTask: URLSessionDownloadTask,
@@ -403,6 +434,7 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try FileManager.default.moveItem(at: location, to: destination)
+            Self.markAsDownloadedFromInternet(destination, sourceURL: context.item.sourceURL)
             DispatchQueue.main.async {
                 self.update(context.id) { item in
                     item.fileName = destination.lastPathComponent
@@ -443,6 +475,15 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
             }
 
             let failure = error as NSError
+            if self.downgradedTasks.remove(task.taskIdentifier) != nil {
+                self.update(id) { item in
+                    item.status = .failed
+                    item.errorMessage = L10n.text("Đã chặn chuyển hướng từ HTTPS sang HTTP không an toàn.")
+                }
+                self.persistHistory()
+                self.notify(title: L10n.text("Tải xuống thất bại"), body: current.fileName)
+                return
+            }
             let attempts = self.networkRetries[id, default: 0]
             if Self.isRecoverableNetworkError(failure), attempts < 3 {
                 self.networkRetries[id] = attempts + 1
@@ -487,6 +528,18 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
             completionHandler(nil)
             return
         }
+        guard Self.allowsRedirect(from: response.url ?? task.currentRequest?.url, to: redirectedURL) else {
+            let identifier = task.taskIdentifier
+            DispatchQueue.main.async { self.downgradedTasks.insert(identifier) }
+            task.cancel()
+            completionHandler(nil)
+            return
+        }
         completionHandler(request)
+    }
+
+    /// A secure download must never be silently continued over plaintext HTTP.
+    static func allowsRedirect(from source: URL?, to destination: URL) -> Bool {
+        !(source?.scheme?.lowercased() == "https" && destination.scheme?.lowercased() != "https")
     }
 }

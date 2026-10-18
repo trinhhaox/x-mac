@@ -17,6 +17,19 @@ import Testing
         #expect(expression.modifiedWithinDays == 7)
     }
 
+    @Test func rankingKeepsOldExactMatchesBeyondTheRecencyWindow() {
+        func result(_ name: String, daysOld: Double) -> FileSearchResult {
+            FileSearchResult(path: "/tmp/\(name)", name: name, kind: "Tệp", size: 0,
+                             modifiedAt: Date().addingTimeInterval(-daysOld * 86_400), isDirectory: false)
+        }
+        // 300 recent partial matches, then one very old exact match that a recency cut-off would drop.
+        var items = (0..<300).map { result("report-\($0).txt", daysOld: 0) }
+        items.append(result("report", daysOld: 400))
+        let ranked = FileSearchEngine.rank(items, expression: FileSearchExpression.parse("'report"), limit: 200)
+        #expect(ranked.count == 200)
+        #expect(ranked.first?.name == "report")
+    }
+
     @Test func exactAndEmptyQueriesAreHandled() {
         let exact = FileSearchExpression.parse("'README.md")
         #expect(exact.terms == [FileSearchTerm(value: "README.md", mode: .exact, excluded: false)])

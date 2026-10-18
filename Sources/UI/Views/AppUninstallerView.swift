@@ -124,10 +124,10 @@ public struct AppUninstallerView: View {
                 message: Text("Ứng dụng và các file phụ trợ đã chọn sẽ được chuyển an toàn vào Thùng rác (Trash)."),
                 primaryButton: .destructive(Text("Chuyển vào Thùng rác")) {
                     if let app = vm.selectedApp {
-                        uninstaller.uninstallApp(app) { success in
-                            self.vm.uninstallResultText = success
+                        uninstaller.uninstallApp(app) { result in
+                            self.vm.uninstallResultText = result.success
                                 ? L10n.format("Đã chuyển các mục đã chọn của %@ vào Thùng rác.", app.name)
-                                : L10n.format("Không thể gỡ bỏ đầy đủ %@. App bundle được giữ lại nếu file phụ trợ gặp lỗi.", app.name)
+                                : result.errorMessage ?? L10n.format("Không thể gỡ bỏ đầy đủ %@.", app.name)
                             self.vm.selectedApp = nil
                         }
                     }
@@ -145,7 +145,7 @@ struct AppListItemRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(nsImage: NSWorkspace.shared.icon(forFile: app.bundlePath))
+            Image(nsImage: AppIconCache.shared.icon(forFile: app.bundlePath))
                 .resizable()
                 .frame(width: 32, height: 32)
             
@@ -194,7 +194,7 @@ struct AppDetailView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Header app info
                 HStack(spacing: 16) {
-                    Image(nsImage: NSWorkspace.shared.icon(forFile: app.bundlePath))
+                    Image(nsImage: AppIconCache.shared.icon(forFile: app.bundlePath))
                         .resizable()
                         .frame(width: 56, height: 56)
                     

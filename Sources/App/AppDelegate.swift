@@ -18,6 +18,11 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         
         // 2. Kiểm tra quyền và chỉ khởi động event tap khi được phép.
         PermissionsManager.shared.checkPermissions()
+
+        // Nạp từ điển tiếng Anh trước, để lần tra đầu tiên lúc gõ không làm chậm event tap.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            EnglishLexicon.warmUp()
+        }
         
         // 3. Yêu cầu quyền thông báo
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in

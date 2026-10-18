@@ -78,8 +78,10 @@ enum SystemProbe {
             let page = UInt64(vm_kernel_page_size)
             sample.memoryWired = UInt64(vm.wire_count) * page
             sample.memoryCompressed = UInt64(vm.compressor_page_count) * page
-            sample.memoryUsed = min(ProcessInfo.processInfo.physicalMemory,
-                (UInt64(vm.active_count) + UInt64(vm.wire_count) + UInt64(vm.compressor_page_count)) * page)
+            sample.memoryUsed = memoryUsed(
+                internalPages: UInt64(vm.internal_page_count), purgeablePages: UInt64(vm.purgeable_count),
+                wiredPages: UInt64(vm.wire_count), compressedPages: UInt64(vm.compressor_page_count),
+                pageSize: page, physicalMemory: ProcessInfo.processInfo.physicalMemory)
         }
         var swap = xsw_usage()
         var size = MemoryLayout<xsw_usage>.size
@@ -91,6 +93,14 @@ enum SystemProbe {
         }
         sample.network = networkCounters()
         return sample
+    }
+
+    /// Activity Monitor's "Memory Used": app memory (internal − purgeable) + wired + compressed.
+    /// Active pages are deliberately excluded because they include reclaimable file cache.
+    static func memoryUsed(internalPages: UInt64, purgeablePages: UInt64, wiredPages: UInt64,
+                           compressedPages: UInt64, pageSize: UInt64, physicalMemory: UInt64) -> UInt64 {
+        let appPages = internalPages > purgeablePages ? internalPages - purgeablePages : 0
+        return min(physicalMemory, (appPages + wiredPages + compressedPages) * pageSize)
     }
 
     static func networkCounters() -> [String: NetworkCounter]? {
@@ -143,10 +153,13 @@ enum SystemProbe {
     @Published private(set) var cpuHistory: [Double] = []
     @Published private(set) var running = false
     private var task: Task<Void, Never>?
-    private let probe: () -> SystemSample
+    private let probe: ProbeBox
     private var previous: SystemSample?
 
-    init(probe: @escaping () -> SystemSample = SystemProbe.read) { self.probe = probe }
+    /// The probe runs on a background task and is only ever called sequentially, one sample at a time.
+    private struct ProbeBox: @unchecked Sendable { let read: () -> SystemSample }
+
+    init(probe: @escaping () -> SystemSample = SystemProbe.read) { self.probe = ProbeBox(read: probe) }
 
     func start() {
         guard task == nil else { return }
@@ -155,11 +168,14 @@ enum SystemProbe {
         cpuUsage = nil
         networkRate = nil
         cpuHistory = []
+        let probe = probe
         task = Task { [weak self] in
             while !Task.isCancelled {
-                guard let self else { return }
                 // Sampling is read-only and bounded; no subprocesses, sockets, sensors or privileged helper.
-                self.accept(self.probe())
+                // It runs off the main actor; only publishing happens on main.
+                let next = await Task.detached(priority: .utility) { probe.read() }.value
+                guard !Task.isCancelled, let self else { return }
+                self.accept(next)
                 do { try await Task.sleep(nanoseconds: 2_000_000_000) } catch { return }
             }
         }

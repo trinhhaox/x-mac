@@ -5,7 +5,25 @@ import Testing
 
 @testable import Xmac
 
+private final class ProbeCounter: @unchecked Sendable {
+  private let lock = NSLock()
+  private var count = 0
+  var value: Int { lock.lock(); defer { lock.unlock() }; return count }
+  func increment() { lock.lock(); count += 1; lock.unlock() }
+}
+
 struct SystemMonitorTests {
+  @Test func memoryUsedFollowsActivityMonitorFormula() {
+    let page: UInt64 = 16_384
+    // app = 1000 - 200 = 800 pages; + 300 wired + 100 compressed = 1200 pages. Active/file cache is not an input.
+    #expect(SystemProbe.memoryUsed(internalPages: 1000, purgeablePages: 200, wiredPages: 300,
+      compressedPages: 100, pageSize: page, physicalMemory: .max) == 1200 * page)
+    #expect(SystemProbe.memoryUsed(internalPages: 10, purgeablePages: 50, wiredPages: 5,
+      compressedPages: 5, pageSize: page, physicalMemory: .max) == 10 * page)
+    #expect(SystemProbe.memoryUsed(internalPages: 1000, purgeablePages: 0, wiredPages: 0,
+      compressedPages: 0, pageSize: page, physicalMemory: 4 * page) == 4 * page)
+  }
+
   @Test func shortRouteAddressRecordsDoNotHideLaterPhysicalInterfaces() {
     var record = if_msghdr2()
     record.ifm_msglen = UInt16(MemoryLayout<if_msghdr2>.size)
@@ -77,29 +95,29 @@ struct SystemMonitorTests {
   }
 
   @MainActor @Test func startIsIdempotentAndStopCancelsSampling() async throws {
-    var calls = 0
+    let counter = ProbeCounter()
     let monitor = SystemMonitor(probe: {
-      calls += 1
+      counter.increment()
       return SystemSample()
     })
     monitor.start()
     monitor.start()
     for _ in 0..<100 {
-      if calls > 0 { break }
+      if counter.value > 0 { break }
       try await Task.sleep(nanoseconds: 10_000_000)
     }
-    #expect(calls == 1)
+    #expect(counter.value == 1)
     monitor.stop()
     #expect(!monitor.running)
     try await Task.sleep(nanoseconds: 2_100_000_000)
-    #expect(calls == 1)
+    #expect(counter.value == 1)
     monitor.start()
     for _ in 0..<100 {
-      if calls > 1 { break }
+      if counter.value > 1 { break }
       try await Task.sleep(nanoseconds: 10_000_000)
     }
     monitor.stop()
-    #expect(calls == 2)
+    #expect(counter.value == 2)
   }
 
   @Test func liveProbeReadsActualMacWithoutPrivileges() async throws {

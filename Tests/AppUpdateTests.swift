@@ -49,7 +49,7 @@ import Testing
     }
 
     @Test(.enabled(if: ProcessInfo.processInfo.environment["XMAC_TEST_APP"] != nil))
-    func signedBundleCanBeInstalledAndOriginalIsRetained() throws {
+    func signedBundleCanBeInstalledAndBackupIsRemoved() throws {
         let fm = FileManager.default
         let source = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["XMAC_TEST_APP"]))
         let version = try #require(Bundle(url: source)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
@@ -58,11 +58,11 @@ import Testing
         let target = root.appendingPathComponent("Xmac.app")
         try fm.createDirectory(at: target, withIntermediateDirectories: true)
         try Data("old".utf8).write(to: target.appendingPathComponent("marker"))
-        try UpdateInstaller.installBundle(source: source, version: version, target: target)
+        let running = UpdateIdentity.read(from: source)
+        try UpdateInstaller.installBundle(source: source, version: version, target: target, running: running)
         #expect(Bundle(url: target)?.bundleIdentifier == "vn.xmac.app")
         let backups = try fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil).filter { $0.lastPathComponent.hasPrefix("Xmac-before-update-") }
-        #expect(backups.count == 1)
-        #expect(try String(contentsOf: backups[0].appendingPathComponent("marker")) == "old")
-        #expect(throws: UpdateFailure.self) { try UpdateInstaller.installBundle(source: source, version: "0.0.0", target: target) }
+        #expect(backups.isEmpty)
+        #expect(throws: UpdateFailure.self) { try UpdateInstaller.installBundle(source: source, version: "0.0.0", target: target, running: running) }
     }
 }

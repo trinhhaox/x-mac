@@ -39,6 +39,61 @@ public struct CleanResult: Equatable {
     public let deletedBytes: Int64
     public let deletedCount: Int
     public let failedCount: Int
+    public var skippedCount: Int = 0
+}
+
+enum CleanerItemPolicy {
+    /// Cache/log entries named after a running app's bundle id (or a helper "<id>.xxx") are in use: skip them.
+    static func shouldSkip(itemName: String, runningBundleIdentifiers: Set<String>) -> Bool {
+        runningBundleIdentifiers.contains { id in
+            !id.isEmpty && (itemName == id || itemName.hasPrefix(id + "."))
+        }
+    }
+
+    /// Only entries already inside the Trash are removed permanently; everything else goes to the Trash.
+    static func isInTrash(path: String, homeDirectory: String = NSHomeDirectory()) -> Bool {
+        let trash = URL(fileURLWithPath: homeDirectory).appendingPathComponent(".Trash", isDirectory: true)
+            .standardizedFileURL.resolvingSymlinksInPath()
+        let item = URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath()
+        return item.path != trash.path && item.pathComponents.starts(with: trash.pathComponents)
+    }
+}
+
+enum AppUninstallPolicy {
+    private static let systemRoots = ["/System/"]
+    private static let protectedBundleIdentifiers: Set<String> = [
+        "com.apple.finder",
+        "com.apple.Safari",
+        "com.apple.AppStore",
+        "com.apple.systempreferences",
+        "com.apple.dock",
+        "com.apple.loginwindow",
+        "com.apple.systemuiserver"
+    ]
+
+    /// Apple apps in /Applications (Xcode, Pages, GarageBand...) are removable; only OS-owned ones are protected.
+    static func isSystemApp(bundlePath: String, bundleIdentifier: String) -> Bool {
+        let path = URL(fileURLWithPath: bundlePath).standardizedFileURL.resolvingSymlinksInPath().path
+        if systemRoots.contains(where: { path.hasPrefix($0) }) { return true }
+        return protectedBundleIdentifiers.contains(bundleIdentifier)
+    }
+
+    /// Bundle id / name come from the target's Info.plist and are used to build paths: reject anything path-like.
+    static func isSafePathComponent(_ value: String) -> Bool {
+        !value.isEmpty
+            && !value.contains("/")
+            && !value.contains("\0")
+            && !value.contains("..")
+    }
+}
+
+public struct UninstallResult: Equatable {
+    public let success: Bool
+    /// Localized, user-facing error (nil on success).
+    public let errorMessage: String?
+    public let failedPaths: [String]
+
+    static let ok = UninstallResult(success: true, errorMessage: nil, failedPaths: [])
 }
 
 enum CleanerPathPolicy {

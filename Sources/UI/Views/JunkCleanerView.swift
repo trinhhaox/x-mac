@@ -145,16 +145,20 @@ public struct JunkCleanerView: View {
         .alert(isPresented: $vm.showCleanConfirmation) {
             Alert(
                 title: Text("Xác nhận xóa dữ liệu đã chọn?"),
-                message: Text("Các mục đã chọn sẽ bị xóa vĩnh viễn. Hãy đóng ứng dụng đang sử dụng các cache này trước khi tiếp tục."),
-                primaryButton: .destructive(Text("Xóa vĩnh viễn")) {
+                message: Text("Các mục đã chọn sẽ được chuyển vào Thùng rác (riêng mục trong Thùng rác sẽ bị xóa vĩnh viễn). Cache của ứng dụng đang chạy sẽ được bỏ qua."),
+                primaryButton: .destructive(Text("Chuyển vào Thùng rác")) {
                     cleaner.cleanSelectedJunk { result in
                         let formatted = ByteCountFormatter.string(
                             fromByteCount: result.deletedBytes,
                             countStyle: .file
                         )
-                        vm.cleanResultText = result.failedCount == 0
-                            ? L10n.format("Đã xóa %lld mục, giải phóng %@.", Int64(result.deletedCount), formatted)
-                            : L10n.format("Đã xóa %lld mục (%@); %lld mục thất bại hoặc bị từ chối.", Int64(result.deletedCount), formatted, Int64(result.failedCount))
+                        var text = result.failedCount == 0
+                            ? L10n.format("Đã chuyển %lld mục (%@) vào Thùng rác. Dọn sạch Thùng rác để lấy lại dung lượng.", Int64(result.deletedCount), formatted)
+                            : L10n.format("Đã chuyển %lld mục (%@) vào Thùng rác; %lld mục thất bại hoặc bị từ chối.", Int64(result.deletedCount), formatted, Int64(result.failedCount))
+                        if result.skippedCount > 0 {
+                            text += " " + L10n.format("Bỏ qua %lld mục của ứng dụng đang chạy.", Int64(result.skippedCount))
+                        }
+                        vm.cleanResultText = text
                     }
                 },
                 secondaryButton: .cancel(Text("Huỷ"))

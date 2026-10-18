@@ -102,6 +102,13 @@ public class VietnameseEngine {
             if lower == "o" && lastLower == "ô" {
                 return replacingLast(in: currentWord, with: lastIsUpper ? "O" : "o", appending: newChar)
             }
+            if lower == "w", let horned = hornedUOPair(in: currentWord), horned.isHorned {
+                var word = String(currentWord.dropLast(2))
+                word.append(horned.uIsUpper ? "U" : "u")
+                word.append(lastIsUpper ? "O" : "o")
+                word.append(newChar)
+                return (word, true)
+            }
             let wCancellationBases: [Character: Character] = ["ă": "a", "ơ": "o", "ư": "u"]
             if lower == "w", let base = wCancellationBases[lastLower] {
                 let replacement = lastIsUpper ? Character(String(base).uppercased()) : base
@@ -146,6 +153,12 @@ public class VietnameseEngine {
                     var word = currentWord
                     word.removeLast()
                     word.append(lastIsUpper ? "Ă" : "ă")
+                    return (word, true)
+                } else if let pair = hornedUOPair(in: currentWord), !pair.isHorned {
+                    // uo / ưo -> ươ (người, đường); "quo" stays "quơ".
+                    var word = String(currentWord.dropLast(2))
+                    word.append(pair.uIsUpper ? "Ư" : "ư")
+                    word.append(lastIsUpper ? "Ơ" : "ơ")
                     return (word, true)
                 } else if lastLower == "o" {
                     var word = currentWord
@@ -254,6 +267,24 @@ public class VietnameseEngine {
         }
         
         return (currentWord + String(newChar), false)
+    }
+
+    /// Detects a trailing u/ư + o/ơ cluster that Telex `w` should treat as one
+    /// unit. `isHorned` means it is already "ươ". "qu" is an onset, so "quo"
+    /// is not a cluster.
+    private func hornedUOPair(in word: String) -> (isHorned: Bool, uIsUpper: Bool)? {
+        let chars = Array(word)
+        guard chars.count >= 2 else { return nil }
+        let u = chars[chars.count - 2]
+        let o = Character(chars[chars.count - 1].lowercased())
+        let uLower = Character(u.lowercased())
+        guard uLower == "u" || uLower == "ư", o == "o" || o == "ơ" else { return nil }
+        if chars.count >= 3, chars[chars.count - 3].lowercased() == "q" { return nil }
+
+        let isHorned = uLower == "ư" && o == "ơ"
+        // "uơ" (huơ, thuở) is already final; only uo, ưo and ươ take part.
+        if !isHorned && o == "ơ" { return nil }
+        return (isHorned, u.isUppercase)
     }
 
     private func replacingLast(

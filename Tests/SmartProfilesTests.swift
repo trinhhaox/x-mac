@@ -108,4 +108,26 @@ import Testing
 
         #expect(history.items.isEmpty)
     }
+
+    @Test func lossyDecodeKeepsValidProfilesAndBacksUpRawData() throws {
+        let defaults = makeDefaults()
+        let good = SmartAppProfile(displayName: "Good", bundleIdentifier: "test.good", imePolicy: .english)
+        var array = try #require(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode([good])) as? [[String: Any]]
+        )
+        var bad = array[0]
+        bad["bundleIdentifier"] = "test.bad"
+        bad["imePolicy"] = "futureUnknownPolicy"
+        array.append(bad)
+        let raw = try JSONSerialization.data(withJSONObject: array)
+        defaults.set(raw, forKey: "SmartProfiles.Profiles")
+
+        let manager = SmartProfilesManager(defaults: defaults, observeWorkspace: false)
+        #expect(manager.profiles.map(\.bundleIdentifier) == ["test.good"])
+        #expect(manager.loadFailed)
+
+        manager.save(SmartAppProfile(displayName: "New", bundleIdentifier: "test.new"))
+        #expect(defaults.data(forKey: manager.unreadableBackupKey) == raw)
+        #expect(defaults.data(forKey: "SmartProfiles.Profiles") != raw)
+    }
 }

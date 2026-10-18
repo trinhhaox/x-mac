@@ -37,4 +37,42 @@ import Testing
         #expect(!EnglishWordRestoration.isPlausibleVietnameseSyllable("sòftware"))
         #expect(!EnglishWordRestoration.isPlausibleVietnameseSyllable("mêting"))
     }
+
+    @Test func telexEscapesAreNeverReinsertedAtTheBoundary() {
+        let lexicon: Set<String> = ["push", "class", "ass", "as", "process", "server", "sever", "off", "of"]
+        let isWord: (String) -> Bool = { lexicon.contains($0.lowercased()) }
+        // "puss" escapes the tone, so the user meant "push", not "pussh".
+        #expect(EnglishWordRestoration.restoration(raw: "pussh", composed: "push", isEnglishWord: isWord) == nil)
+        #expect(EnglishWordRestoration.restoration(raw: "class", composed: "clas", isEnglishWord: isWord) == "class")
+        #expect(EnglishWordRestoration.restoration(raw: "process", composed: "proces", isEnglishWord: isWord) == "process")
+        #expect(EnglishWordRestoration.restoration(raw: "ass", composed: "as", isEnglishWord: isWord) == nil)
+        #expect(EnglishWordRestoration.restoration(raw: "off", composed: "of", isEnglishWord: isWord) == nil)
+        // A tone key cancelled mid-word is not an escape: "server" must survive.
+        #expect(EnglishWordRestoration.restoration(raw: "server", composed: "sever", isEnglishWord: isWord) == "server")
+    }
+
+    @Test func invalidNucleiAndToneCodaPairsAreRestored() {
+        #expect(EnglishWordRestoration.isCandidate(raw: "use", composed: "úe"))
+        #expect(EnglishWordRestoration.isCandidate(raw: "case", composed: "cáe"))
+        #expect(EnglishWordRestoration.isCandidate(raw: "house", composed: "hóue"))
+        #expect(EnglishWordRestoration.isCandidate(raw: "text", composed: "tẽt"))
+        #expect(EnglishWordRestoration.isCandidate(raw: "yes", composed: "ýe"))
+    }
+
+    @Test func realVietnameseSyllablesStayValid() {
+        for word in ["người", "thuở", "khuya", "giữa", "gì", "xoong", "quốc", "oanh", "huỳnh", "kìa",
+                     "yêu", "nghiêng", "xoăn", "ếch", "ăn", "khoẻ", "hoà", "thuý", "uống", "giếng"] {
+            #expect(VietnameseSyllable.isValid(word), "\(word)")
+        }
+        for word in ["úe", "tẽt", "ă", "kan", "cé", "ghá", "anhh", "ủe", "ìch"] {
+            #expect(!VietnameseSyllable.isValid(word), "\(word)")
+        }
+    }
+
+    @Test func systemSpellCheckerRecognisesEnglishWords() {
+        #expect(EnglishLexicon.contains("class"))
+        #expect(EnglishLexicon.contains("Push"))
+        #expect(!EnglishLexicon.contains("pussh"))
+        #expect(!EnglishLexicon.contains("clas"))
+    }
 }

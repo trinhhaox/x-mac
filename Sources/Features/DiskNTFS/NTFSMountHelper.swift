@@ -131,31 +131,16 @@ public class NTFSMountHelper: DiskMounter {
             case .ntfs3g:
                 innerCommand = POSIXShell.join([
                     "/bin/mkdir", "-p", targetMountPoint
-                ]) + " && " + POSIXShell.join([
-                    mountBinary.path, deviceNode, targetMountPoint
-                ])
+                ]) + " && " + POSIXShell.join(Self.ntfs3gArguments(
+                    binary: mountBinary.path, deviceNode: deviceNode,
+                    mountPoint: targetMountPoint, volumeName: volume.name
+                ))
             case .unavailable:
                 return
             }
 
             let appleScriptSource = "do shell script \(self.appleScriptStringLiteral(innerCommand)) with administrator privileges"
-            var error: NSDictionary?
-            guard let appleScript = NSAppleScript(source: appleScriptSource) else {
-                let rollback = self.rollbackReadOnlyIfNeeded(
-                    deviceNode: deviceNode,
-                    targetMountPoint: targetMountPoint,
-                    shouldRollback: didUnmountOriginalVolume
-                )
-                self.complete(
-                    .failure(error: self.failureMessage("Không tạo được lệnh mount.", rollback: rollback)),
-                    completion: completion
-                )
-                return
-            }
-
-            _ = appleScript.executeAndReturnError(&error)
-            if let err = error {
-                let errMsg = err["NSAppleScriptErrorMessage"] as? String ?? "Lỗi không xác định"
+            if let errMsg = self.runAdministratorScript(appleScriptSource) {
                 let rollback = self.rollbackReadOnlyIfNeeded(
                     deviceNode: deviceNode,
                     targetMountPoint: targetMountPoint,
@@ -246,6 +231,27 @@ public class NTFSMountHelper: DiskMounter {
             return .ntfs3g(URL(fileURLWithPath: path))
         }
         return .unavailable
+    }
+
+    /// `allow_other` lets the logged-in user (and Finder) access a filesystem mounted by root;
+    /// `local` makes macOS treat the FUSE volume as a local disk.
+    static func ntfs3gArguments(binary: String, deviceNode: String, mountPoint: String, volumeName: String) -> [String] {
+        // Commas separate mount options and control characters are never valid in a volume label.
+        let label = String(volumeName.unicodeScalars.filter { $0 != "," && !CharacterSet.controlCharacters.contains($0) })
+        var arguments = [binary, deviceNode, mountPoint, "-o", "allow_other,local"]
+        if !label.isEmpty { arguments += ["-o", "volname=\(label)"] }
+        return arguments
+    }
+
+    /// Runs the script with the admin prompt and returns an error message, or nil on success.
+    /// It runs out of process via osascript on the caller's queue: in-process NSAppleScript
+    /// would either share threads with FinderScriptThread or block the main run loop (and with
+    /// it the global event tap) for the whole password prompt and mount.
+    private func runAdministratorScript(_ source: String) -> String? {
+        let result = executeCommand("/usr/bin/osascript", arguments: ["-e", source])
+        guard result.status != 0 else { return nil }
+        let message = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+        return message.isEmpty ? "Lỗi không xác định" : message
     }
 
     private func appleScriptStringLiteral(_ value: String) -> String {

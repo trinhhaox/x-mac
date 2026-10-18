@@ -85,6 +85,15 @@ private final class SuccessfulDownloadProtocol: URLProtocol {
         #expect(manager.items.first?.status == .completed)
     }
 
+    @Test func redirectPolicyRejectsHTTPSToHTTPDowngrade() throws {
+        let secure = try #require(URL(string: "https://a.example/file.zip"))
+        let plain = try #require(URL(string: "http://b.example/file.zip"))
+        #expect(!DownloadManager.allowsRedirect(from: secure, to: plain))
+        #expect(DownloadManager.allowsRedirect(from: secure, to: try #require(URL(string: "https://c.example/f"))))
+        #expect(DownloadManager.allowsRedirect(from: plain, to: secure))
+        #expect(DownloadManager.allowsRedirect(from: plain, to: plain))
+    }
+
     @Test func recoveryRejectsNonNetworkFailuresAndSleepAssertionIsScoped() {
         #expect(DownloadManager.isRecoverableNetworkError(NSError(domain: NSURLErrorDomain, code: NSURLErrorNetworkConnectionLost)))
         #expect(!DownloadManager.isRecoverableNetworkError(NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)))
@@ -106,6 +115,19 @@ private final class SuccessfulDownloadProtocol: URLProtocol {
             try await Task.sleep(nanoseconds: 20_000_000)
         }
         #expect(manager.items.first?.status == .completed)
+    }
+
+    @Test func downloadedFileIsQuarantinedForGatekeeper() throws {
+        let file = FileManager.default.temporaryDirectory
+            .appendingPathComponent("XmacQuarantine-\(UUID().uuidString).command")
+        try Data("echo hi".utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+
+        DownloadManager.markAsDownloadedFromInternet(file, sourceURL: "https://example.com/run.command")
+
+        let properties = try file.resourceValues(forKeys: [.quarantinePropertiesKey]).quarantineProperties
+        #expect(properties?[kLSQuarantineAgentNameKey as String] as? String == "Xmac")
+        #expect(properties?[kLSQuarantineTypeKey as String] as? String == kLSQuarantineTypeWebDownload as String)
     }
 
     @Test func httpErrorDoesNotWriteAnErrorPageAsAFile() async throws {

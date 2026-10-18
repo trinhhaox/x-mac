@@ -11,60 +11,12 @@ NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$PROJECT_DIR/Resources/Info.plist" 2>/dev/null || echo "1.0.0")"
 
-SWIFT_SOURCES=(
-    "$PROJECT_DIR/Sources/Core/GlobalEventTap.swift"
-    "$PROJECT_DIR/Sources/Features/SystemMonitor/SystemMonitor.swift"
-    "$PROJECT_DIR/Sources/UI/Views/SystemMonitorView.swift"
-    "$PROJECT_DIR/Sources/Core/DownloadEnvironment.swift"
-    "$PROJECT_DIR/Sources/Core/AppUpdateManager.swift"
-    "$PROJECT_DIR/Sources/Core/POSIXShell.swift"
-    "$PROJECT_DIR/Sources/Core/PermissionsManager.swift"
-    "$PROJECT_DIR/Sources/Core/LaunchAtLoginManager.swift"
-    "$PROJECT_DIR/Sources/Core/SoundEffectManager.swift"
-    "$PROJECT_DIR/Sources/Features/FinderCutPaste/FinderBridge.swift"
-    "$PROJECT_DIR/Sources/Features/FinderCutPaste/FileMover.swift"
-    "$PROJECT_DIR/Sources/Features/FinderCutPaste/EventTapManager.swift"
-    "$PROJECT_DIR/Sources/Features/FinderCutPaste/FinderCutPasteManager.swift"
-    "$PROJECT_DIR/Sources/Features/DiskNTFS/DiskModel.swift"
-    "$PROJECT_DIR/Sources/Features/DiskNTFS/DiskManager.swift"
-    "$PROJECT_DIR/Sources/Features/DiskNTFS/NTFSMountHelper.swift"
-    "$PROJECT_DIR/Sources/Features/VietnameseIME/VietnameseEngine.swift"
-    "$PROJECT_DIR/Sources/Features/VietnameseIME/EnglishWordRestoration.swift"
-    "$PROJECT_DIR/Sources/Features/VietnameseIME/MacroManager.swift"
-    "$PROJECT_DIR/Sources/Features/VietnameseIME/InputHookManager.swift"
-    "$PROJECT_DIR/Sources/Features/SmartProfiles/SmartProfilesManager.swift"
-    "$PROJECT_DIR/Sources/Features/Cleaner/CleanerModels.swift"
-    "$PROJECT_DIR/Sources/Features/Cleaner/CleanerEngine.swift"
-    "$PROJECT_DIR/Sources/Features/Cleaner/AppUninstallerEngine.swift"
-    "$PROJECT_DIR/Sources/Features/Downloads/DownloadManager.swift"
-    "$PROJECT_DIR/Sources/Features/Clipboard/ClipboardHistory.swift"
-    "$PROJECT_DIR/Sources/Features/Organizer/DownloadsOrganizer.swift"
-    "$PROJECT_DIR/Sources/Features/FileSearch/FileSearchEngine.swift"
-    "$PROJECT_DIR/Sources/App/Localization.swift"
-    "$PROJECT_DIR/Sources/App/AppState.swift"
-    "$PROJECT_DIR/Sources/UI/ViewModels/AppViewModels.swift"
-    "$PROJECT_DIR/Sources/UI/Components/ModernComponents.swift"
-    "$PROJECT_DIR/Sources/UI/Views/OverviewView.swift"
-    "$PROJECT_DIR/Sources/UI/Views/CutPasteView.swift"
-    "$PROJECT_DIR/Sources/UI/Views/DiskNTFSView.swift"
-    "$PROJECT_DIR/Sources/UI/Views/VietnameseIMEView.swift"
-    "$PROJECT_DIR/Sources/UI/Views/SmartProfilesView.swift"
-    "$PROJECT_DIR/Sources/UI/Views/JunkCleanerView.swift"
-    "$PROJECT_DIR/Sources/UI/Views/AppUninstallerView.swift"
-    "$PROJECT_DIR/Sources/UI/Views/DownloadsView.swift"
-    "$PROJECT_DIR/Sources/UI/Views/FileSearchView.swift"
-    "$PROJECT_DIR/Sources/UI/Views/SettingsView.swift"
-    "$PROJECT_DIR/Sources/UI/Views/ClipboardHistoryView.swift"
-    "$PROJECT_DIR/Sources/UI/Views/DownloadsOrganizerView.swift"
-    "$PROJECT_DIR/Sources/UI/Views/MainView.swift"
-    "$PROJECT_DIR/Sources/UI/MenuBar/StatusBarController.swift"
-    "$PROJECT_DIR/Sources/UI/MenuBar/MenuBarDashboard.swift"
-    "$PROJECT_DIR/Sources/UI/Launcher/LauncherCatalog.swift"
-    "$PROJECT_DIR/Sources/UI/Launcher/LauncherCalculator.swift"
-    "$PROJECT_DIR/Sources/UI/Launcher/QuickLauncher.swift"
-    "$PROJECT_DIR/Sources/App/AppDelegate.swift"
-    "$PROJECT_DIR/Sources/App/main.swift"
-)
+# Compile exactly what Package.swift compiles, so a new source file can never
+# pass `swift test` yet be missing from the release binary.
+SWIFT_SOURCES=()
+while IFS= read -r -d '' source_file; do
+    SWIFT_SOURCES+=("$source_file")
+done < <(find "$PROJECT_DIR/Sources" -name '*.swift' -print0 | sort -z)
 
 SWIFT_FLAGS=(
     -O
@@ -134,7 +86,10 @@ if [[ "$CODE_SIGN_IDENTITY" == "-" ]]; then
     codesign --force --deep --sign - "$APP_BUNDLE"
 else
     echo "Signing app bundle with configured Developer ID..."
+    # Hardened runtime blocks Apple Events (Finder Cut/Paste, NTFS admin
+    # prompt) unless the entitlement is declared.
     codesign --force --deep --options runtime --timestamp \
+        --entitlements "$PROJECT_DIR/Resources/Xmac.entitlements" \
         --sign "$CODE_SIGN_IDENTITY" "$APP_BUNDLE"
 fi
 

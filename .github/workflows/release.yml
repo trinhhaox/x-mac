@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    env:
+      KEYCHAIN_NAME: xmac-release.keychain-db
+      NOTARY_PROFILE: xmac-notary
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify signing secrets
+        id: secrets
+        env:
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        shell: bash
+        run: |
+          missing=()
+          for name in MACOS_CERT_P12_BASE64 MACOS_CERT_PASSWORD APPLE_ID APPLE_TEAM_ID APPLE_APP_PASSWORD; do
+            [[ -n "${!name}" ]] || missing+=("$name")
+          done
+          if (( ${#missing[@]} > 0 )); then
+            # Without Developer ID secrets the release is published manually
+            # (ad-hoc DMG), so skip instead of failing the tag push.
+            echo "::warning::Signed release skipped; missing secrets: ${missing[*]}."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run tests
+        if: steps.secrets.outputs.enabled == 'true'
+        run: ./Scripts/test.sh
+
+      - name: Import Developer ID certificate into temporary keychain
+        if: steps.secrets.outputs.enabled == 'true'
+        env:
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          keychain_path="$RUNNER_TEMP/$KEYCHAIN_NAME"
+          keychain_password="$(uuidgen)"
+          cert_path="$RUNNER_TEMP/developer-id.p12"
+
+          echo "$MACOS_CERT_P12_BASE64" | base64 --decode > "$cert_path"
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$cert_path" -P "$MACOS_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain_path"
+          security list-keychains -d user -s "$keychain_path" login.keychain-db
+          rm -f "$cert_path"
+
+          identity="$(security find-identity -v -p codesigning "$keychain_path" | grep 'Developer ID Application' | head -1 | sed -E 's/.*"(.*)"/\1/')"
+          if [[ -z "$identity" ]]; then
+            echo "::error::No 'Developer ID Application' identity found in the imported certificate."
+            exit 1
+          fi
+          echo "CODE_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+
+      - name: Store notarization credentials
+        if: steps.secrets.outputs.enabled == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          xcrun notarytool store-credentials "$NOTARY_PROFILE" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --keychain "$RUNNER_TEMP/$KEYCHAIN_NAME"
+
+      - name: Build, sign and notarize
+        if: steps.secrets.outputs.enabled == 'true'
+        run: ./Scripts/build.sh
+
+      - name: Publish DMG to GitHub Release
+        if: steps.secrets.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          dmg_path="$(find build -maxdepth 1 -name 'Xmac-*.dmg' -print -quit)"
+          test -n "$dmg_path"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$dmg_path" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$dmg_path" --title "Xmac $GITHUB_REF_NAME" --generate-notes
+          fi
+
+      - name: Remove temporary keychain
+        if: always() && steps.secrets.outputs.enabled == 'true'
+        shell: bash
+        run: security delete-keychain "$RUNNER_TEMP/$KEYCHAIN_NAME" || true

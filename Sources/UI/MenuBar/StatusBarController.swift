@@ -1,5 +1,6 @@
 import Cocoa
 import SwiftUI
+import UserNotifications
 
 public class StatusBarController: NSObject, NSMenuDelegate {
     public static let shared = StatusBarController()
@@ -7,6 +8,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var menu: NSMenu?
     private let dashboard = NSPopover()
+    private var titleRefreshPending = false
     
     override private init() {
         super.init()
@@ -28,7 +30,8 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         
         updateStatusBarTitle()
         
-        // Đăng ký observer khi chế độ gõ hoặc số file cut thay đổi
+        // UserDefaults báo mọi thay đổi (kể cả key không liên quan), nên onStateChanged
+        // gộp các thông báo liên tiếp và updateStatusBarTitle bỏ qua khi tiêu đề không đổi.
         NotificationCenter.default.addObserver(self, selector: #selector(onStateChanged), name: UserDefaults.didChangeNotification, object: nil)
     }
 
@@ -53,24 +56,31 @@ public class StatusBarController: NSObject, NSMenuDelegate {
     }
     
     @objc private func onStateChanged() {
+        guard !titleRefreshPending else { return }
+        titleRefreshPending = true
         DispatchQueue.main.async {
+            self.titleRefreshPending = false
             self.updateStatusBarTitle()
         }
     }
-    
-    public func updateStatusBarTitle() {
-        guard let button = statusItem?.button else { return }
-        
+
+    private func effectiveIMEConfiguration() -> SmartProfileEffectiveConfiguration {
         let ime = InputHookManager.shared
-        let cutPaste = FinderCutPasteManager.shared
-        let hasAccessibility = PermissionsManager.shared.isAccessibilityGranted
-        let smartProfiles = SmartProfilesManager.shared
-        let effectiveIME = smartProfiles.effectiveConfiguration(
+        return SmartProfilesManager.shared.effectiveConfiguration(
             for: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
             globalVietnameseMode: ime.isVietnameseMode,
             globalTypingMethod: ime.typingMethod,
             globalMacrosEnabled: MacroManager.shared.isMacroEnabled
         )
+    }
+    
+    public func updateStatusBarTitle() {
+        guard let button = statusItem?.button else { return }
+        
+        let cutPaste = FinderCutPasteManager.shared
+        let hasAccessibility = PermissionsManager.shared.isAccessibilityGranted
+        let smartProfiles = SmartProfilesManager.shared
+        let effectiveIME = effectiveIMEConfiguration()
         
         var title = hasAccessibility
             ? (effectiveIME.isVietnameseMode ? "🇻🇳 V" : "🇺🇸 E")
@@ -82,6 +92,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
             title += " [✂︎\(cutPaste.cutFiles.count)]"
         }
         
+        guard button.title != title else { return }
         button.title = title
         button.toolTip = L10n.text("Xmac - Tiện ích thiết yếu cho macOS")
     }
@@ -100,12 +111,25 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         let hasAccessibility = PermissionsManager.shared.isAccessibilityGranted
         
         // 1. Chuyển đổi ngôn ngữ gõ
-        let langTitle = hasAccessibility
-            ? (ime.isVietnameseMode ? L10n.text("🇻🇳 Đang gõ: Tiếng Việt (Nhấn để đổi E)") : L10n.text("🇺🇸 Đang gõ: Tiếng Anh (Nhấn để đổi V)"))
-            : L10n.text("⚠ Bộ gõ cần quyền Trợ năng")
+        // Dùng cùng cấu hình hiệu lực với tiêu đề thanh trạng thái: khi profile ép chế độ
+        // gõ cho ứng dụng đang dùng, phím chuyển toàn cục không có tác dụng nên khoá mục này.
+        let effectiveIME = effectiveIMEConfiguration()
+        let forcingProfile = SmartProfilesManager.shared.activeProfile.flatMap { $0.imePolicy == .inherit ? nil : $0 }
+        let langTitle: String
+        if !hasAccessibility {
+            langTitle = L10n.text("⚠ Bộ gõ cần quyền Trợ năng")
+        } else if let forcingProfile {
+            langTitle = effectiveIME.isVietnameseMode
+                ? L10n.format("🇻🇳 Đang gõ: Tiếng Việt (do profile %@)", forcingProfile.displayName)
+                : L10n.format("🇺🇸 Đang gõ: Tiếng Anh (do profile %@)", forcingProfile.displayName)
+        } else {
+            langTitle = effectiveIME.isVietnameseMode
+                ? L10n.text("🇻🇳 Đang gõ: Tiếng Việt (Nhấn để đổi E)")
+                : L10n.text("🇺🇸 Đang gõ: Tiếng Anh (Nhấn để đổi V)")
+        }
         let langItem = NSMenuItem(title: langTitle, action: #selector(toggleLanguage), keyEquivalent: "")
         langItem.target = self
-        langItem.isEnabled = hasAccessibility
+        langItem.isEnabled = hasAccessibility && forcingProfile == nil
         menu.addItem(langItem)
         
         // Submenu chọn kiểu gõ
@@ -255,7 +279,22 @@ public class StatusBarController: NSObject, NSMenuDelegate {
     }
     
     @objc private func purgeMemoryAction() {
-        CleanerEngine.shared.purgeMemory()
+        CleanerEngine.shared.purgeMemory { success in
+            self.notify(
+                title: L10n.text(success ? "Đã giải phóng bộ nhớ RAM" : "Không thể giải phóng bộ nhớ RAM"),
+                body: success ? nil : L10n.text("Lệnh purge không chạy thành công. Hãy thử lại sau.")
+            )
+        }
+    }
+
+    private func notify(title: String, body: String?) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        if let body { content.body = body }
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error { NSLog("Xmac notification error: \(error)") }
+        }
     }
 
     @objc private func openDownloads() {

@@ -14,7 +14,8 @@ public class FinderCutPasteManager: ObservableObject {
 
     private let operationQueue = DispatchQueue(label: "vn.xmac.finder-file-operations", qos: .userInitiated)
     private var cutSessionID: UUID?
-    
+    private var cutPasteboardChange: Int?
+
     private init() {
         if UserDefaults.standard.object(forKey: "CutPasteEnabled") != nil {
             self.isEnabled = UserDefaults.standard.bool(forKey: "CutPasteEnabled")
@@ -23,22 +24,34 @@ public class FinderCutPasteManager: ObservableObject {
         }
     }
     
+    /// Called from the event tap: must return immediately. Finder is queried on
+    /// `FinderScriptThread`, and results are applied back on the main queue.
     public func handleCut() -> Bool {
         guard isEnabled else { return false }
         let sessionID = UUID()
         cutSessionID = sessionID
         cutFiles.removeAll()
+        // Xmac never writes the pasteboard during a cut, so any later change
+        // means the user copied something else (menu, other app).
+        let pasteboardChange = NSPasteboard.general.changeCount
 
-        // NSAppleScript is not thread-safe. Query Finder on the event tap's main
-        // run loop, then reserve the operation queue for actual file I/O.
-        let selected = FinderBridge.getSelectedFiles()
-        guard cutSessionID == sessionID else { return true }
+        FinderScriptThread.shared.async {
+            let selected = FinderBridge.getSelectedFiles()
+            DispatchQueue.main.async {
+                self.finishCut(selected: selected, sessionID: sessionID, pasteboardChange: pasteboardChange)
+            }
+        }
+        return true
+    }
+
+    private func finishCut(selected: [String], sessionID: UUID, pasteboardChange: Int) {
+        guard cutSessionID == sessionID else { return }
         guard !selected.isEmpty else {
             cutSessionID = nil
-            cutFiles.removeAll()
-            return true
+            return
         }
         cutFiles = selected
+        cutPasteboardChange = pasteboardChange
         SoundEffectManager.shared.play(.cut)
 
         let count = selected.count
@@ -47,24 +60,52 @@ public class FinderCutPasteManager: ObservableObject {
             ? (selected.first as NSString?)?.lastPathComponent ?? ""
             : L10n.text("Sẵn sàng để dán (⌘V)")
         sendNotification(title: title, body: subtitle)
+    }
+
+    /// A pending cut (selection still being read) also claims ⌘V. The script
+    /// thread is serial, so this paste's Finder query finishes after the cut's,
+    /// and its main-queue completion sees the final `cutFiles`.
+    public func handlePaste() -> Bool {
+        guard isEnabled, cutSessionID != nil else { return false }
+        if isMoveInProgress { return true }
+        if cutIsStale() {
+            discardCut()
+            return false // Let Finder paste what the user copied later.
+        }
+        isMoveInProgress = true
+
+        FinderScriptThread.shared.async {
+            let folder = FinderBridge.getCurrentFolder()
+            DispatchQueue.main.async {
+                self.performPaste(into: folder)
+            }
+        }
         return true
     }
-    
-    public func handlePaste() -> Bool {
-        guard isEnabled, !cutFiles.isEmpty else { return false }
-        if isMoveInProgress { return true }
 
-        guard let currentFolder = FinderBridge.getCurrentFolder() else {
+    private func performPaste(into folder: String?) {
+        let filesToMove = cutFiles
+        let sessionID = cutSessionID
+        guard sessionID != nil, !filesToMove.isEmpty else {
+            // The pending cut came back empty: hand the swallowed ⌘V to Finder.
+            isMoveInProgress = false
+            replayFinderPaste()
+            return
+        }
+        if cutIsStale() {
+            discardCut()
+            isMoveInProgress = false
+            replayFinderPaste()
+            return
+        }
+        guard let currentFolder = folder else {
+            isMoveInProgress = false
             sendNotification(
                 title: L10n.text("Không thể dán"),
                 body: L10n.text("Không xác định được thư mục đích trong Finder.")
             )
-            return true
+            return
         }
-
-        let filesToMove = cutFiles
-        let sessionID = cutSessionID
-        isMoveInProgress = true
 
         operationQueue.async {
             let moved = FileMover.shared.moveFiles(
@@ -98,7 +139,6 @@ public class FinderCutPasteManager: ObservableObject {
                 self.sendNotification(title: L10n.format("Đã di chuyển %lld mục", Int64(moved.count)), body: body)
             }
         }
-        return true
     }
     
     public func handleUndo() -> Bool {
@@ -130,10 +170,31 @@ public class FinderCutPasteManager: ObservableObject {
     
     public func handleCopy() {
         // Hủy trạng thái cut nếu người dùng copy file khác
+        discardCut()
+    }
+
+    private func cutIsStale() -> Bool {
+        guard let recorded = cutPasteboardChange else { return false }
+        return NSPasteboard.general.changeCount != recorded
+    }
+
+    private func discardCut() {
         cutSessionID = nil
+        cutPasteboardChange = nil
         cutFiles.removeAll()
     }
     
+    /// Re-posts ⌘V once Xmac holds no cut, so the event tap lets it through to Finder.
+    private func replayFinderPaste() {
+        guard cutSessionID == nil, FinderBridge.isFinderActive() else { return }
+        let source = CGEventSource(stateID: .combinedSessionState)
+        for isDown in [true, false] {
+            let event = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: isDown)
+            event?.flags = .maskCommand
+            event?.post(tap: .cghidEventTap)
+        }
+    }
+
     private func sendNotification(title: String, body: String) {
         let content = UNMutableNotificationContent()
         content.title = title
