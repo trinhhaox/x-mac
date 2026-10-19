@@ -69,7 +69,9 @@ import Testing
         }
     }
 
-    @Test func systemSpellCheckerRecognisesEnglishWords() {
+    // On main the lookup is synchronous; off main it is bounded by a 30ms
+    // wait and may legitimately miss on a busy runner.
+    @MainActor @Test func systemSpellCheckerRecognisesEnglishWords() {
         #expect(EnglishLexicon.contains("class"))
         #expect(EnglishLexicon.contains("Push"))
         #expect(!EnglishLexicon.contains("pussh"))

@@ -237,6 +237,8 @@
 "Thiết lập cách Xmac xử lý tiếng Việt." = "Configure how Xmac handles Vietnamese input.";
 "Kiểu gõ chính" = "Primary input method";
 "Kiểu bỏ dấu mới" = "Modern tone placement";
+"Ghi nhật ký chẩn đoán" = "Diagnostic logging";
+"Ghi cả phím đã gõ vào nhật ký hệ thống để tìm lỗi bộ gõ. Chỉ bật khi cần; tự tắt khi mở lại Xmac." = "Writes typed keys to the system log to debug the input method. Turn on only when needed; it turns off when Xmac relaunches.";
 "Bỏ dấu theo chuẩn mới: hòa, thúy, khỏe thay vì hoà, thuý, khoẻ." = "Use modern tone placement: hòa, thúy, khỏe instead of hoà, thuý, khoẻ.";
 "Phím tắt chuyển đổi nhanh (V / E)" = "Quick input switch (V / E)";
 "Nhấn tổ hợp phím này bất cứ lúc nào để chuyển đổi giữa Tiếng Việt và Tiếng Anh." = "Use this shortcut anytime to switch between Vietnamese and English input.";

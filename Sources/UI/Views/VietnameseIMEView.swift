@@ -50,6 +50,14 @@ public struct VietnameseIMEView: View {
                             subtitle: "Bỏ dấu theo chuẩn mới: hòa, thúy, khỏe thay vì hoà, thuý, khoẻ.",
                             isOn: $ime.modernOrthography
                         )
+
+                        Divider()
+
+                        BrandToggleRow(
+                            "Ghi nhật ký chẩn đoán",
+                            subtitle: "Ghi cả phím đã gõ vào nhật ký hệ thống để tìm lỗi bộ gõ. Chỉ bật khi cần; tự tắt khi mở lại Xmac.",
+                            isOn: $ime.diagnosticLogging
+                        )
                         
                         Divider()
                         

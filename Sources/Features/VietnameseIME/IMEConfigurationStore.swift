@@ -19,6 +19,7 @@ struct IMETapSnapshot: Equatable {
         macrosEnabled: true
     )
     var modernOrthography = true
+    var diagnosticLogging = false
     var macros: [String: String] = [:]
     /// Bumped whenever the composition buffer must be dropped (app switch,
     /// language toggle). The tap thread compares it to the last value it saw.
@@ -61,6 +62,7 @@ struct IMETapSnapshot: Equatable {
         }
         snapshot.handlesFinderShortcuts = finderCutPasteEnabled && bundleIdentifier == "com.apple.finder"
         snapshot.modernOrthography = hook.modernOrthography
+        snapshot.diagnosticLogging = hook.diagnosticLogging
         snapshot.macros = Dictionary(
             macroManager.macros.map { ($0.shortcut, $0.expansion) },
             uniquingKeysWith: { first, _ in first }

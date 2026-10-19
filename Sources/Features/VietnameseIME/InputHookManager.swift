@@ -22,6 +22,10 @@ public class InputHookManager: ObservableObject {
         }
     }
     
+    /// Keystroke trace for bug reports (IMEDiagnosticLog). Deliberately not
+    /// persisted: it logs typed text, so it is off again after a relaunch.
+    @Published public var diagnosticLogging = false
+
     @Published public var excludedApps: [String] = [
         "com.apple.Terminal",
         "com.googlecode.iterm2",
@@ -34,6 +38,7 @@ public class InputHookManager: ObservableObject {
     private var rawBuffer: String = ""
     private var eventProxy: CGEventTapProxy?
     private var seenResetGeneration = 0
+    private var diagnostics = false
     private var languageSwitch = CtrlShiftToggleDetector()
     /// Private state: synthetic keys must not pick up Shift or other modifiers
     /// the user is physically holding while typing fast.
@@ -89,12 +94,15 @@ public class InputHookManager: ObservableObject {
         eventProxy = proxy
         defer { eventProxy = nil }
         let snapshot = IMEConfigurationStore.shared.snapshot
+        diagnostics = snapshot.diagnosticLogging
         if snapshot.resetGeneration != seenResetGeneration {
             seenResetGeneration = snapshot.resetGeneration
+            trace("reset: app or language changed")
             resetComposition()
         }
         if type == .leftMouseDown || type == .rightMouseDown || type == .otherMouseDown {
             languageSwitch.handleKeyDown()
+            if !currentBuffer.isEmpty { trace("reset: mouse click") }
             resetComposition()
             return Unmanaged.passUnretained(event)
         }
@@ -126,7 +134,22 @@ public class InputHookManager: ObservableObject {
         }
         languageSwitch.handleKeyDown()
 
-        return handleKeyDown(event: event, snapshot: snapshot)
+        guard diagnostics else { return handleKeyDown(event: event, snapshot: snapshot) }
+        let before = currentBuffer
+        let result = handleKeyDown(event: event, snapshot: snapshot)
+        trace("key code=\(event.getIntegerValueField(.keyboardEventKeycode)) char=[\(Self.typedText(of: event))] flags=\(event.flags.rawValue) repeat=\(event.getIntegerValueField(.keyboardEventAutorepeat)) buffer=[\(before)]->[\(currentBuffer)] raw=[\(rawBuffer)] \(result == nil ? "swallowed" : "passed") app=\(snapshot.bundleIdentifier ?? "?")")
+        return result
+    }
+
+    private static func typedText(of event: CGEvent) -> String {
+        var length = 0
+        var chars = [UniChar](repeating: 0, count: 4)
+        event.keyboardGetUnicodeString(maxStringLength: 4, actualStringLength: &length, unicodeString: &chars)
+        return String(utf16CodeUnits: chars, count: length)
+    }
+
+    private func trace(_ message: @autoclosure () -> String) {
+        if diagnostics { IMEDiagnosticLog.log(message()) }
     }
 
     private func handleKeyDown(event: CGEvent, snapshot: IMETapSnapshot) -> Unmanaged<CGEvent>? {
@@ -310,6 +333,7 @@ public class InputHookManager: ObservableObject {
             isBrowser: snapshot.isBrowser
         )
         TypingLatencyMonitor.shared.recordReplacement(syntheticEvents: plan.syntheticEventCount)
+        trace("replace backspaces=\(plan.backspaceCount) breaker=\(plan.leadingText != nil) text=[\(newText)] keyEvents=\(plan.textChunks.count) viaProxy=\(eventProxy != nil)")
 
         if let leadingText = plan.leadingText {
             postText(leadingText)
@@ -367,6 +391,7 @@ public class InputHookManager: ObservableObject {
     /// Event tap thread: keys typed while macOS had the tap disabled reached
     /// the app unseen, so the buffer no longer matches the text on screen.
     func handleTapReenabled() {
+        trace("reset: tap re-enabled after macOS disabled it")
         resetComposition()
     }
 
