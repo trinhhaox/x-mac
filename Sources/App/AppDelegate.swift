@@ -14,6 +14,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     
     public func applicationDidFinishLaunching(_ notification: Notification) {
         // 1. Cấu hình Menu Bar
+        DockIconManager.shared.apply()
         StatusBarController.shared.setup()
         
         // 2. Kiểm tra quyền và chỉ khởi động event tap khi được phép.

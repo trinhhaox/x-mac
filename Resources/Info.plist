@@ -28,7 +28,7 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSUIElement</key>
-	<false/>
+	<true/>
 	<key>NSAccessibilityUsageDescription</key>
 	<string>Xmac cần quyền Accessibility để nhận diện phím tắt di chuyển file trong Finder và gõ Tiếng Việt.</string>
 	<key>NSAppleEventsUsageDescription</key>

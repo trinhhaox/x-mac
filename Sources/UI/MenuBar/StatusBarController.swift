@@ -2,13 +2,16 @@ import Cocoa
 import SwiftUI
 import UserNotifications
 
-public class StatusBarController: NSObject, NSMenuDelegate {
+public class StatusBarController: NSObject, NSMenuDelegate, NSPopoverDelegate {
     public static let shared = StatusBarController()
     
     private var statusItem: NSStatusItem?
     private var menu: NSMenu?
     private let dashboard = NSPopover()
     private var titleRefreshPending = false
+    /// `.transient` only closes the popover on clicks inside an active Xmac;
+    /// a menu bar app is usually inactive, so watch clicks everywhere.
+    private var outsideClickMonitors: [Any] = []
     
     override private init() {
         super.init()
@@ -21,6 +24,7 @@ public class StatusBarController: NSObject, NSMenuDelegate {
         menu = NSMenu()
         menu?.delegate = self
         dashboard.behavior = .transient
+        dashboard.delegate = self
         let dashboardController = NSHostingController(rootView: MenuBarDashboard())
         dashboardController.sizingOptions = [.preferredContentSize]
         dashboard.contentViewController = dashboardController
@@ -52,7 +56,36 @@ public class StatusBarController: NSObject, NSMenuDelegate {
             PermissionsManager.shared.checkPermissions()
             DiskManager.shared.refreshVolumes()
             dashboard.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            startOutsideClickMonitoring()
         }
+    }
+
+    private func startOutsideClickMonitoring() {
+        guard outsideClickMonitors.isEmpty else { return }
+        let mask: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+        if let global = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: { [weak self] _ in
+            self?.closeDashboard()
+        }) {
+            outsideClickMonitors.append(global)
+        }
+        if let local = NSEvent.addLocalMonitorForEvents(matching: mask, handler: { [weak self] event in
+            guard let self else { return event }
+            // Clicks inside the popover, or on the status button (which toggles
+            // it itself), keep their normal behaviour.
+            let window = event.window
+            if window != self.dashboard.contentViewController?.view.window,
+               window != self.statusItem?.button?.window {
+                self.closeDashboard()
+            }
+            return event
+        }) {
+            outsideClickMonitors.append(local)
+        }
+    }
+
+    public func popoverDidClose(_ notification: Notification) {
+        outsideClickMonitors.forEach(NSEvent.removeMonitor)
+        outsideClickMonitors = []
     }
     
     @objc private func onStateChanged() {

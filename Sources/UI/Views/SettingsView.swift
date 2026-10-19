@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct SettingsView: View {
     @ObservedObject var launchManager = LaunchAtLoginManager.shared
+    @ObservedObject var dockIcon = DockIconManager.shared
     @ObservedObject var permissions = PermissionsManager.shared
     @ObservedObject var vm = SettingsViewModel.shared
     @ObservedObject private var downloads = DownloadEnvironment.shared
@@ -48,6 +49,14 @@ public struct SettingsView: View {
                                 set: { launchManager.setEnabled($0) }
                             ))
                         
+                        Divider()
+
+                        BrandToggleRow(
+                            "Hiện biểu tượng trên Dock",
+                            subtitle: "Tắt để Xmac chỉ chạy trên thanh menu, không chiếm chỗ trên Dock.",
+                            isOn: $dockIcon.showsDockIcon
+                        )
+
                         Divider()
                         
                         BrandToggleRow(
