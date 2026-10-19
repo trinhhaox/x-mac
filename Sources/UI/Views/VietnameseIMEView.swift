@@ -166,11 +166,15 @@ public struct VietnameseIMEView: View {
     }
 }
 
+private final class MacroDeleteHoverState: ObservableObject {
+    @Published var isHovered = false
+}
+
 /// Neutral until hovered, so a column of red icons does not outweigh the macros.
 private struct MacroDeleteButton: View {
     let shortcut: String
     let action: () -> Void
-    @State private var isHovered = false
+    @StateObject private var hover = MacroDeleteHoverState()
 
     var body: some View {
         Button(action: action) {
@@ -179,8 +183,8 @@ private struct MacroDeleteButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundColor(isHovered ? .red : .secondary)
-        .onHover { isHovered = $0 }
+        .foregroundColor(hover.isHovered ? .red : .secondary)
+        .onHover { hover.isHovered = $0 }
         .help("Xóa gõ tắt")
         .accessibilityLabel(L10n.format("Xóa gõ tắt %@", shortcut))
     }
