@@ -1,4 +1,5 @@
 import AppKit
+import os
 
 /// Decides what a word should become at a word boundary in Vietnamese mode,
 /// so mixed Vietnamese-English sentences stay usable without guessing on
@@ -53,11 +54,32 @@ enum EnglishWordRestoration {
 /// English word lookup backed by the system spell checker. Only consulted for
 /// Telex escapes at a word boundary, and cached, so the event tap stays fast.
 enum EnglishLexicon {
-    private static var cache: [String: Bool] = [:]
+    private static let cache = OSAllocatedUnfairLock(initialState: [String: Bool]())
+    private static let cacheLimit = 2_000
+    /// How long the event tap thread may wait for the main thread. A busy main
+    /// thread must not stall typing; a word looked up too late is treated as
+    /// unknown once (kept as typed) and is cached for next time.
+    static let tapThreadTimeout: DispatchTimeInterval = .milliseconds(30)
 
     static func contains(_ word: String) -> Bool {
         let key = word.lowercased()
-        if let cached = cache[key] { return cached }
+        if let cached = cache.withLock({ $0[key] }) { return cached }
+        if Thread.isMainThread { return lookUp(key) }
+
+        // NSSpellChecker is AppKit API: ask it on the main thread.
+        let done = DispatchSemaphore(value: 0)
+        DispatchQueue.main.async {
+            _ = lookUp(key)
+            done.signal()
+        }
+        let result = TypingLatencyMonitor.shared.measureSpellWait {
+            done.wait(timeout: .now() + tapThreadTimeout)
+        }
+        guard result == .success else { return false }
+        return cache.withLock { $0[key] } ?? false
+    }
+
+    private static func lookUp(_ key: String) -> Bool {
         let misspelled = NSSpellChecker.shared.checkSpelling(
             of: key,
             startingAt: 0,
@@ -67,8 +89,13 @@ enum EnglishLexicon {
             wordCount: nil
         )
         let known = misspelled.location == NSNotFound
-        if cache.count > 2_000 { cache.removeAll() }
-        cache[key] = known
+        cache.withLock { cache in
+            // Drop half rather than everything, so common words stay warm.
+            if cache.count >= cacheLimit {
+                cache = Dictionary(uniqueKeysWithValues: cache.prefix(cacheLimit / 2).map { ($0.key, $0.value) })
+            }
+            cache[key] = known
+        }
         return known
     }
 

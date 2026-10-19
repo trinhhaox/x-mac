@@ -98,7 +98,8 @@ import Testing
             for: "vn",
             boundaryKeyCode: 49,
             character: nil,
-            manager: manager
+            macros: Dictionary(uniqueKeysWithValues: manager.macros.map { ($0.shortcut, $0.expansion) }),
+            enabled: manager.isMacroEnabled
         )
 
         #expect(expansion == "Việt Nam")

@@ -13,23 +13,28 @@ public class EventTapManager {
         // Cut/Paste off must not tear down the shared IME tap.
     }
 
-    /// Returns true when the event was consumed as a Finder cut/paste/undo shortcut.
-    static func handleIfNeeded(type: CGEventType, event: CGEvent) -> Bool {
+    private static let shortcutKeyCodes: Set<Int64> = [6, 7, 8, 9] // Z, X, C, V
+
+    /// Cheap, thread-safe pre-check run on the event tap thread: only events
+    /// that can be a Finder shortcut are handed to `handleIfNeeded` on main.
+    static func isShortcutCandidate(type: CGEventType, event: CGEvent) -> Bool {
         guard type == .keyDown else { return false }
+        let flags = event.flags
+        guard flags.contains(.maskCommand),
+              !flags.contains(.maskControl),
+              !flags.contains(.maskAlternate) else { return false }
+        return shortcutKeyCodes.contains(event.getIntegerValueField(.keyboardEventKeycode))
+    }
+
+    /// Returns true when the event was consumed as a Finder cut/paste/undo shortcut.
+    /// Main thread only.
+    static func handleIfNeeded(type: CGEventType, event: CGEvent) -> Bool {
+        guard isShortcutCandidate(type: type, event: event) else { return false }
         guard FinderCutPasteManager.shared.isEnabled else { return false }
 
         let flags = event.flags
-        let isCommand = flags.contains(.maskCommand)
-        let isControl = flags.contains(.maskControl)
-        let isOption = flags.contains(.maskAlternate)
         let isShift = flags.contains(.maskShift)
-
-        guard isCommand && !isControl && !isOption else { return false }
-
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-        guard keyCode == 7 || keyCode == 9 || keyCode == 6 || keyCode == 8 else {
-            return false
-        }
         guard FinderBridge.isFinderActive() else { return false }
         if FinderBridge.isRenamingFile() { return false }
 
