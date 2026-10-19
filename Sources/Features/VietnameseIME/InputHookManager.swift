@@ -349,12 +349,20 @@ public class InputHookManager: ObservableObject {
         }
     }
 
+    /// Key code carried by synthetic text events. It used to be 0, the A key:
+    /// typing "aw" fast keeps the physical A held while Xmac sends "ă", so
+    /// apps saw a second A press during the hold, and Zalo dropped exactly
+    /// those "ă" while keeping the Backspace ("tặng" became "ặng"), likely
+    /// treating it as a press-and-hold repeat. The ISO § key has no letter,
+    /// no accent popup and is absent from ANSI keyboards.
+    static let textKeyCode: CGKeyCode = 10 // kVK_ISO_Section
+
     private func postText(_ utf16: [UInt16]) {
-        if let keyEvent = makeKeyEvent(virtualKey: 0, keyDown: true) {
+        if let keyEvent = makeKeyEvent(virtualKey: Self.textKeyCode, keyDown: true) {
             keyEvent.keyboardSetUnicodeString(stringLength: utf16.count, unicodeString: utf16)
             postReplacement(keyEvent)
         }
-        postKey(virtualKey: 0, keyDown: false)
+        postKey(virtualKey: Self.textKeyCode, keyDown: false)
     }
 
     private func postKey(virtualKey: CGKeyCode, keyDown: Bool) {
