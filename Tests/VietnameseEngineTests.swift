@@ -33,6 +33,30 @@ import Testing
         #expect(type("uoww", method: .telex) == "uow")
     }
 
+    @Test func telexWAfterFinalConsonantShapesTheNucleus() {
+        #expect(type("tangw", method: .telex) == "tăng")
+        #expect(type("tangwj", method: .telex) == "tặng")
+        #expect(type("tangjw", method: .telex) == "tặng")
+        #expect(type("duongwf", method: .telex) == "dường")
+        #expect(type("nguoiwf", method: .telex) == "người")
+        #expect(type("hoangwf", method: .telex) == "hoằng")
+        #expect(type("quangw", method: .telex) == "quăng")
+        #expect(type("tungw", method: .telex) == "tưng")
+        #expect(type("Tangw", method: .telex) == "Tăng")
+    }
+
+    @Test func secondFreeOrderWUndoesTheHorn() {
+        #expect(type("tangww", method: .telex) == "tangw")
+        #expect(type("tangwjw", method: .telex) == "tạngw")
+    }
+
+    @Test func freeOrderWKeepsNonSyllableEndingsLiteral() {
+        #expect(type("tw", method: .telex) == "tw")
+        #expect(type("tasw", method: .telex) == "tắ")
+        #expect(type("bowl", method: .telex) == "bơl")
+        #expect(type("tabw", method: .telex) == "tabw")
+    }
+
     @Test func repeatedVNIKeyCancelsToneForLiteralInput() {
         #expect(type("a11", method: .vni) == "a1")
         #expect(type("a66", method: .vni) == "a6")

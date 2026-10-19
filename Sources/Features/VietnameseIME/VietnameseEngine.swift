@@ -170,6 +170,8 @@ public class VietnameseEngine {
                     word.removeLast()
                     word.append(lastIsUpper ? "Ư" : "ư")
                     return (word, true)
+                } else if let shaped = hornNucleus(of: currentWord, typed: newChar, modern: modern) {
+                    return (shaped, true)
                 }
             }
         }
@@ -285,6 +287,51 @@ public class VietnameseEngine {
         // "uơ" (huơ, thuở) is already final; only uo, ưo and ươ take part.
         if !isHorned && o == "ơ" { return nil }
         return (isHorned, u.isUppercase)
+    }
+
+    /// Telex `w` typed after the final consonant or a trailing glide, as fast
+    /// typists do: tangw -> tăng, duongw -> dương, nguoiw -> ngươi,
+    /// tạngw -> tặng. A second `w` undoes it: tăngw -> tangw. Only applies
+    /// when what follows the vowel nucleus can end a Vietnamese syllable.
+    private func hornNucleus(of word: String, typed: Character, modern: Bool) -> String? {
+        var chars = Array(word)
+        guard let last = chars.lastIndex(where: { isVowel(stripTone($0)) }) else { return nil }
+        var start = last
+        while start > 0, isVowel(stripTone(chars[start - 1])) { start -= 1 }
+        let finals = String(chars[(last + 1)...]).lowercased()
+        guard ["", "c", "ch", "m", "n", "ng", "nh", "p", "t"].contains(finals) else { return nil }
+
+        let tone = chars.lazy.compactMap { self.reverseToneMap[$0]?.tone }.first
+        for index in start...last { chars[index] = stripTone(chars[index]) }
+        let lower = { (index: Int) in Character(String(chars[index]).lowercased()) }
+        let nucleus = Array(start...last)
+        // After "q" the u is part of the onset (quăng), never a horn target.
+        let glideIndex = start > 0 && lower(start - 1) == "q" && lower(start) == "u" ? start : nil
+
+        let horned: [Character: Character] = ["a": "ă", "o": "ơ", "u": "ư", "A": "Ă", "O": "Ơ", "U": "Ư"]
+        let plain: [Character: Character] = ["ă": "a", "ơ": "o", "ư": "u", "Ă": "A", "Ơ": "O", "Ư": "U"]
+
+        if nucleus.contains(where: { plain[chars[$0]] != nil }) {
+            for index in nucleus { chars[index] = plain[chars[index]] ?? chars[index] }
+            let reverted = String(chars) + String(typed)
+            return tone.map { applyTone(to: reverted, tone: $0, modern: modern).0 } ?? reverted
+        }
+
+        let targets: [Int]
+        if let u = nucleus.first(where: { $0 != glideIndex && $0 < last && lower($0) == "u" && lower($0 + 1) == "o" }) {
+            targets = [u, u + 1]
+        } else if let a = nucleus.first(where: { lower($0) == "a" }) {
+            targets = [a]
+        } else if let o = nucleus.first(where: { lower($0) == "o" }) {
+            targets = [o]
+        } else if let u = nucleus.first(where: { $0 != glideIndex && lower($0) == "u" }) {
+            targets = [u]
+        } else {
+            return nil
+        }
+        for index in targets { chars[index] = horned[chars[index]] ?? chars[index] }
+        let shaped = String(chars)
+        return tone.map { applyTone(to: shaped, tone: $0, modern: modern).0 } ?? shaped
     }
 
     private func replacingLast(
