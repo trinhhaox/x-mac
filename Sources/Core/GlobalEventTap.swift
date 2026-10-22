@@ -26,12 +26,11 @@ public final class GlobalEventTap {
 
         IMEConfigurationStore.shared.start()
 
+        // Only hook keyboard events in the active CGEventTap.
+        // Mouse events are monitored passively via NSEvent to prevent system-wide mouse freezes.
         let mask =
             (1 << CGEventType.keyDown.rawValue) |
-            (1 << CGEventType.flagsChanged.rawValue) |
-            (1 << CGEventType.leftMouseDown.rawValue) |
-            (1 << CGEventType.rightMouseDown.rawValue) |
-            (1 << CGEventType.otherMouseDown.rawValue)
+            (1 << CGEventType.flagsChanged.rawValue)
 
         let callback: CGEventTapCallBack = { proxy, type, event, refcon in
             guard let refcon else {
@@ -86,7 +85,7 @@ public final class GlobalEventTap {
         thread.name = "vn.xmac.event-tap"
         thread.qualityOfService = .userInteractive
         thread.start()
-        ready.wait()
+        _ = ready.wait(timeout: .now() + .milliseconds(500))
 
         eventTap = tap
         tapRunLoop = box.runLoop
@@ -109,13 +108,19 @@ public final class GlobalEventTap {
     /// Runs on the tap thread.
     private func route(type: CGEventType, event: CGEvent, proxy: CGEventTapProxy) -> Unmanaged<CGEvent>? {
         // Finder shortcuts touch AppleScript, AX and @Published state: run them
-        // on main. Only Cmd+X/C/V/Z in Finder pays that hop.
+        // on main with a strict timeout to prevent deadlocks from freezing the system.
         if IMEConfigurationStore.shared.snapshot.handlesFinderShortcuts,
            EventTapManager.isShortcutCandidate(type: type, event: event) {
-            let consumed = DispatchQueue.main.sync {
-                EventTapManager.handleIfNeeded(type: type, event: event)
+            var consumed = false
+            let semaphore = DispatchSemaphore(value: 0)
+            DispatchQueue.main.async {
+                consumed = EventTapManager.handleIfNeeded(type: type, event: event)
+                semaphore.signal()
             }
-            if consumed { return nil }
+            let waitResult = semaphore.wait(timeout: .now() + .milliseconds(25))
+            if waitResult == .success && consumed {
+                return nil
+            }
         }
         return InputHookManager.shared.handleEvent(type: type, event: event, proxy: proxy)
     }

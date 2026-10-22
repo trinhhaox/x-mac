@@ -45,6 +45,7 @@ public struct FinderBridge {
         }
         
         let systemWideElement = AXUIElementCreateSystemWide()
+        AXUIElementSetMessagingTimeout(systemWideElement, 0.05)
         var focusedElement: CFTypeRef?
         let result = AXUIElementCopyAttributeValue(
             systemWideElement,
