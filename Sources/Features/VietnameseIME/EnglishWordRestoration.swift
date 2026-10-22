@@ -56,13 +56,35 @@ enum EnglishWordRestoration {
 enum EnglishLexicon {
     private static let cache = OSAllocatedUnfairLock(initialState: [String: Bool]())
     private static let cacheLimit = 2_000
+    /// Common English words (especially coding/chat words matching Telex keys)
+    /// checked instantly in-memory without waiting for the main thread.
+    private static let commonWords: Set<String> = [
+        "the", "and", "for", "are", "but", "not", "you", "all", "any", "can", "had", "her",
+        "was", "one", "our", "out", "day", "get", "has", "him", "his", "how", "man", "new",
+        "now", "old", "see", "two", "way", "who", "boy", "did", "its", "let", "put", "say",
+        "she", "too", "use", "push", "test", "text", "type", "case", "code", "user", "view",
+        "file", "open", "save", "load", "send", "post", "date", "time", "name", "help", "home",
+        "page", "line", "link", "list", "item", "icon", "menu", "mode", "pass", "fail", "true",
+        "null", "func", "init", "main", "play", "stop", "wait", "read", "free", "full", "size",
+        "data", "form", "card", "font", "edit", "copy", "move", "find", "done", "info", "show",
+        "hide", "next", "back", "task", "step", "auto", "self", "call", "rate", "lock", "safe",
+        "base", "disk", "port", "host", "path", "peer", "rule", "cert", "sync", "drop", "tool",
+        "auth", "hash", "salt", "team", "site", "chat", "mail", "blog", "feed", "meta", "fast",
+        "slow", "best", "good", "nice", "cool", "well", "real", "easy", "hard", "fine", "sure",
+        "more", "most", "less", "last", "left", "right", "down", "long", "even", "much", "also",
+        "only", "just", "like", "some", "them", "then", "they", "this", "that", "with", "from",
+        "have", "here", "make", "were", "what", "when", "know", "take", "come", "look", "give",
+        "want", "year", "work", "feel", "seem", "hand", "high", "keep", "hold", "tell", "turn",
+        "hear", "talk", "live", "server", "class", "off", "as", "is", "at", "to", "in", "on"
+    ]
+
     /// How long the event tap thread may wait for the main thread. A busy main
-    /// thread must not stall typing; a word looked up too late is treated as
-    /// unknown once (kept as typed) and is cached for next time.
-    static let tapThreadTimeout: DispatchTimeInterval = .milliseconds(30)
+    /// thread must not stall typing; reduced to 10ms to keep tap thread responsive.
+    static let tapThreadTimeout: DispatchTimeInterval = .milliseconds(10)
 
     static func contains(_ word: String) -> Bool {
         let key = word.lowercased()
+        if commonWords.contains(key) { return true }
         if let cached = cache.withLock({ $0[key] }) { return cached }
         if Thread.isMainThread { return lookUp(key) }
 

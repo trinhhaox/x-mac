@@ -593,3 +593,11 @@
 "Các mục đã chọn sẽ được chuyển vào Thùng rác (riêng mục trong Thùng rác sẽ bị xóa vĩnh viễn). Cache của ứng dụng đang chạy sẽ được bỏ qua." = "Selected items will be moved to the Trash (items already in the Trash are deleted permanently). Caches of running apps are skipped.";
 "Đã chặn chuyển hướng từ HTTPS sang HTTP không an toàn." = "Blocked an insecure redirect from HTTPS to HTTP.";
 "Chữ ký của bản cập nhật không khớp với ứng dụng đang chạy. Đã hủy cài đặt." = "The update's signature does not match the running app. Installation cancelled.";
+
+/* Quick system status in menu bar dashboard */
+"Chi tiết" = "Details";
+"Nhiệt độ" = "Temperature";
+"Bộ nhớ máy" = "Storage";
+"Nóng" = "Hot";
+"Rất nóng" = "Very hot";
+"trống / %@" = "free / %@";

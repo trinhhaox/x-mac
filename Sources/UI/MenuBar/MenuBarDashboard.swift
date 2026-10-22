@@ -19,10 +19,69 @@ struct MenuBarDashboardSnapshot {
   var ejecting = false
   var message = ""
 
+  // Quick system status
+  var cpuUsage: Double? = nil
+  var memoryUsed: UInt64? = nil
+  var memoryTotal: UInt64 = ProcessInfo.processInfo.physicalMemory
+  var diskAvailable: Int64? = nil
+  var diskTotal: Int64? = nil
+  var thermalState: ProcessInfo.ThermalState? = nil
+
   var activeDownloads: [ManagedDownload] {
     downloads.filter { $0.status == .downloading || $0.status == .waitingForNetwork }
   }
   var externalVolumes: [DiskVolume] { volumes.filter(\.isExternal) }
+
+  var cpuText: String {
+    guard let cpuUsage else { return "—" }
+    return String(format: "%.1f%%", cpuUsage)
+  }
+
+  var memoryUsedText: String {
+    guard let memoryUsed else { return "—" }
+    return ByteSize.string(Int64(clamping: memoryUsed), countStyle: .memory)
+  }
+
+  var memoryTotalText: String {
+    ByteSize.string(Int64(clamping: memoryTotal), countStyle: .memory)
+  }
+
+  var memoryPercentText: String {
+    guard let memoryUsed, memoryTotal > 0 else { return "" }
+    let percent = Int((Double(memoryUsed) / Double(memoryTotal) * 100).rounded())
+    return "\(percent)%"
+  }
+
+  var diskAvailableText: String {
+    guard let diskAvailable, diskAvailable >= 0 else { return "—" }
+    return ByteSize.string(diskAvailable, countStyle: .file)
+  }
+
+  var diskTotalText: String {
+    guard let diskTotal, diskTotal >= 0 else { return "" }
+    return ByteSize.string(diskTotal, countStyle: .file)
+  }
+
+  var thermalShortTitle: String {
+    guard let state = thermalState else { return L10n.text("Bình thường") }
+    switch state {
+    case .nominal: return L10n.text("Bình thường")
+    case .fair: return L10n.text("Ấm")
+    case .serious: return L10n.text("Nóng")
+    case .critical: return L10n.text("Rất nóng")
+    @unknown default: return L10n.text("Bình thường")
+    }
+  }
+
+  var thermalColor: Color {
+    guard let state = thermalState else { return .green }
+    switch state {
+    case .nominal: return .green
+    case .fair: return .orange
+    case .serious, .critical: return .red
+    @unknown default: return .green
+    }
+  }
 }
 
 struct MenuBarDashboardActions {
@@ -77,6 +136,7 @@ struct MenuBarDashboardContent: View {
       MenuBarDashboardViewport(maximumHeight: maximumHeight - 160) {
         VStack(alignment: .leading, spacing: 10) {
           languageSection
+          systemStatusSection
           downloadsSection
           disksSection
           if !snapshot.message.isEmpty {
@@ -281,6 +341,95 @@ struct MenuBarDashboardContent: View {
     }
   }
 
+  private var systemStatusSection: some View {
+    group {
+      sectionTitle(
+        "Hệ thống", icon: "waveform.path.ecg", count: 0,
+        action: "Chi tiết", tab: .systemMonitor)
+
+      HStack(spacing: 8) {
+        systemMetricTile(
+          icon: "cpu",
+          title: "CPU",
+          value: snapshot.cpuText,
+          subtitle: snapshot.cpuUsage != nil ? L10n.text("Đang chạy") : L10n.text("Đang đo…"),
+          accentColor: XmacTheme.blue
+        )
+        systemMetricTile(
+          icon: "memorychip",
+          title: "RAM",
+          value: snapshot.memoryUsedText,
+          subtitle: snapshot.memoryPercentText.isEmpty ? snapshot.memoryTotalText : "\(snapshot.memoryPercentText) · \(snapshot.memoryTotalText)",
+          accentColor: .purple
+        )
+      }
+
+      HStack(spacing: 8) {
+        systemMetricTile(
+          icon: "internaldrive",
+          title: "Bộ nhớ máy",
+          value: snapshot.diskAvailableText,
+          subtitle: snapshot.diskTotalText.isEmpty ? L10n.text("trống") : L10n.format("trống / %@", snapshot.diskTotalText),
+          accentColor: .orange
+        )
+        systemMetricTile(
+          icon: "thermometer.medium",
+          title: "Nhiệt độ",
+          value: snapshot.thermalShortTitle,
+          subtitle: L10n.text("Trạng thái nhiệt"),
+          accentColor: snapshot.thermalColor,
+          statusDot: snapshot.thermalColor
+        )
+      }
+    }
+  }
+
+  private func systemMetricTile(
+    icon: String,
+    title: String,
+    value: String,
+    subtitle: String,
+    accentColor: Color,
+    statusDot: Color? = nil
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 3) {
+      HStack(spacing: 5) {
+        Image(systemName: icon)
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundStyle(accentColor)
+        Text(L10n.text(title))
+          .font(.system(size: 11, weight: .medium))
+          .foregroundStyle(.secondary)
+        Spacer(minLength: 0)
+        if let statusDot {
+          Circle()
+            .fill(statusDot)
+            .frame(width: 6, height: 6)
+        }
+      }
+      Text(value)
+        .font(.system(size: 14, weight: .bold, design: .rounded))
+        .monospacedDigit()
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)
+      Text(subtitle)
+        .font(.system(size: 10))
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+    }
+    .padding(.horizontal, 9)
+    .padding(.vertical, 7)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      RoundedRectangle(cornerRadius: 8, style: .continuous)
+        .fill(Color.primary.opacity(0.03))
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: 8, style: .continuous)
+        .stroke(Color.primary.opacity(0.04), lineWidth: 0.5)
+    )
+  }
+
   private func sectionTitle(
     _ title: String, icon: String, count: Int, action: String, tab: NavigationTab
   ) -> some View {
@@ -339,6 +488,7 @@ struct MenuBarDashboard: View {
   @ObservedObject private var permissions = PermissionsManager.shared
   @ObservedObject private var environment = DownloadEnvironment.shared
   @ObservedObject private var launcher = QuickLauncher.shared
+  @StateObject private var monitor = SystemMonitor()
   @StateObject private var state = MenuBarDashboardState()
 
   var body: some View {
@@ -349,7 +499,12 @@ struct MenuBarDashboard: View {
         keepAwake: environment.keepAwake, shortcut: launcher.shortcut.title,
         downloads: downloads.items,
         volumes: disks.volumes, disksLoading: disks.isLoading, ejecting: state.ejecting,
-        message: state.message),
+        message: state.message,
+        cpuUsage: monitor.cpuUsage,
+        memoryUsed: monitor.sample?.memoryUsed,
+        diskAvailable: monitor.sample?.diskAvailable,
+        diskTotal: monitor.sample?.diskTotal,
+        thermalState: monitor.sample?.thermal),
       actions: MenuBarDashboardActions(
         open: open, launcher: { launcher.show() },
         language: { vietnamese in
@@ -374,6 +529,8 @@ struct MenuBarDashboard: View {
     )
     .environment(\.locale, localization.language.locale)
     .id(localization.language)
+    .onAppear { monitor.start() }
+    .onDisappear { monitor.stop() }
     .alert(item: $state.ejectCandidate) { volume in
       Alert(
         title: Text(L10n.format("Ngắt kết nối %@?", volume.name)),

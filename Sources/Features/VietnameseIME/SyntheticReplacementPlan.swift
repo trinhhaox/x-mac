@@ -13,19 +13,28 @@ struct SyntheticReplacementPlan: Equatable {
         ((leadingText == nil ? 0 : 1) + backspaceCount + textChunks.count) * 2
     }
 
-    static func make(backspaceCount: Int, newText: String, isBrowser: Bool) -> SyntheticReplacementPlan {
-        guard isBrowser else {
+    static func make(
+        backspaceCount: Int,
+        newText: String,
+        isBrowser: Bool,
+        isElectronOrChatApp: Bool = false,
+        useAutocompleteBreaker: Bool = false
+    ) -> SyntheticReplacementPlan {
+        let needsSingleChars = isBrowser || isElectronOrChatApp
+        guard needsSingleChars else {
             return SyntheticReplacementPlan(
                 leadingText: nil,
                 backspaceCount: backspaceCount,
                 textChunks: Utf16Chunker.chunks(newText)
             )
         }
-        // Web editors map one key event to one input event; several characters
-        // in one synthetic key are dropped or misread by some of them.
+        // Web and Electron editors (Chrome, Zalo, VS Code, Slack) map one key event
+        // to one input event. By default we omit the U+202F breaker because it corrupts
+        // contentEditable DOMs (Google Docs, web chats, Notion) and adds backspace delay.
+        let shouldBreak = useAutocompleteBreaker && isBrowser && backspaceCount > 0
         return SyntheticReplacementPlan(
-            leadingText: backspaceCount > 0 ? autocompleteBreaker : nil,
-            backspaceCount: backspaceCount > 0 ? backspaceCount + 1 : 0,
+            leadingText: shouldBreak ? autocompleteBreaker : nil,
+            backspaceCount: shouldBreak ? backspaceCount + 1 : backspaceCount,
             textChunks: newText.map { Array($0.utf16) }
         )
     }

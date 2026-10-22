@@ -10,6 +10,7 @@ struct IMETapSnapshot: Equatable {
     var bundleIdentifier: String?
     var isExcluded = false
     var isBrowser = false
+    var isElectronOrChatApp = false
     /// Finder is frontmost and Cut/Paste is on: only then may Cmd+X/C/V/Z
     /// block the tap thread on a main-thread hop.
     var handlesFinderShortcuts = false
@@ -37,6 +38,15 @@ struct IMETapSnapshot: Equatable {
         "org.chromium.Chromium"
     ]
 
+    /// Electron, Chromium-based and chat desktop apps that require single-char events
+    /// and micro-pacing for clean Backspace and text rendering.
+    static let electronAndChatBundleIdentifiers: Set<String> = [
+        "com.vng.zalo", "com.vng.zalo-pc", "com.zing.zalo", "com.vng.zaloapp",
+        "com.tinyspeck.slackmacgap", "com.microsoft.VSCode", "com.microsoft.VSCodeInsiders",
+        "com.hnc.Discord", "md.obsidian", "notion.id", "com.figma.Desktop",
+        "ru.keepcoder.Telegram", "org.telegram.desktop"
+    ]
+
     static func make(
         bundleIdentifier: String?,
         processIdentifier: pid_t?,
@@ -59,6 +69,7 @@ struct IMETapSnapshot: Equatable {
             let hasExplicitProfile = profiles.isEnabled && profiles.profile(for: bundleIdentifier) != nil
             snapshot.isExcluded = hook.excludedApps.contains(bundleIdentifier) && !hasExplicitProfile
             snapshot.isBrowser = browserBundleIdentifiers.contains(bundleIdentifier)
+            snapshot.isElectronOrChatApp = electronAndChatBundleIdentifiers.contains(bundleIdentifier)
         }
         snapshot.handlesFinderShortcuts = finderCutPasteEnabled && bundleIdentifier == "com.apple.finder"
         snapshot.modernOrthography = hook.modernOrthography

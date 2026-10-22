@@ -23,9 +23,17 @@ import Testing
         #expect(!chrome.isExcluded)
         #expect(chrome.macros["vn"] == "Việt Nam")
 
+        let zalo = IMETapSnapshot.make(
+            bundleIdentifier: "com.vng.zalo", processIdentifier: 13,
+            hook: .shared, profiles: profiles, macroManager: macros, previous: chrome
+        )
+        #expect(zalo.isElectronOrChatApp)
+        #expect(!zalo.isBrowser)
+        #expect(!zalo.isExcluded)
+
         let terminal = IMETapSnapshot.make(
             bundleIdentifier: "com.apple.Terminal", processIdentifier: 11,
-            hook: .shared, profiles: profiles, macroManager: macros, previous: chrome
+            hook: .shared, profiles: profiles, macroManager: macros, previous: zalo
         )
         #expect(terminal.isExcluded)
         #expect(!terminal.isBrowser)
@@ -65,12 +73,32 @@ import Testing
         #expect(otherApp.resetGeneration == sameApp.resetGeneration + 1)
     }
 
-    @Test func browserReplacementBreaksAutocompleteAndSendsOneCharacterPerKey() {
+    @Test func browserReplacementSendsOneCharacterPerKeyWithoutIntrusiveBreakerByDefault() {
         let plan = SyntheticReplacementPlan.make(backspaceCount: 3, newText: "êng", isBrowser: true)
+        #expect(plan.leadingText == nil)
+        #expect(plan.backspaceCount == 3)
+        #expect(plan.textChunks == [[0x00EA], [0x006E], [0x0067]])
+        #expect(plan.syntheticEventCount == (3 + 3) * 2)
+    }
+
+    @Test func browserReplacementSupportsOptionalAutocompleteBreaker() {
+        let plan = SyntheticReplacementPlan.make(
+            backspaceCount: 3, newText: "êng", isBrowser: true, useAutocompleteBreaker: true
+        )
         #expect(plan.leadingText == [0x202F])
         #expect(plan.backspaceCount == 4)
         #expect(plan.textChunks == [[0x00EA], [0x006E], [0x0067]])
         #expect(plan.syntheticEventCount == (1 + 4 + 3) * 2)
+    }
+
+    @Test func electronOrChatAppUsesSingleCharacterEventsForCleanRendering() {
+        let plan = SyntheticReplacementPlan.make(
+            backspaceCount: 3, newText: "êng", isBrowser: false, isElectronOrChatApp: true
+        )
+        #expect(plan.leadingText == nil)
+        #expect(plan.backspaceCount == 3)
+        #expect(plan.textChunks == [[0x00EA], [0x006E], [0x0067]])
+        #expect(plan.syntheticEventCount == (3 + 3) * 2)
     }
 
     @Test func browserAppendNeedsNoAutocompleteBreaker() {
