@@ -57,12 +57,11 @@ public class AppUninstallerEngine: ObservableObject {
         var associatedFiles: [AppAssociatedFile] = []
         
         // 1. Bundle file
-        let bundleSize = getFileSize(atPath: bundlePath)
         associatedFiles.append(AppAssociatedFile(
             name: (bundlePath as NSString).lastPathComponent,
             path: bundlePath,
             fileType: "Application Bundle",
-            size: bundleSize,
+            size: DirectorySize.bytes(atPath: bundlePath, fileManager: fileManager),
             confidence: .verified,
             isSelected: true
         ))
@@ -70,43 +69,17 @@ public class AppUninstallerEngine: ObservableObject {
         // 2. Quét các file phụ trợ nếu có bundleIdentifier hợp lệ
         // Info.plist là dữ liệu không tin cậy: bỏ qua tệp phụ trợ nếu id/tên có thể thoát khỏi thư mục Library
         if AppUninstallPolicy.isSafePathComponent(bundleId) && AppUninstallPolicy.isSafePathComponent(appName) {
-            let libraryPath = ("~/Library" as NSString).expandingTildeInPath
-            
-            // Application Support
-            let appSupport1 = "\(libraryPath)/Application Support/\(bundleId)"
-            let appSupport2 = "\(libraryPath)/Application Support/\(appName)"
-            addAssociatedIfExists(path: appSupport1, type: "Application Support", confidence: .verified, to: &associatedFiles)
-            if appSupport1 != appSupport2 {
-                addAssociatedIfExists(path: appSupport2, type: "Application Support", confidence: .inferred, to: &associatedFiles)
+            let locator = AppLeftoverLocator(library: ("~/Library" as NSString).expandingTildeInPath, fileManager: fileManager)
+            for candidate in locator.candidates(bundleIdentifier: bundleId, appName: appName, bundlePath: bundlePath) {
+                associatedFiles.append(AppAssociatedFile(
+                    name: (candidate.path as NSString).lastPathComponent,
+                    path: candidate.path,
+                    fileType: candidate.type,
+                    size: DirectorySize.bytes(atPath: candidate.path, fileManager: fileManager),
+                    confidence: candidate.confidence,
+                    isSelected: candidate.confidence == .verified
+                ))
             }
-            
-            // Caches
-            let cache1 = "\(libraryPath)/Caches/\(bundleId)"
-            let cache2 = "\(libraryPath)/Caches/\(appName)"
-            addAssociatedIfExists(path: cache1, type: "Caches", confidence: .verified, to: &associatedFiles)
-            if cache1 != cache2 {
-                addAssociatedIfExists(path: cache2, type: "Caches", confidence: .inferred, to: &associatedFiles)
-            }
-            
-            // Preferences .plist
-            let prefPath = "\(libraryPath)/Preferences/\(bundleId).plist"
-            addAssociatedIfExists(path: prefPath, type: "Preferences", confidence: .verified, to: &associatedFiles)
-            
-            // Saved Application State
-            let savedState = "\(libraryPath)/Saved Application State/\(bundleId).savedState"
-            addAssociatedIfExists(path: savedState, type: "Saved State", confidence: .verified, to: &associatedFiles)
-            
-            // Containers (Sandbox)
-            let containerPath = "\(libraryPath)/Containers/\(bundleId)"
-            addAssociatedIfExists(path: containerPath, type: "Sandbox Container", confidence: .verified, to: &associatedFiles)
-            
-            // WebKit data
-            let webKitPath = "\(libraryPath)/WebKit/\(bundleId)"
-            addAssociatedIfExists(path: webKitPath, type: "WebKit Data", confidence: .verified, to: &associatedFiles)
-            
-            // HTTPStorages
-            let httpStorage = "\(libraryPath)/HTTPStorages/\(bundleId)"
-            addAssociatedIfExists(path: httpStorage, type: "HTTP Storages", confidence: .verified, to: &associatedFiles)
         }
         
         return InstalledAppItem(
@@ -118,25 +91,6 @@ public class AppUninstallerEngine: ObservableObject {
             associatedFiles: associatedFiles,
             isSelected: false
         )
-    }
-    
-    private func addAssociatedIfExists(
-        path: String,
-        type: String,
-        confidence: AssociationConfidence,
-        to list: inout [AppAssociatedFile]
-    ) {
-        guard fileManager.fileExists(atPath: path),
-              !list.contains(where: { $0.path == path }) else { return }
-        let size = getFileSize(atPath: path)
-        list.append(AppAssociatedFile(
-            name: (path as NSString).lastPathComponent,
-            path: path,
-            fileType: type,
-            size: size,
-            confidence: confidence,
-            isSelected: confidence == .verified
-        ))
     }
     
     public func uninstallApp(_ app: InstalledAppItem, completion: @escaping (UninstallResult) -> Void) {
@@ -160,10 +114,18 @@ public class AppUninstallerEngine: ObservableObject {
         self.isUninstalling = true
         
         DispatchQueue.global(qos: .userInitiated).async {
-            let result = Self.performUninstall(app) { url in
-                // Chuyển vào Thùng rác để đảm bảo an toàn
-                try self.fileManager.trashItem(at: url, resultingItemURL: nil)
-            }
+            var journal: [CleanupLogEntry] = []
+            let result = Self.performUninstall(
+                app,
+                trash: { url in
+                    // Chuyển vào Thùng rác để đảm bảo an toàn
+                    try self.fileManager.trashItem(at: url, resultingItemURL: nil)
+                },
+                record: { file, outcome, reason in
+                    journal.append(CleanupLogEntry(date: Date(), action: .uninstall, path: file.path, bytes: file.size, outcome: outcome, reason: reason))
+                }
+            )
+            CleanupOperationLog.shared.append(journal)
             if result.success {
                 SoundEffectManager.shared.play(.clean)
             }
@@ -182,16 +144,23 @@ public class AppUninstallerEngine: ObservableObject {
     }
 
     /// Gỡ app bundle trước; nếu thất bại thì dừng, không đụng tới tệp phụ trợ.
-    static func performUninstall(_ app: InstalledAppItem, trash: (URL) throws -> Void) -> UninstallResult {
+    /// Launch agents are unloaded before they are moved, otherwise launchd keeps respawning them.
+    static func performUninstall(
+        _ app: InstalledAppItem,
+        trash: (URL) throws -> Void,
+        unloadLaunchAgent: (URL) -> Void = LaunchAgentControl.bootOut,
+        record: (AppAssociatedFile, CleanupLogEntry.Outcome, String?) -> Void = { _, _, _ in }
+    ) -> UninstallResult {
         let selectedFiles = app.associatedFiles.filter(\.isSelected)
         guard !selectedFiles.isEmpty else {
             return UninstallResult(success: false, errorMessage: nil, failedPaths: [])
         }
         let auxiliaryFiles = selectedFiles.filter { $0.path != app.bundlePath }
 
-        if selectedFiles.contains(where: { $0.path == app.bundlePath }) {
+        if let bundleFile = selectedFiles.first(where: { $0.path == app.bundlePath }) {
             guard UninstallPathPolicy.isAllowed(path: app.bundlePath, bundlePath: app.bundlePath) else {
                 NSLog("Xmac Uninstall rejected unsafe bundle path: \(app.bundlePath)")
+                record(bundleFile, .failed, "path not allowed")
                 return UninstallResult(
                     success: false,
                     errorMessage: L10n.format("Không thể gỡ %@: đường dẫn ứng dụng không hợp lệ.", app.name),
@@ -200,8 +169,10 @@ public class AppUninstallerEngine: ObservableObject {
             }
             do {
                 try trash(URL(fileURLWithPath: app.bundlePath))
+                record(bundleFile, .trashed, nil)
             } catch {
                 NSLog("Xmac Uninstall error moving app bundle to Trash: \(error)")
+                record(bundleFile, .failed, error.localizedDescription)
                 return UninstallResult(
                     success: false,
                     errorMessage: L10n.format("Không thể chuyển %@ vào Thùng rác. Chưa có tệp nào bị thay đổi.", app.name),
@@ -215,13 +186,20 @@ public class AppUninstallerEngine: ObservableObject {
             guard UninstallPathPolicy.isAllowed(path: file.path, bundlePath: app.bundlePath) else {
                 NSLog("Xmac Uninstall rejected unsafe path: \(file.path)")
                 failedPaths.append(file.path)
+                record(file, .failed, "path not allowed")
                 continue
             }
+            let url = URL(fileURLWithPath: file.path)
+            if file.fileType == AppLeftoverLocator.launchAgentType {
+                unloadLaunchAgent(url)
+            }
             do {
-                try trash(URL(fileURLWithPath: file.path))
+                try trash(url)
+                record(file, .trashed, nil)
             } catch {
                 NSLog("Xmac Uninstall error moving \(file.path) to Trash: \(error)")
                 failedPaths.append(file.path)
+                record(file, .failed, error.localizedDescription)
             }
         }
         guard failedPaths.isEmpty else {
@@ -233,27 +211,5 @@ public class AppUninstallerEngine: ObservableObject {
             )
         }
         return .ok
-    }
-    
-    private func getFileSize(atPath path: String) -> Int64 {
-        var isDir: ObjCBool = false
-        guard fileManager.fileExists(atPath: path, isDirectory: &isDir) else { return 0 }
-        
-        if !isDir.boolValue {
-            let attr = try? fileManager.attributesOfItem(atPath: path)
-            return (attr?[.size] as? Int64) ?? 0
-        }
-        
-        var totalSize: Int64 = 0
-        if let enumerator = fileManager.enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey], options: [.skipsHiddenFiles]) {
-            for case let fileURL as URL in enumerator {
-                if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey]),
-                   let isDirectory = resourceValues.isDirectory, !isDirectory,
-                   let fileSize = resourceValues.fileSize {
-                    totalSize += Int64(fileSize)
-                }
-            }
-        }
-        return totalSize
     }
 }

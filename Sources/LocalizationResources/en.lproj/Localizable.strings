@@ -589,8 +589,6 @@
 "Không thể chuyển %@ vào Thùng rác. Chưa có tệp nào bị thay đổi." = "Could not move %@ to the Trash. Nothing was changed.";
 "Đã gỡ %@ nhưng %lld tệp phụ trợ không chuyển được vào Thùng rác: %@" = "%@ was removed but %lld support files could not be moved to the Trash: %@";
 "Không thể gỡ bỏ đầy đủ %@." = "Could not fully uninstall %@.";
-"Bỏ qua %lld mục của ứng dụng đang chạy." = "Skipped %lld items of running apps.";
-"Các mục đã chọn sẽ được chuyển vào Thùng rác (riêng mục trong Thùng rác sẽ bị xóa vĩnh viễn). Cache của ứng dụng đang chạy sẽ được bỏ qua." = "Selected items will be moved to the Trash (items already in the Trash are deleted permanently). Caches of running apps are skipped.";
 "Đã chặn chuyển hướng từ HTTPS sang HTTP không an toàn." = "Blocked an insecure redirect from HTTPS to HTTP.";
 "Chữ ký của bản cập nhật không khớp với ứng dụng đang chạy. Đã hủy cài đặt." = "The update's signature does not match the running app. Installation cancelled.";
 
@@ -601,3 +599,28 @@
 "Nóng" = "Hot";
 "Rất nóng" = "Very hot";
 "trống / %@" = "free / %@";
+
+/* Cleaner safety, developer caches, leftovers, history */
+"Bỏ qua" = "Skipped";
+"Bỏ qua %lld mục đang được sử dụng hoặc được bảo vệ." = "Skipped %lld items that are in use or protected.";
+"Các mục đã chọn sẽ được chuyển vào Thùng rác (riêng mục trong Thùng rác sẽ bị xóa vĩnh viễn). Mục đang được ứng dụng sử dụng hoặc nằm trong danh sách bảo vệ sẽ được bỏ qua." = "Selected items will be moved to the Trash (items already in the Trash are deleted permanently). Items an app is using or that you protected are skipped.";
+"Bộ nhớ đệm công cụ lập trình" = "Developer tool caches";
+"Cache của npm, pnpm, Bun, uv, Gradle, Cargo và bản hỗ trợ thiết bị iOS cũ. Công cụ sẽ tự tải lại khi cần; mục đang được dùng sẽ được bỏ qua. Store của pnpm/Bun dùng chung tệp với node_modules nên dung lượng thực giải phóng có thể ít hơn." = "Caches of npm, pnpm, Bun, uv, Gradle, Cargo and old iOS device support files. Tools download them again when needed; items in use are skipped. pnpm/Bun stores share files with node_modules, so the space actually freed may be smaller.";
+"Không kiểm tra được tệp đang mở (lsof) nên chưa dọn mục nào ngoài Thùng rác. Hãy thử lại." = "Could not check open files (lsof), so nothing outside the Trash was cleaned. Please try again.";
+"Dữ liệu sót lại của ứng dụng đã gỡ" = "Leftovers of uninstalled apps";
+"Thư mục mang tên ứng dụng không còn cài trên máy và không thay đổi trong 30 ngày. Đây là suy đoán: hãy kiểm tra trước khi chọn." = "Folders named after apps that are no longer installed and unchanged for 30 days. This is a guess: review before selecting.";
+"Không đọc được danh sách mục được bảo vệ nên chưa dọn gì. Hãy kiểm tra tệp cleaner-whitelist.json trong ~/Library/Application Support/Xmac." = "Nothing was cleaned because the protected items list could not be read. Check cleaner-whitelist.json in ~/Library/Application Support/Xmac.";
+"Không lưu được danh sách mục được bảo vệ." = "Could not save the protected items list.";
+"Đã bảo vệ %@. Mục này sẽ không bị dọn nữa." = "Protected %@. It will no longer be cleaned.";
+"Luôn giữ mục này (không dọn)" = "Always keep (never clean)";
+"Lịch sử & bảo vệ" = "History & protection";
+"Lịch sử dọn & mục được bảo vệ" = "Cleanup history & protected items";
+"Mục được bảo vệ" = "Protected items";
+"Chưa có mục nào. Nhấp phải vào một mục trong danh sách dọn rác để bảo vệ nó." = "None yet. Right-click an item in the cleaner list to protect it.";
+"Bỏ bảo vệ" = "Unprotect";
+"Thao tác gần đây" = "Recent operations";
+"Chưa có thao tác dọn hoặc gỡ ứng dụng nào được ghi lại." = "No cleanup or uninstall has been recorded yet.";
+"Đã chuyển vào Thùng rác" = "Moved to Trash";
+"Đã xóa vĩnh viễn" = "Deleted permanently";
+"Thất bại" = "Failed";
+

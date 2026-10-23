@@ -40,6 +40,10 @@ public struct CleanResult: Equatable {
     public let deletedCount: Int
     public let failedCount: Int
     public var skippedCount: Int = 0
+    /// Set when nothing was cleaned because a safety precondition failed (e.g. unreadable whitelist).
+    public var abortMessage: String? = nil
+    /// lsof could not run, so everything outside the Trash was skipped.
+    public var openFileCheckUnavailable: Bool = false
 }
 
 enum CleanerItemPolicy {
@@ -96,28 +100,6 @@ public struct UninstallResult: Equatable {
     static let ok = UninstallResult(success: true, errorMessage: nil, failedPaths: [])
 }
 
-enum CleanerPathPolicy {
-    static func isAllowed(itemPath: String, homeDirectory: String = NSHomeDirectory()) -> Bool {
-        let itemURL = URL(fileURLWithPath: itemPath)
-            .standardizedFileURL
-            .resolvingSymlinksInPath()
-        let homeURL = URL(fileURLWithPath: homeDirectory)
-            .standardizedFileURL
-            .resolvingSymlinksInPath()
-        let allowedRoots = [
-            homeURL.appendingPathComponent("Library/Caches", isDirectory: true),
-            homeURL.appendingPathComponent("Library/Logs", isDirectory: true),
-            homeURL.appendingPathComponent("Library/Developer/Xcode/DerivedData", isDirectory: true),
-            homeURL.appendingPathComponent(".Trash", isDirectory: true)
-        ].map { $0.standardizedFileURL.resolvingSymlinksInPath() }
-
-        return allowedRoots.contains { root in
-            itemURL.path != root.path
-                && itemURL.pathComponents.starts(with: root.pathComponents)
-        }
-    }
-}
-
 public struct AppAssociatedFile: Identifiable, Hashable {
     public var id: String { path }
     public let name: String
@@ -145,40 +127,39 @@ enum UninstallPathPolicy {
         bundlePath: String,
         homeDirectory: String = NSHomeDirectory()
     ) -> Bool {
-        let candidate = URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath()
-        let bundle = URL(fileURLWithPath: bundlePath).standardizedFileURL.resolvingSymlinksInPath()
-        let home = URL(fileURLWithPath: homeDirectory).standardizedFileURL.resolvingSymlinksInPath()
+        guard !HomePathGuard.hasRelativeComponents(path) else { return false }
+        let candidate = HomePathGuard.resolve(path)
+        let bundle = HomePathGuard.resolve(bundlePath)
+        let home = HomePathGuard.resolvedHome(homeDirectory)
 
         if candidate.path == bundle.path {
             let applicationRoots = [
-                URL(fileURLWithPath: "/Applications", isDirectory: true),
-                home.appendingPathComponent("Applications", isDirectory: true)
-            ].map { $0.standardizedFileURL.resolvingSymlinksInPath() }
-            return applicationRoots.contains { root in
-                candidate.pathComponents.starts(with: root.pathComponents)
-                    && candidate.path != root.path
-            }
+                HomePathGuard.resolve("/Applications"),
+                HomePathGuard.trustedRoot("Applications", home: home)
+            ].compactMap { $0 }
+            return applicationRoots.contains { HomePathGuard.isStrictDescendant(candidate, of: $0) }
         }
 
-        let libraryRoot = home.appendingPathComponent("Library", isDirectory: true)
-        let allowedLibraryRoots = [
-            "Application Support",
-            "Caches",
-            "Preferences",
-            "Saved Application State",
-            "Containers",
-            "WebKit",
-            "HTTPStorages"
-        ].map {
-            libraryRoot.appendingPathComponent($0, isDirectory: true)
-                .standardizedFileURL
-                .resolvingSymlinksInPath()
-        }
-        return allowedLibraryRoots.contains { root in
-            candidate.path != root.path
-                && candidate.pathComponents.starts(with: root.pathComponents)
+        return libraryRoots.contains { relative in
+            guard let root = HomePathGuard.trustedRoot("Library/\(relative)", home: home) else { return false }
+            return HomePathGuard.isStrictDescendant(candidate, of: root)
         }
     }
+
+    static let libraryRoots = [
+        "Application Support",
+        "Caches",
+        "Preferences",
+        "Saved Application State",
+        "Containers",
+        "Group Containers",
+        "WebKit",
+        "HTTPStorages",
+        "LaunchAgents",
+        "Application Scripts",
+        "Logs",
+        "Cookies"
+    ]
 }
 
 public struct InstalledAppItem: Identifiable, Hashable {

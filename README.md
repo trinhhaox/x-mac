@@ -61,10 +61,15 @@ Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
   - Cho phép chọn riêng báo cáo lỗi (Diagnostic & Crash Reports).
   - Quét dữ liệu biên dịch khổng lồ của lập trình viên (Xcode DerivedData).
   - Làm sạch Thùng rác (Trash).
-  - Các mục được chuyển vào Thùng rác (riêng mục đã ở trong Thùng rác bị xóa vĩnh viễn); cache của ứng dụng đang chạy được bỏ qua.
+  - Cache công cụ lập trình nằm ngoài `~/Library/Caches`: npm, pnpm, Bun, uv, Gradle, Cargo, bản iOS DeviceSupport/CoreSimulator cũ.
+  - Dữ liệu sót lại của ứng dụng đã gỡ (không còn cài, không thay đổi 30 ngày) — chỉ gợi ý, không chọn sẵn.
+  - Các mục được chuyển vào Thùng rác (riêng mục đã ở trong Thùng rác bị xóa vĩnh viễn).
+  - **Không đụng tới mục đang được dùng**: kiểm tra tệp đang mở bằng `lsof` trước khi dọn; nếu không kiểm tra được thì bỏ qua thay vì đoán.
+  - **Bảo vệ & lịch sử**: nhấp phải để luôn giữ một mục; mọi thao tác dọn/gỡ được ghi vào `~/Library/Logs/Xmac/operations.log` và xem lại trong "Lịch sử & bảo vệ".
 - **Giải phóng bộ nhớ RAM (Purge Memory)**: Nút giải phóng RAM Inactive tức thì giúp máy tính nhẹ và mượt mà hơn.
 - **Gỡ ứng dụng có kiểm soát (App Uninstaller)**:
-  - Tự động dò tìm toàn bộ các file phụ trợ nằm ẩn sâu trong thư viện: `Application Support`, `Caches`, `Preferences .plist`, `Saved State`, `WebKit`, `Sandbox Containers`.
+  - Tự động dò tìm toàn bộ các file phụ trợ nằm ẩn sâu trong thư viện: `Application Support`, `Caches`, `Preferences .plist` (cả `ByHost`), `Saved State`, `WebKit`, `HTTPStorages`, `Cookies`, `Logs`, `Sandbox Containers`, `Group Containers`, `Application Scripts`, `LaunchAgents`.
+  - Launch Agent của ứng dụng được gỡ khỏi launchd trước khi chuyển vào Thùng rác để không tự chạy lại.
   - Tính toán tổng dung lượng thực tế của ứng dụng.
   - Mặc định chọn các đường dẫn xác định bằng bundle identifier; đường dẫn suy đoán theo tên ứng dụng phải được người dùng chọn thủ công.
   - Từ chối gỡ khi ứng dụng đang chạy; gỡ được cả ứng dụng Apple cài trong `/Applications` (Xcode, Pages…), chỉ chặn ứng dụng hệ thống.

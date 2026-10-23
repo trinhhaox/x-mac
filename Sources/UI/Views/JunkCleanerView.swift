@@ -3,6 +3,7 @@ import SwiftUI
 public struct JunkCleanerView: View {
     @ObservedObject var cleaner = CleanerEngine.shared
     @ObservedObject var vm = JunkCleanerViewModel.shared
+    @State private var showHistory = false
     
     public init() {}
     
@@ -20,6 +21,11 @@ public struct JunkCleanerView: View {
                     }
                     .buttonStyle(BrandSecondaryButtonStyle())
                     .disabled(cleaner.isScanning || cleaner.isCleaning)
+
+                    Button(action: { showHistory = true }) {
+                        Label("Lịch sử & bảo vệ", systemImage: "clock.arrow.circlepath")
+                    }
+                    .buttonStyle(BrandSecondaryButtonStyle())
                 }
                 
                 // Result Banner
@@ -143,12 +149,19 @@ public struct JunkCleanerView: View {
                 cleaner.startScan()
             }
         }
+        .sheet(isPresented: $showHistory) {
+            CleanupHistorySheet()
+        }
         .alert(isPresented: $vm.showCleanConfirmation) {
             Alert(
                 title: Text("Xác nhận xóa dữ liệu đã chọn?"),
-                message: Text("Các mục đã chọn sẽ được chuyển vào Thùng rác (riêng mục trong Thùng rác sẽ bị xóa vĩnh viễn). Cache của ứng dụng đang chạy sẽ được bỏ qua."),
+                message: Text("Các mục đã chọn sẽ được chuyển vào Thùng rác (riêng mục trong Thùng rác sẽ bị xóa vĩnh viễn). Mục đang được ứng dụng sử dụng hoặc nằm trong danh sách bảo vệ sẽ được bỏ qua."),
                 primaryButton: .destructive(Text("Chuyển vào Thùng rác")) {
                     cleaner.cleanSelectedJunk { result in
+                        if let abortMessage = result.abortMessage {
+                            vm.cleanResultText = abortMessage
+                            return
+                        }
                         let formatted = ByteCountFormatter.string(
                             fromByteCount: result.deletedBytes,
                             countStyle: .file
@@ -156,88 +169,16 @@ public struct JunkCleanerView: View {
                         var text = result.failedCount == 0
                             ? L10n.format("Đã chuyển %lld mục (%@) vào Thùng rác. Dọn sạch Thùng rác để lấy lại dung lượng.", Int64(result.deletedCount), formatted)
                             : L10n.format("Đã chuyển %lld mục (%@) vào Thùng rác; %lld mục thất bại hoặc bị từ chối.", Int64(result.deletedCount), formatted, Int64(result.failedCount))
-                        if result.skippedCount > 0 {
-                            text += " " + L10n.format("Bỏ qua %lld mục của ứng dụng đang chạy.", Int64(result.skippedCount))
+                        if result.openFileCheckUnavailable {
+                            text += " " + L10n.text("Không kiểm tra được tệp đang mở (lsof) nên chưa dọn mục nào ngoài Thùng rác. Hãy thử lại.")
+                        } else if result.skippedCount > 0 {
+                            text += " " + L10n.format("Bỏ qua %lld mục đang được sử dụng hoặc được bảo vệ.", Int64(result.skippedCount))
                         }
                         vm.cleanResultText = text
                     }
                 },
                 secondaryButton: .cancel(Text("Huỷ"))
             )
-        }
-    }
-}
-
-struct CategoryRow: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Binding var category: JunkCategory
-    @ObservedObject var vm: JunkCleanerViewModel
-    
-    var body: some View {
-        ModernCard {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Toggle(L10n.format("Chọn tất cả trong %@", category.name), isOn: $category.isSelected)
-                        .labelsHidden()
-                        .onChange(of: category.isSelected) { newValue in
-                            for i in 0..<category.items.count {
-                                category.items[i].isSelected = newValue
-                            }
-                        }
-                    
-                    Image(systemName: category.iconName)
-                        .foregroundColor(XmacTheme.blue)
-                        .frame(width: 24)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(category.name)
-                            .font(.system(size: 14, weight: .semibold))
-                        Text(category.description)
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Text(category.formattedTotalSize)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(category.totalSize > 0 ? .primary : .secondary)
-                    
-                    Button(action: {
-                        vm.toggleExpand(categoryName: category.name)
-                    }) {
-                        Image(systemName: vm.isExpanded(categoryName: category.name) ? "chevron.up" : "chevron.down")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(
-                        vm.isExpanded(categoryName: category.name)
-                            ? L10n.format("Thu gọn %@", category.name)
-                            : L10n.format("Mở rộng %@", category.name)
-                    )
-                }
-                
-                if vm.isExpanded(categoryName: category.name) && !category.items.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach($category.items) { $item in
-                            HStack {
-                                Toggle(L10n.format("Chọn %@", item.name), isOn: $item.isSelected)
-                                    .labelsHidden()
-                                Text(item.name)
-                                    .font(.system(size: 12))
-                                    .lineLimit(1)
-                                Spacer()
-                                Text(item.formattedSize)
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.leading, 36)
-                        }
-                    }
-                }
-            }
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.24), value: vm.isExpanded(categoryName: category.name))
         }
     }
 }
