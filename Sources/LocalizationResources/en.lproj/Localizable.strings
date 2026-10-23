@@ -624,3 +624,21 @@
 "Đã xóa vĩnh viễn" = "Deleted permanently";
 "Thất bại" = "Failed";
 
+/* System monitor: disk activity, battery, top processes */
+"Đọc/ghi ổ đĩa" = "Disk activity";
+"Mọi ổ đang gắn" = "All mounted disks";
+"Đọc" = "Read";
+"Ghi" = "Write";
+"Tổng của các ổ, kể cả ổ ngoài" = "Total across disks, including external ones";
+"Không đọc được bộ đếm ổ đĩa" = "Disk counters unavailable";
+"Pin" = "Battery";
+"Đang sạc" = "Charging";
+"Dùng pin" = "On battery";
+"Mức pin" = "Charge";
+"Tình trạng" = "Health";
+"Số lần sạc" = "Cycles";
+"Tình trạng = dung lượng sạc đầy hiện tại so với dung lượng thiết kế" = "Health = current full-charge capacity compared with design capacity";
+"Tiến trình dùng CPU nhiều nhất" = "Top processes by CPU";
+"Tiến trình của bạn" = "Your processes";
+"Tính theo một nhân CPU như Activity Monitor; không hiển thị tiến trình hệ thống và của người dùng khác" = "Per CPU core, like Activity Monitor; system and other users' processes are not shown";
+"Đang cắm nguồn" = "On power adapter";

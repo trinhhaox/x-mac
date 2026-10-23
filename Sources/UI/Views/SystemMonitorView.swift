@@ -49,12 +49,7 @@ import SwiftUI
   private func diskBytes(_ value: Int64?) -> String {
     bytes(value.flatMap { $0 >= 0 ? UInt64($0) : nil })
   }
-  private func rate(_ value: Double?) -> String {
-    guard let value, value.isFinite, value >= 0 else { return "—" }
-    if value < 1 { return "0 B/s" }
-    return ByteCountFormatter.string(
-      fromByteCount: Int64(min(value, Double(Int64.max / 2))), countStyle: .file) + "/s"
-  }
+  private func rate(_ value: Double?) -> String { MonitorFormat.rate(value) }
 
   var body: some View {
     ScrollView {
@@ -65,7 +60,12 @@ import SwiftUI
           memoryCard
           networkCard
           storageCard
+          DiskActivityCard(rate: monitor.diskRate, available: monitor.sample == nil || monitor.sample?.diskIO != nil)
+          if let battery = monitor.sample?.battery {
+            BatteryCard(info: battery)
+          }
         }
+        TopProcessesCard(processes: monitor.topProcesses)
         thermalStrip
         details
         footer

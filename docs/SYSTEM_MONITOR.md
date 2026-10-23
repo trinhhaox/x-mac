@@ -10,7 +10,7 @@ nội dung tối thiểu rộng 672pt trong cửa sổ Xmac 900pt.
 - **CPU:** chênh lệch tick user/system/nice/idle từ Mach host statistics.
   Trung bình tất cả nhân, thang 0–100%, không phải CPU riêng của Xmac.
   Mẫu đầu chưa có tỷ lệ; sau 2 giây hiển thị số và biểu đồ tối đa 30 mẫu.
-  Xử lý tràn bộ đếm UInt32. Không hiển thị tần số hoặc CPU từng tiến trình.
+  Xử lý tràn bộ đếm UInt32. Không hiển thị tần số CPU; CPU theo tiến trình xem mục bổ sung bên dưới.
 - **RAM:** tổng RAM vật lý; ước tính dùng = active + wired + compressed,
   giới hạn không vượt RAM vật lý. Hiển thị riêng wired, nén và swap.
   Đây không phải phép đo áp lực bộ nhớ và có thể khác Activity Monitor.
@@ -62,3 +62,16 @@ sau sửa không còn cảnh báo anchor tự động. Chưa kiểm chứng ch�
 Build Intel có cảnh báo từ SDK về thư viện compatibility chỉ chứa arm64;
 link vẫn thành công, universal binary chứa đủ hai kiến trúc. DMG checksum hợp lệ.
 
+
+## Bổ sung (đọc/ghi ổ đĩa, pin, tiến trình)
+
+- **Đọc/ghi ổ đĩa:** cộng bộ đếm `Bytes (Read/Write)` của mọi `IOBlockStorageDriver`
+  (cả ổ ngoài), tính byte/giây như mạng; bộ đếm giảm (rút ổ) thì bỏ mẫu đó.
+- **Pin:** đọc registry `AppleSmartBattery` (không cần quyền). Tình trạng =
+  `AppleRawMaxCapacity` (hoặc `NominalChargeCapacity` trên Intel) / `DesignCapacity`.
+  Máy không có pin thì ẩn thẻ. Không đọc nhiệt độ pin.
+- **Tiến trình dùng CPU nhiều nhất:** `proc_listallpids` + `proc_pid_rusage`, chênh lệch thời
+  gian CPU giữa hai mẫu (đổi đơn vị Mach → ns), % theo một nhân. Chỉ thấy tiến trình
+  của người dùng hiện tại; PID mới hoặc bị tái sử dụng (đổi tên) bị bỏ qua.
+
+Vẫn không chạy subprocess, không cần quyền quản trị, không lưu số liệu.

@@ -10,6 +10,7 @@
 
 ### Thông tin hệ thống (từ v1.4.0)
 - Theo dõi CPU và biểu đồ, RAM/nén/wired/swap, dung lượng lưu trữ và tốc độ nhận/gửi qua Wi-Fi/Ethernet mỗi 2 giây.
+- Tốc độ đọc/ghi ổ đĩa, tình trạng pin (mức pin, % so với thiết kế, số lần sạc) và 5 tiến trình của bạn dùng CPU nhiều nhất.
 - Tạm dừng/tiếp tục; chỉ lấy mẫu khi mở trang, không lưu hoặc gửi số liệu.
 - Hiển thị trạng thái nhiệt của macOS; **chưa hỗ trợ nhiệt độ °C**.
 

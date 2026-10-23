@@ -48,6 +48,9 @@ struct SystemSample {
     var diskTotal: Int64?
     var diskAvailable: Int64?
     var network: [String: NetworkCounter]?
+    var battery: BatteryInfo?
+    var diskIO: DiskIOCounter?
+    var processes: [ProcessSample]?
     var uptime = ProcessInfo.processInfo.systemUptime
     var thermal = ProcessInfo.processInfo.thermalState
 }
@@ -92,6 +95,9 @@ enum SystemProbe {
             sample.diskAvailable = values.volumeAvailableCapacity.map(Int64.init)
         }
         sample.network = networkCounters()
+        sample.battery = SystemExtrasProbe.battery()
+        sample.diskIO = SystemExtrasProbe.diskIO()
+        sample.processes = SystemExtrasProbe.processes()
         return sample
     }
 
@@ -150,6 +156,8 @@ enum SystemProbe {
     @Published private(set) var sample: SystemSample?
     @Published private(set) var cpuUsage: Double?
     @Published private(set) var networkRate: NetworkRate?
+    @Published private(set) var diskRate: DiskIORate?
+    @Published private(set) var topProcesses: [ProcessUsage] = []
     @Published private(set) var cpuHistory: [Double] = []
     @Published private(set) var running = false
     private var task: Task<Void, Never>?
@@ -167,11 +175,13 @@ enum SystemProbe {
         previous = nil
         cpuUsage = nil
         networkRate = nil
+        diskRate = nil
+        topProcesses = []
         cpuHistory = []
         let probe = probe
         task = Task { [weak self] in
             while !Task.isCancelled {
-                // Sampling is read-only and bounded; no subprocesses, sockets, sensors or privileged helper.
+                // Sampling is read-only and bounded (Mach, sysctl, IOKit registry, libproc); no subprocesses, sockets or privileged helper.
                 // It runs off the main actor; only publishing happens on main.
                 let next = await Task.detached(priority: .utility) { probe.read() }.value
                 guard !Task.isCancelled, let self else { return }
@@ -194,7 +204,13 @@ enum SystemProbe {
             networkRate = next.network.flatMap { counters in old.network.flatMap {
                 NetworkRate.calculate(previous: $0, current: counters, elapsed: elapsed)
             } }
-        } else { cpuUsage = nil; networkRate = nil }
+            diskRate = next.diskIO.flatMap { counter in old.diskIO.flatMap {
+                DiskIORate.calculate(previous: $0, current: counter, elapsed: elapsed)
+            } }
+            topProcesses = next.processes.flatMap { now in old.processes.map {
+                ProcessUsage.top(previous: $0, current: now, elapsed: elapsed)
+            } } ?? []
+        } else { cpuUsage = nil; networkRate = nil; diskRate = nil; topProcesses = [] }
         if let cpuUsage { cpuHistory.append(cpuUsage); cpuHistory = Array(cpuHistory.suffix(30)) }
         previous = next
         sample = next
