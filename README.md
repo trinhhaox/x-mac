@@ -76,6 +76,25 @@ Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
   - Từ chối gỡ khi ứng dụng đang chạy; gỡ được cả ứng dụng Apple cài trong `/Applications` (Xcode, Pages…), chỉ chặn ứng dụng hệ thống.
   - Chuyển app bundle vào Thùng rác trước; nếu thất bại thì không đụng tới file phụ trợ, và báo rõ file phụ trợ nào chưa chuyển được.
 
+### 7. 🗂️ Hợp Nhất Tệp CoW APFS (Storage Deduplication)
+- **Tiết kiệm dung lượng không cần xóa tệp**: Tận dụng cơ chế Copy-on-Write nguyên bản của hệ thống tệp APFS (`clonefile(2)`), gộp các khối vật lý trùng nhau trên SSD về cùng một bản sao duy nhất trong khi giữ nguyên 100% đường dẫn và cấu trúc thư mục.
+- **Pipeline 4 tầng siêu tốc**:
+  - Quét hệ thống siêu tốc bằng `getattrlistbulk(2)` với buffer 256KB, giảm hàng triệu lệnh `lstat`.
+  - Phân cụm kích thước & phân vùng (Size & Device Bucket).
+  - Băm biên (Edge Hash) 4KB đầu + 4KB cuối của tệp.
+  - Băm toàn phần SHA-256 đối với các tệp có cùng edge hash.
+  - Đối soát từng byte sống (`memcmp` 128KB buffer) trước khi tiến hành hoán đổi.
+- **An toàn tuyệt đối & Nguyên tử (Atomic Swap)**:
+  - Bỏ qua tệp hệ thống có cờ bảo vệ đặc biệt (`SF_DATALESS`, `UF_COMPRESSED`, `UF_IMMUTABLE`, `SF_RESTRICTED`, `UF_TRACKED`).
+  - Kiểm tra Extent vật lý qua `fcntl(fd, F_LOG2PHYS_EXT)` để nhận diện tệp đã chia sẻ khối, tránh xử lý lặp.
+  - Bảo tồn toàn diện quyền POSIX, cờ tệp, Extended Attributes và timestamps (`btime`, `mtime`) chuẩn xác đến cấp nanosecond.
+  - Sử dụng tệp clone tạm thời và syscall `rename(2)` để thay thế tức thì, không bao giờ để lại tệp hỏng.
+- **Nhật ký & Hoàn tác một chạm (Undo / Unfold)**:
+  - Ghi nhận mọi giao dịch vào nhật ký JSONL tại `~/Library/Application Support/Xmac/dedup_journal.jsonl`.
+  - Nút **"Hoàn tác tất cả"** khôi phục mọi tệp CoW trở lại trạng thái độc lập riêng biệt thông qua phép sao chép dữ liệu thật `copyfile(..., COPYFILE_DATA)`.
+
+Chi tiết: [`docs/DEDUPLICATOR.md`](docs/DEDUPLICATOR.md).
+
 ---
 
 ## 🖥 Giao Diện Người Dùng Hiện Đại (macOS Native)

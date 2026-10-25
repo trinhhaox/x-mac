@@ -31,6 +31,7 @@ public enum NavigationTab: String, CaseIterable, Identifiable {
     case vietnameseIME = "Bộ gõ Tiếng Việt"
     case smartProfiles = "Smart Profiles"
     case junkCleaner = "Dọn rác hệ thống"
+    case deduplicator = "Hợp nhất tệp CoW"
     case appUninstaller = "Gỡ ứng dụng"
     case settings = "Cài đặt"
     
@@ -51,6 +52,7 @@ public enum NavigationTab: String, CaseIterable, Identifiable {
         case .vietnameseIME: return "character.bubble.fill"
         case .smartProfiles: return "slider.horizontal.3"
         case .junkCleaner: return "sparkles"
+        case .deduplicator: return "square.2.layers.3d.top.filled"
         case .appUninstaller: return "trash.fill"
         case .settings: return "gearshape.fill"
         }
