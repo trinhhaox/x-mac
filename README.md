@@ -89,6 +89,8 @@ Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
   - Kiểm tra Extent vật lý qua `fcntl(fd, F_LOG2PHYS_EXT)` để nhận diện tệp đã chia sẻ khối, tránh xử lý lặp.
   - Bảo tồn toàn diện quyền POSIX, cờ tệp, Extended Attributes và timestamps (`btime`, `mtime`) chuẩn xác đến cấp nanosecond.
   - Sử dụng tệp clone tạm thời và syscall `rename(2)` để thay thế tức thì, không bao giờ để lại tệp hỏng.
+- **Quét theo danh mục chuyên biệt (Category Filtering)**: Tùy chọn lọc nhanh theo nhóm tệp (Tất cả, Ảnh, Video, Mã nguồn, Tài liệu, Tệp nén). Khi chọn Mã nguồn, ngưỡng kích thước tối thiểu tự động hạ xuống 1 KB.
+- **Lập lịch quét tự động định kỳ (Background Scheduler)**: Chạy ngầm định kỳ khi máy rảnh rỗi (Hàng ngày, Hàng tuần, Hàng tháng) và gửi thông báo hệ thống khi phát hiện lượng dung lượng trùng lặp vượt ngưỡng đã chọn (500MB - 5GB).
 - **Nhật ký & Hoàn tác một chạm (Undo / Unfold)**:
   - Ghi nhận mọi giao dịch vào nhật ký JSONL tại `~/Library/Application Support/Xmac/dedup_journal.jsonl`.
   - Nút **"Hoàn tác tất cả"** khôi phục mọi tệp CoW trở lại trạng thái độc lập riêng biệt thông qua phép sao chép dữ liệu thật `copyfile(..., COPYFILE_DATA)`.
@@ -116,7 +118,7 @@ Tự kiểm tra mỗi ngày là tùy chọn; cài đặt cần xác nhận. Xem
 mô hình tin cậy chữ ký và giới hạn phục hồi tải.
 
 ### 1. Cài đặt từ DMG (Khuyến nghị)
-1. Tải file `Xmac-1.8.0.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
+1. Tải file `Xmac-1.9.0.dmg` từ phần Releases của GitHub hoặc thư mục `build/`.
 2. Kéo thả `Xmac.app` vào thư mục `Applications`.
 3. Mở ứng dụng và làm theo hướng dẫn cấp quyền.
 
@@ -127,7 +129,7 @@ cd x-mac
 chmod +x Scripts/build.sh
 ./Scripts/build.sh
 ```
-Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.8.0.dmg` sẽ được tạo trong thư mục `build/`.
+Sau khi hoàn tất, file `Xmac.app` và `Xmac-1.9.0.dmg` sẽ được tạo trong thư mục `build/`.
 
 Mặc định script ký ad-hoc để kiểm thử local. Nếu máy đã có sẵn chứng thư và hồ sơ notarization trong Keychain, có thể tạo bản phát hành bằng:
 
