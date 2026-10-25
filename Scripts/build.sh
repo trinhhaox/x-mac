@@ -8,6 +8,15 @@ APP_NAME="Xmac"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 CODE_SIGN_IDENTITY="${CODE_SIGN_IDENTITY:--}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
+# Team ID: ký lại bằng Developer ID trên đám mây và notarize qua tài khoản Xcode.
+XCODE_NOTARIZE_TEAM="${XCODE_NOTARIZE_TEAM:-}"
+
+if [[ -n "$XCODE_NOTARIZE_TEAM" ]]; then
+    if [[ "$CODE_SIGN_IDENTITY" == "-" || -n "$NOTARY_PROFILE" ]]; then
+        echo "XCODE_NOTARIZE_TEAM cần CODE_SIGN_IDENTITY không phải ad-hoc và không dùng chung NOTARY_PROFILE." >&2
+        exit 1
+    fi
+fi
 
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$PROJECT_DIR/Resources/Info.plist" 2>/dev/null || echo "1.0.0")"
 
@@ -95,6 +104,10 @@ fi
 
 codesign --verify --deep --strict "$APP_BUNDLE"
 
+if [[ -n "$XCODE_NOTARIZE_TEAM" ]]; then
+    "$SCRIPT_DIR/notarize-with-xcode.sh" "$APP_BUNDLE" "$XCODE_NOTARIZE_TEAM"
+fi
+
 echo "App bundle created at: $APP_BUNDLE"
 
 # 6. Tạo DMG Installer
@@ -113,7 +126,9 @@ hdiutil create -volname "Xmac" \
 
 rm -rf "$DMG_DIR"
 
-if [[ "$CODE_SIGN_IDENTITY" != "-" ]]; then
+# Chứng thư Developer ID trên đám mây không có trong Keychain nên DMG để
+# không ký; Gatekeeper kiểm tra app đã staple bên trong.
+if [[ "$CODE_SIGN_IDENTITY" != "-" && -z "$XCODE_NOTARIZE_TEAM" ]]; then
     echo "Signing DMG with configured Developer ID..."
     codesign --force --timestamp --sign "$CODE_SIGN_IDENTITY" "$DMG_PATH"
     codesign --verify --strict "$DMG_PATH"

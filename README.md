@@ -141,6 +141,16 @@ NOTARY_PROFILE="xmac-notary" \
 
 Script không tạo hoặc thay đổi chứng thư/thông tin xác thực. Khi đặt `NOTARY_PROFILE`, quá trình build sẽ dừng nếu notarization hoặc stapling thất bại.
 
+Nếu không có chứng thư Developer ID trong Keychain nhưng tài khoản Apple Developer (gói trả phí) đã đăng nhập trong Xcode, dùng Developer ID do Apple quản lý trên đám mây. Script ký trước bằng chứng thư Apple Development (để gắn entitlements), sau đó `Scripts/notarize-with-xcode.sh` ký lại bằng Developer ID, gửi notarize và staple:
+
+```bash
+CODE_SIGN_IDENTITY="Apple Development: ..." \
+XCODE_NOTARIZE_TEAM="<team-id>" \
+./Scripts/build.sh
+```
+
+Ở chế độ này DMG không được ký (chứng thư nằm trên đám mây); Gatekeeper kiểm tra `Xmac.app` đã staple bên trong.
+
 ### 3. Chạy kiểm thử
 
 ```bash
