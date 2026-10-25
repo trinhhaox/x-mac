@@ -46,6 +46,7 @@ public final class DeduplicatorScanner: @unchecked Sendable {
                 guard !self.isCancelled else { return }
                 guard file.size >= self.options.minSizeBytes else { return }
                 guard file.links == 1, (file.flags & APFSCloneEngine.untouchableFlags) == 0 else { return }
+                guard self.options.category.matches(path: file.path) else { return }
 
                 found.lock.lock()
                 defer { found.lock.unlock() }

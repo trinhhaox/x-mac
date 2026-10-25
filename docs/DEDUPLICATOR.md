@@ -74,3 +74,29 @@ Hệ thống lọc tệp trùng lặp hoạt động theo quy trình 4 tầng l�
 - **Hoàn tác (Unfold):**
   - Người dùng có thể bấm nút **"Hoàn tác tất cả"** bất cứ lúc nào.
   - Động cơ sẽ thực hiện phép sao chép vật lý thực sự qua `copyfile(..., COPYFILE_DATA | COPYFILE_NOFOLLOW)` (không dùng cờ `COPYFILE_CLONE`), tách rời các khối CoW thành dữ liệu độc lập hoàn toàn mà không làm mất bất kỳ thuộc tính nào của tệp.
+
+---
+
+## 5. Quét Theo Loại Tệp (Category Filtering)
+
+Để đáp ứng các nhu cầu dọn dẹp chuyên biệt và tối ưu hiệu suất, hệ thống cung cấp các bộ lọc danh mục tại **Tầng 1 (Tier 1)**:
+- **Tất cả (All):** Quét toàn bộ các tệp hợp lệ theo ngưỡng kích thước mặc định (>= 64 KB).
+- **Hình ảnh (Images):** `.png`, `.jpg`, `.jpeg`, `.gif`, `.heic`, `.webp`, `.tiff`, `.raw`, `.svg`...
+- **Video:** `.mp4`, `.mov`, `.mkv`, `.avi`, `.m4v`, `.webm`, `.flv`...
+- **Mã nguồn (Code):** `.swift`, `.m`, `.h`, `.c`, `.cpp`, `.rs`, `.go`, `.py`, `.js`, `.ts`, `.json`, `.yaml`, `.xml`... *(Khi chọn danh mục Mã nguồn, ngưỡng kích thước tối thiểu tự động hạ xuống 1 KB để bắt kịp các file code nhỏ).*
+- **Tài liệu (Documents):** `.pdf`, `.docx`, `.xlsx`, `.pptx`, `.txt`, `.md`, `.rtf`, `.csv`...
+- **Tệp nén (Archives):** `.zip`, `.tar`, `.gz`, `.dmg`, `.pkg`, `.7z`, `.rar`, `.iso`...
+
+Việc lọc phần mở rộng ngay tại bước duyệt cây thư mục giúp loại bỏ các tệp không liên quan trước khi tính toán băm SHA-256, tăng tốc độ quét chuyên biệt lên nhiều lần.
+
+---
+
+## 6. Lập Lịch Quét Tự Động Định Kỳ (Background Scheduler)
+
+- **Cơ chế hoạt động:**
+  - Lập lịch quét chạy nền thông qua `DeduplicatorScheduler` được tích hợp vào vòng đời ứng dụng (`AppDelegate`).
+  - Hỗ trợ các chu kỳ định kỳ: **Hàng ngày (Daily)**, **Hàng tuần (Weekly)**, **Hàng tháng (Monthly)**.
+  - Tự động ghi nhớ thời điểm quét gần nhất (`UserDefaults`).
+- **Ngưỡng thông báo thông minh:**
+  - Người dùng có thể cấu hình ngưỡng dung lượng lãng phí có thể giải phóng: **500 MB**, **1 GB**, **2 GB**, hoặc **5 GB**.
+  - Khi phát hiện lượng dung lượng trùng lặp vượt ngưỡng đã chọn, dịch vụ nền sẽ gửi thông báo hệ thống qua `UNUserNotificationCenter` để nhắc nhở người dùng mở ứng dụng và hợp nhất tệp CoW, không làm gián đoạn công việc hiện tại.

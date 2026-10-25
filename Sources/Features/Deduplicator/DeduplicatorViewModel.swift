@@ -20,7 +20,12 @@ public final class DeduplicatorViewModel: ObservableObject {
     @Published public var lastClonedBytes: Int64 = 0
     @Published public var lastClonedFilesCount: Int = 0
     @Published public var undoAvailable: Bool = false
-    @Published public var selectedFilterCategory: String? = nil
+    @Published public var selectedCategory: DeduplicatorFileCategory = .all
+    @Published public var isScheduleSheetPresented: Bool = false
+
+    public var scheduler: DeduplicatorScheduler {
+        DeduplicatorScheduler.shared
+    }
 
     private var currentScanner: DeduplicatorScanner?
     private let journal = DeduplicatorJournal.shared
@@ -30,7 +35,7 @@ public final class DeduplicatorViewModel: ObservableObject {
     }
 
     public var totalReclaimableBytes: Int64 {
-        groups.filter { $0.isSelected }.reduce(0) { $0 + $1.reclaimableBytes }
+        filteredGroups.filter { $0.isSelected }.reduce(0) { $0 + $1.reclaimableBytes }
     }
 
     public var formattedTotalReclaimable: String {
@@ -38,12 +43,10 @@ public final class DeduplicatorViewModel: ObservableObject {
     }
 
     public var filteredGroups: [DuplicateGroup] {
-        guard let cat = selectedFilterCategory else { return groups }
-        return groups.filter { $0.categoryName == cat }
-    }
-
-    public var availableCategories: [String] {
-        Array(Set(groups.map { $0.categoryName })).sorted()
+        if selectedCategory == .all {
+            return groups
+        }
+        return groups.filter { $0.category == selectedCategory }
     }
 
     public func checkUndoAvailability() {
@@ -60,13 +63,16 @@ public final class DeduplicatorViewModel: ObservableObject {
         statusMessage = L10n.text("Đang bắt đầu quét các thư mục đã chọn...")
         phase = .scanningDirectories(scannedFiles: 0)
 
+        let minSize: Int64 = (selectedCategory == .code) ? 1024 : (64 * 1024)
+
         let options = DeduplicatorScanOptions(
             rootPaths: Array(selectedRoots),
-            minSizeBytes: 64 * 1024,
+            minSizeBytes: minSize,
             skipPaths: [
                 NSHomeDirectory() + "/Library",
                 NSHomeDirectory() + "/.Trash"
-            ]
+            ],
+            category: selectedCategory
         )
 
         let scanner = DeduplicatorScanner(options: options) { [weak self] progressPhase in
@@ -120,7 +126,7 @@ public final class DeduplicatorViewModel: ObservableObject {
 
     public func reclaimSelected() {
         guard !isCloning, !isScanning else { return }
-        let selectedGroups = groups.filter { $0.isSelected }
+        let selectedGroups = filteredGroups.filter { $0.isSelected }
         guard !selectedGroups.isEmpty else { return }
 
         isCloning = true
@@ -136,6 +142,8 @@ public final class DeduplicatorViewModel: ObservableObject {
 
         let totalItems = workItems.count
         phase = .cloning(done: 0, total: totalItems, currentPath: "")
+
+        let selectedIDs = Set(selectedGroups.map { $0.id })
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -170,7 +178,7 @@ public final class DeduplicatorViewModel: ObservableObject {
                 self.checkUndoAvailability()
 
                 // Remove successfully cloned items from UI list
-                self.groups.removeAll { $0.isSelected }
+                self.groups.removeAll { selectedIDs.contains($0.id) }
                 self.statusMessage = L10n.format("Đã hợp nhất thành công %d tệp, tiết kiệm %@ ổ cứng!",
                                                  totalClonedCount,
                                                  ByteSize.string(totalFreedBytes, countStyle: .file))
@@ -197,9 +205,12 @@ public final class DeduplicatorViewModel: ObservableObject {
     }
 
     public func toggleSelectAll() {
-        let allSelected = groups.allSatisfy { $0.isSelected }
+        let allSelected = filteredGroups.allSatisfy { $0.isSelected }
+        let currentFilteredIDs = Set(filteredGroups.map { $0.id })
         for i in 0..<groups.count {
-            groups[i].isSelected = !allSelected
+            if currentFilteredIDs.contains(groups[i].id) {
+                groups[i].isSelected = !allSelected
+            }
         }
     }
 

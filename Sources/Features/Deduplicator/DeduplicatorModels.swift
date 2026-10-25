@@ -36,23 +36,86 @@ public struct DuplicateGroup: Identifiable, Sendable, Codable, Hashable {
         URL(fileURLWithPath: keeper).lastPathComponent
     }
 
-    public var categoryName: String {
+    public var category: DeduplicatorFileCategory {
         let ext = URL(fileURLWithPath: keeper).pathExtension.lowercased()
-        switch ext {
-        case "jpg", "jpeg", "png", "gif", "webp", "heic", "tiff", "svg", "raw":
-            return L10n.text("Hình ảnh")
-        case "mp4", "mov", "mkv", "avi", "webm", "m4v":
-            return L10n.text("Video")
-        case "mp3", "m4a", "wav", "flac", "aac", "ogg":
-            return L10n.text("Âm thanh")
-        case "zip", "tar", "gz", "bz2", "xz", "7z", "dmg", "iso", "pkg":
-            return L10n.text("Tệp nén & Cài đặt")
-        case "pdf", "docx", "xlsx", "pptx", "txt", "md", "csv", "json":
-            return L10n.text("Tài liệu")
-        case "js", "ts", "swift", "py", "rs", "go", "cpp", "c", "h", "java", "kt":
-            return L10n.text("Mã nguồn")
-        default:
-            return L10n.text("Tệp khác")
+        for cat in DeduplicatorFileCategory.allCases where cat != .all {
+            if cat.extensions.contains(ext) {
+                return cat
+            }
+        }
+        return .all
+    }
+
+    public var categoryName: String {
+        category == .all ? L10n.text("Tệp khác") : category.title
+    }
+}
+
+public enum DeduplicatorFileCategory: String, CaseIterable, Identifiable, Codable, Sendable {
+    case all = "Tất cả"
+    case images = "Hình ảnh"
+    case videos = "Video"
+    case code = "Mã nguồn"
+    case documents = "Tài liệu"
+    case archives = "Tệp nén"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        L10n.text(rawValue)
+    }
+
+    public var iconName: String {
+        switch self {
+        case .all: return "square.grid.2x2"
+        case .images: return "photo"
+        case .videos: return "film"
+        case .code: return "curlybraces"
+        case .documents: return "doc.text"
+        case .archives: return "archivebox"
+        }
+    }
+
+    public var extensions: Set<String> {
+        switch self {
+        case .all:
+            return []
+        case .images:
+            return ["jpg", "jpeg", "png", "gif", "webp", "heic", "tiff", "svg", "raw", "cr2", "nef", "arw", "bmp", "ico"]
+        case .videos:
+            return ["mp4", "mov", "mkv", "avi", "webm", "m4v", "flv", "wmv", "3gp", "ts"]
+        case .code:
+            return ["swift", "py", "js", "ts", "tsx", "jsx", "c", "cpp", "h", "hpp", "go", "rs", "java", "kt", "html", "css", "scss", "json", "yaml", "yml", "md", "sh", "zsh", "sql", "rb", "php", "dart", "xml"]
+        case .documents:
+            return ["pdf", "docx", "doc", "xlsx", "xls", "pptx", "ppt", "txt", "rtf", "csv", "pages", "numbers", "key"]
+        case .archives:
+            return ["zip", "tar", "gz", "bz2", "xz", "7z", "dmg", "iso", "pkg", "rar", "tgz"]
+        }
+    }
+
+    public func matches(path: String) -> Bool {
+        if self == .all { return true }
+        let ext = URL(fileURLWithPath: path).pathExtension.lowercased()
+        return extensions.contains(ext)
+    }
+}
+
+public enum DeduplicatorScheduleInterval: String, CaseIterable, Identifiable, Codable, Sendable {
+    case daily = "Hàng ngày"
+    case weekly = "Hàng tuần"
+    case monthly = "Hàng tháng"
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        L10n.text(rawValue)
+    }
+
+    public var timeInterval: TimeInterval {
+        switch self {
+        case .daily: return 86400
+        case .weekly: return 604800
+        case .monthly: return 2592000
         }
     }
 }
@@ -61,6 +124,7 @@ public struct DeduplicatorScanOptions: Sendable {
     public var rootPaths: [String]
     public var minSizeBytes: Int64
     public var skipPaths: Set<String>
+    public var category: DeduplicatorFileCategory
 
     public init(
         rootPaths: [String] = [
@@ -72,11 +136,13 @@ public struct DeduplicatorScanOptions: Sendable {
         skipPaths: Set<String> = [
             NSHomeDirectory() + "/Library",
             NSHomeDirectory() + "/.Trash"
-        ]
+        ],
+        category: DeduplicatorFileCategory = .all
     ) {
         self.rootPaths = rootPaths
         self.minSizeBytes = minSizeBytes
         self.skipPaths = skipPaths
+        self.category = category
     }
 }
 

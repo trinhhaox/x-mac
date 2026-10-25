@@ -38,7 +38,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         QuickLauncher.shared.start()
         SmartProfilesManager.shared.start()
         ClipboardHistory.shared.start()
-        
+        DeduplicatorScheduler.shared.start()
     }
 
     public func applicationDidBecomeActive(_ notification: Notification) {

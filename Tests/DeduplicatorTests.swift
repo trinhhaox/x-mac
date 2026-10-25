@@ -192,4 +192,85 @@ struct DeduplicatorTests {
         #expect(failed == 0)
         #expect(journal.readEntries().isEmpty)
     }
+
+    @Test("DeduplicatorFileCategory matches extensions properly and filters scanning")
+    func deduplicatorFileCategoryFiltersCorrectly() throws {
+        #expect(DeduplicatorFileCategory.images.matches(path: "/path/to/photo.jpg"))
+        #expect(DeduplicatorFileCategory.images.matches(path: "/path/to/photo.PNG"))
+        #expect(!DeduplicatorFileCategory.images.matches(path: "/path/to/script.py"))
+
+        #expect(DeduplicatorFileCategory.videos.matches(path: "/path/to/movie.mp4"))
+        #expect(DeduplicatorFileCategory.videos.matches(path: "/path/to/clip.mov"))
+        #expect(!DeduplicatorFileCategory.videos.matches(path: "/path/to/image.png"))
+
+        #expect(DeduplicatorFileCategory.code.matches(path: "/path/to/main.swift"))
+        #expect(DeduplicatorFileCategory.code.matches(path: "/path/to/index.ts"))
+        #expect(!DeduplicatorFileCategory.code.matches(path: "/path/to/archive.zip"))
+
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let realRootPath = APFSCloneEngine.realPath(root.path)
+        guard APFSCloneEngine.supportsClones(at: realRootPath) else { return }
+
+        let code1 = root.appendingPathComponent("script1.swift")
+        let code2 = root.appendingPathComponent("script2.swift")
+        let img1 = root.appendingPathComponent("pic1.png")
+        let img2 = root.appendingPathComponent("pic2.png")
+
+        let codeContent = String(repeating: "func testCoWClone() -> Bool { return true }\n", count: 200)
+        let imgContent = String(repeating: "PNG DUMMY IMAGE BYTES DATA 1234567890\n", count: 200)
+
+        try createTestFile(at: code1, content: codeContent)
+        try createTestFile(at: code2, content: codeContent)
+        try createTestFile(at: img1, content: imgContent)
+        try createTestFile(at: img2, content: imgContent)
+
+        // Scan only code category
+        let codeOptions = DeduplicatorScanOptions(
+            rootPaths: [realRootPath],
+            minSizeBytes: 1024,
+            skipPaths: [],
+            category: .code
+        )
+        let codeReport = DeduplicatorScanner(options: codeOptions).scan()
+        #expect(codeReport.groups.count == 1)
+        #expect(codeReport.groups.first?.fileName.hasSuffix(".swift") == true)
+
+        // Scan only images category
+        let imgOptions = DeduplicatorScanOptions(
+            rootPaths: [realRootPath],
+            minSizeBytes: 1024,
+            skipPaths: [],
+            category: .images
+        )
+        let imgReport = DeduplicatorScanner(options: imgOptions).scan()
+        #expect(imgReport.groups.count == 1)
+        #expect(imgReport.groups.first?.fileName.hasSuffix(".png") == true)
+    }
+
+    @Test("DeduplicatorScheduler persists preferences and calculates due intervals")
+    @MainActor
+    func deduplicatorSchedulerPersistsAndCalculates() throws {
+        let scheduler = DeduplicatorScheduler.shared
+        let originalEnabled = scheduler.isEnabled
+        let originalInterval = scheduler.interval
+        let originalMinMB = scheduler.minNotifyMB
+
+        defer {
+            scheduler.isEnabled = originalEnabled
+            scheduler.interval = originalInterval
+            scheduler.minNotifyMB = originalMinMB
+        }
+
+        scheduler.isEnabled = true
+        #expect(UserDefaults.standard.bool(forKey: "Deduplicator.Schedule.Enabled") == true)
+
+        scheduler.interval = .daily
+        #expect(UserDefaults.standard.string(forKey: "Deduplicator.Schedule.Interval") == DeduplicatorScheduleInterval.daily.rawValue)
+        #expect(scheduler.interval.timeInterval == 86400)
+
+        scheduler.minNotifyMB = 1000
+        #expect(UserDefaults.standard.integer(forKey: "Deduplicator.Schedule.MinNotifyMB") == 1000)
+    }
 }

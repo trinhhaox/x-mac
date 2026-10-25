@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct DeduplicatorView: View {
     @ObservedObject var vm = DeduplicatorViewModel.shared
+    @ObservedObject var scheduler = DeduplicatorScheduler.shared
     @State private var expandedGroupIDs = Set<String>()
 
     public init() {}
@@ -27,6 +28,17 @@ public struct DeduplicatorView: View {
                         .disabled(vm.isCloning)
                     }
 
+                    Button(action: { vm.isScheduleSheetPresented = true }) {
+                        Label(
+                            scheduler.isEnabled ? "Lịch quét: Bật" : "Lịch quét",
+                            systemImage: scheduler.isEnabled ? "clock.badge.checkmark" : "clock.arrow.2.circlepath"
+                        )
+                    }
+                    .buttonStyle(BrandSecondaryButtonStyle())
+                    .popover(isPresented: $vm.isScheduleSheetPresented) {
+                        DeduplicatorSchedulePopoverView(scheduler: scheduler)
+                    }
+
                     if vm.undoAvailable {
                         Button(action: { vm.undoAll() }) {
                             Label("Hoàn tác (Tách riêng)", systemImage: "arrow.uturn.backward")
@@ -35,6 +47,9 @@ public struct DeduplicatorView: View {
                         .disabled(vm.isCloning || vm.isScanning)
                     }
                 }
+
+                // File Category Filter Bar
+                categoryFilterBar
 
                 // Progress Banner
                 if vm.isScanning || vm.isCloning {
@@ -120,29 +135,30 @@ public struct DeduplicatorView: View {
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.green.opacity(0.15), lineWidth: 1))
 
                 // Duplicate List
-                if !vm.groups.isEmpty {
+                let displayedGroups = vm.filteredGroups
+                if !displayedGroups.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text("Tất cả tệp trùng lặp (\(vm.groups.count) nhóm)")
+                            Text(L10n.format("Tệp trùng lặp (%d nhóm)", displayedGroups.count))
                                 .font(.system(size: 14, weight: .bold))
 
                             Spacer()
 
                             Button(action: { vm.toggleSelectAll() }) {
-                                Text(vm.groups.allSatisfy { $0.isSelected } ? "Bỏ chọn tất cả" : "Chọn tất cả")
+                                Text(displayedGroups.allSatisfy { $0.isSelected } ? "Bỏ chọn tất cả" : "Chọn tất cả")
                                     .font(.system(size: 12, weight: .medium))
                             }
                             .buttonStyle(.link)
                         }
 
-                        ForEach($vm.groups) { $group in
-                            duplicateGroupRow(group: $group)
+                        ForEach(displayedGroups) { group in
+                            duplicateGroupRow(group: group)
                         }
                     }
                 } else if !vm.isScanning {
                     // Empty state
                     VStack(spacing: 14) {
-                        Image(systemName: "doc.on.doc")
+                        Image(systemName: vm.selectedCategory.iconName)
                             .font(.system(size: 42))
                             .foregroundColor(.secondary.opacity(0.6))
                             .padding(.top, 30)
@@ -171,100 +187,266 @@ public struct DeduplicatorView: View {
         .xmacPage()
     }
 
+    // MARK: - Category Filter Bar
+
+    private var categoryFilterBar: some View {
+        HStack(spacing: 8) {
+            ForEach(DeduplicatorFileCategory.allCases) { cat in
+                let isSelected = vm.selectedCategory == cat
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        vm.selectedCategory = cat
+                    }
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: cat.iconName)
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(cat.title)
+                            .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(isSelected ? XmacTheme.cyan.opacity(0.18) : Color.primary.opacity(0.04))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(isSelected ? XmacTheme.cyan.opacity(0.4) : Color.clear, lineWidth: 1)
+                    )
+                    .foregroundColor(isSelected ? XmacTheme.cyan : .secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+        }
+    }
+
     // MARK: - Row Subview
 
-    private func duplicateGroupRow(group: Binding<DuplicateGroup>) -> some View {
-        let isExpanded = expandedGroupIDs.contains(group.wrappedValue.id)
+    private func duplicateGroupRow(group: DuplicateGroup) -> some View {
+        let isExpanded = expandedGroupIDs.contains(group.id)
+        let bindingSelected = Binding<Bool>(
+            get: {
+                if let idx = vm.groups.firstIndex(where: { $0.id == group.id }) {
+                    return vm.groups[idx].isSelected
+                }
+                return false
+            },
+            set: { val in
+                if let idx = vm.groups.firstIndex(where: { $0.id == group.id }) {
+                    vm.groups[idx].isSelected = val
+                }
+            }
+        )
 
         return ModernCard {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 12) {
-                    Toggle("", isOn: group.isSelected)
+                HStack(alignment: .center, spacing: 12) {
+                    Toggle("", isOn: bindingSelected)
                         .labelsHidden()
                         .toggleStyle(.checkbox)
 
-                    Image(systemName: "doc.fill")
-                        .font(.system(size: 20))
+                    Image(systemName: group.category.iconName)
+                        .font(.system(size: 15))
                         .foregroundColor(XmacTheme.cyan)
+                        .frame(width: 24, height: 24)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(XmacTheme.cyan.opacity(0.12)))
 
                     VStack(alignment: .leading, spacing: 2) {
+                        Text(group.fileName)
+                            .font(.system(size: 13, weight: .semibold))
+                            .lineLimit(1)
+
                         HStack(spacing: 6) {
-                            Text(group.wrappedValue.fileName)
-                                .font(.system(size: 13, weight: .semibold))
-                                .lineLimit(1)
-                            Text(group.wrappedValue.categoryName)
+                            Text(group.categoryName)
                                 .font(.system(size: 10, weight: .medium))
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Capsule().fill(.white.opacity(0.1)))
-                        }
+                                .background(RoundedRectangle(cornerRadius: 4).fill(Color.primary.opacity(0.06)))
 
-                        Text(L10n.format("Bản gốc: %@", group.wrappedValue.keeper))
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                            Text(L10n.format("%d bản sao trùng lặp", group.duplicates.count))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+
+                            Text(verbatim: "•")
+                                .foregroundColor(.secondary.opacity(0.5))
+
+                            Text(L10n.format("Mỗi tệp: %@", group.formattedSize))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
                     }
 
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(L10n.format("+%@", group.wrappedValue.formattedReclaimable))
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                        Text(L10n.format("Tiết kiệm %@", group.formattedReclaimable))
+                            .font(.system(size: 13, weight: .bold))
                             .foregroundColor(Color.green)
-                        Text(L10n.format("%d bản sao", group.wrappedValue.duplicates.count))
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
 
-                    Button(action: {
-                        if isExpanded {
-                            expandedGroupIDs.remove(group.wrappedValue.id)
-                        } else {
-                            expandedGroupIDs.insert(group.wrappedValue.id)
+                        Button(action: {
+                            if isExpanded {
+                                expandedGroupIDs.remove(group.id)
+                            } else {
+                                expandedGroupIDs.insert(group.id)
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Text(isExpanded ? "Thu gọn" : "Xem chi tiết")
+                                    .font(.system(size: 11))
+                                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                    .font(.system(size: 9))
+                            }
                         }
-                    }) {
-                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.secondary)
-                            .frame(width: 24, height: 24)
+                        .buttonStyle(.link)
                     }
-                    .buttonStyle(.plain)
                 }
 
                 // Expanded duplicates list
                 if isExpanded {
-                    Divider().padding(.vertical, 2)
+                    Divider()
+                        .padding(.vertical, 2)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Các bản sao sẽ được chia sẻ CoW:")
+                        Text("Bản gốc giữ lại (Keeper):")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.secondary)
 
-                        ForEach(group.wrappedValue.duplicates, id: \.self) { dupPath in
-                            HStack(spacing: 8) {
-                                Image(systemName: "arrow.turn.down.right")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
+                        filePathRow(path: group.keeper, isKeeper: true)
 
-                                Text(dupPath)
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
+                        Text("Các bản sao sẽ được hợp nhất CoW:")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.secondary)
+                            .padding(.top, 4)
 
-                                Spacer()
-
-                                Button("Xem") {
-                                    vm.revealInFinder(dupPath)
-                                }
-                                .buttonStyle(.link)
-                                .font(.system(size: 11))
-                            }
-                            .padding(.leading, 12)
+                        ForEach(group.duplicates, id: \.self) { dupPath in
+                            filePathRow(path: dupPath, isKeeper: false)
                         }
                     }
+                    .padding(.leading, 32)
                 }
             }
         }
+    }
+
+    private func filePathRow(path: String, isKeeper: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: isKeeper ? "star.fill" : "doc.on.doc.fill")
+                .font(.system(size: 11))
+                .foregroundColor(isKeeper ? .yellow : XmacTheme.cyan)
+
+            Text(path)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(.primary.opacity(0.85))
+                .lineLimit(1)
+                .truncationMode(.middle)
+
+            Spacer()
+
+            Button(action: { vm.revealInFinder(path) }) {
+                Image(systemName: "folder")
+                    .font(.system(size: 11))
+            }
+            .buttonStyle(.plain)
+            .help("Mở trong Finder")
+        }
+    }
+}
+
+// MARK: - Schedule Popover View
+
+public struct DeduplicatorSchedulePopoverView: View {
+    @ObservedObject var scheduler: DeduplicatorScheduler
+    @Environment(\.dismiss) private var dismiss
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Label("Lập lịch quét tự động", systemImage: "clock.arrow.2.circlepath")
+                    .font(.system(size: 14, weight: .bold))
+                Spacer()
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Divider()
+
+            Toggle("Bật tự động quét định kỳ", isOn: $scheduler.isEnabled)
+                .toggleStyle(.switch)
+                .font(.system(size: 13, weight: .medium))
+
+            if scheduler.isEnabled {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Chu kỳ quét:")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Picker("", selection: $scheduler.interval) {
+                            ForEach(DeduplicatorScheduleInterval.allCases) { interval in
+                                Text(interval.title).tag(interval)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 140)
+                    }
+
+                    HStack {
+                        Text("Chỉ thông báo khi tiết kiệm từ:")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Picker("", selection: $scheduler.minNotifyMB) {
+                            Text("500 MB").tag(500)
+                            Text("1 GB").tag(1000)
+                            Text("2 GB").tag(2000)
+                            Text("5 GB").tag(5000)
+                        }
+                        .labelsHidden()
+                        .frame(width: 140)
+                    }
+
+                    if let lastDate = scheduler.lastScanDate {
+                        HStack {
+                            Text("Lần quét gần nhất:")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text(lastDate.formatted(date: .abbreviated, time: .shortened))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Button(action: {
+                        scheduler.runBackgroundScan()
+                    }) {
+                        HStack {
+                            if scheduler.isBackgroundScanning {
+                                ProgressView().scaleEffect(0.6).frame(width: 14, height: 14)
+                                Text("Đang quét nền...")
+                            } else {
+                                Image(systemName: "play.fill").font(.system(size: 10))
+                                Text("Chạy quét nền thử nghiệm ngay")
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(BrandSecondaryButtonStyle())
+                    .disabled(scheduler.isBackgroundScanning)
+                }
+                .padding(.top, 4)
+            }
+
+            Text("Quét chạy hoàn toàn trong nền khi máy rảnh rỗi. Khi phát hiện dung lượng trùng lặp đáng kể, Xmac sẽ gửi thông báo để bạn quyết định hợp nhất.")
+                .font(.system(size: 11))
+                .foregroundColor(.secondary.opacity(0.8))
+        }
+        .padding(18)
+        .frame(width: 340)
     }
 }
