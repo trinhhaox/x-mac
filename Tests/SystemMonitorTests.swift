@@ -141,10 +141,15 @@ struct SystemMonitorTests {
         cursor = entry.ifa_next
       }
     }
-    try await Task.sleep(nanoseconds: 100_000_000)
-    let next = SystemProbe.read()
+    // The kernel's CPU tick counters can stay unchanged for a short interval, which makes
+    // usage(since:) nil; keep sampling up to ~2 s instead of trusting one 100 ms window.
     let initialCPU = try #require(first.cpu)
-    let cpu = try #require(next.cpu?.usage(since: initialCPU))
+    var sampled: Double?
+    for _ in 0..<20 where sampled == nil {
+      try await Task.sleep(nanoseconds: 100_000_000)
+      sampled = SystemProbe.read().cpu?.usage(since: initialCPU)
+    }
+    let cpu = try #require(sampled)
     #expect((0...100).contains(cpu))
     print(
       "System monitor live: CPU \(cpu)%, RAM \(first.memoryUsed ?? 0), network interfaces \(first.network?.keys.sorted() ?? [])"
