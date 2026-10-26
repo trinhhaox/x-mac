@@ -12,6 +12,7 @@ public class SoundEffectManager {
         case mount
         case eject
         case error
+        case done
     }
     
     private init() {}
@@ -35,6 +36,8 @@ public class SoundEffectManager {
                 NSSound(named: "Bottle")?.play()
             case .error:
                 NSSound(named: "Basso")?.play()
+            case .done:
+                NSSound(named: "Hero")?.play()
             }
         }
     }

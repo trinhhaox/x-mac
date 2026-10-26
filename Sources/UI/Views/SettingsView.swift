@@ -196,6 +196,8 @@ public struct SettingsView: View {
                     }
                 }
                 
+                ConverterSettingsCard()
+
                 // About App Card
                 ModernCard {
                     HStack(spacing: 14) {

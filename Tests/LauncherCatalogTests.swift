@@ -10,6 +10,13 @@ import Testing
         #expect(LauncherEntry.matching(LauncherEntry.commands, query: "not-a-command").isEmpty)
     }
 
+    @Test func converterEntriesAreDiscoverable() {
+        let tab = LauncherEntry.matching(LauncherEntry.commands, query: "chuyen doi tep")
+        #expect(tab.first?.destination == .tab(.converter))
+        let selection = LauncherEntry.matching(LauncherEntry.commands, query: "chuyen doi tep dang chon finder")
+        #expect(selection.map(\.destination) == [.convertFinderSelection])
+    }
+
     @Test func rankingPrefersExactThenPrefixAndUsesAllWords() {
         let entries = [
             LauncherEntry(id: "1", title: "My Downloads", subtitle: "App", icon: "app", destination: .application("/a")),

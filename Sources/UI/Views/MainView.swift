@@ -21,6 +21,7 @@ public struct MainView: View {
                 case .fileSearch: FileSearchView()
                 case .clipboard: ClipboardHistoryView()
                 case .organizer: DownloadsOrganizerView()
+                case .converter: ConverterView()
                 case .cutPaste: CutPasteView()
                 case .diskNTFS: DiskNTFSView()
                 case .vietnameseIME: VietnameseIMEView()
@@ -161,7 +162,7 @@ public struct MainView: View {
     private var sidebarSections: [(title: String, tabs: [NavigationTab])] {
         [
             ("TỔNG QUAN", [.overview, .systemMonitor]),
-            ("CÔNG VIỆC", [.downloads, .fileSearch, .clipboard, .organizer]),
+            ("CÔNG VIỆC", [.downloads, .fileSearch, .clipboard, .organizer, .converter]),
             ("HỆ THỐNG", [.cutPaste, .diskNTFS, .vietnameseIME, .smartProfiles, .junkCleaner, .deduplicator, .appUninstaller])
         ]
     }

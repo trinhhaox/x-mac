@@ -4,6 +4,7 @@ struct LauncherEntry: Identifiable, Equatable {
     enum Destination: Equatable {
         case tab(NavigationTab)
         case toggleLanguage
+        case convertFinderSelection
         case application(String)
         case file(String)
         case calculation(String)
@@ -20,7 +21,10 @@ struct LauncherEntry: Identifiable, Equatable {
                           subtitle: L10n.text("Mở trong Xmac"), icon: $0.iconName, destination: .tab($0))
         } + [LauncherEntry(id: "language", title: L10n.text("Chuyển Tiếng Việt / English"),
                            subtitle: L10n.text("Bật hoặc tắt bộ gõ • Cần quyền Trợ năng"),
-                           icon: "character.bubble", destination: .toggleLanguage)]
+                           icon: "character.bubble", destination: .toggleLanguage),
+                LauncherEntry(id: "convert-finder-selection", title: L10n.text("Chuyển đổi tệp đang chọn trong Finder"),
+                              subtitle: L10n.text("Chọn định dạng đích cho tệp đang chọn"),
+                              icon: NavigationTab.converter.iconName, destination: .convertFinderSelection)]
     }
 
     static func matching(_ entries: [LauncherEntry], query: String, limit: Int = 30) -> [LauncherEntry] {

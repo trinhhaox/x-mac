@@ -380,12 +380,12 @@ public final class DownloadManager: NSObject, ObservableObject, URLSessionDownlo
 
     /// Tags the file the way Safari does, so Gatekeeper checks downloaded
     /// apps, scripts and installers on first open.
-    static func markAsDownloadedFromInternet(_ fileURL: URL, sourceURL: String) {
+    static func markAsDownloadedFromInternet(_ fileURL: URL, sourceURL: String?) {
         var properties: [String: Any] = [
             kLSQuarantineAgentNameKey as String: "Xmac",
             kLSQuarantineTypeKey as String: kLSQuarantineTypeWebDownload as String
         ]
-        if let origin = URL(string: sourceURL) {
+        if let origin = sourceURL.flatMap({ URL(string: $0) }) {
             properties[kLSQuarantineDataURLKey as String] = origin
         }
         var url = fileURL

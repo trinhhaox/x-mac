@@ -295,11 +295,28 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
                 AppState.shared.selectedTab = .settings
                 AppDelegate.shared.createMainWindow()
             }
+        case .convertFinderSelection: convertFinderSelection()
         case .application(let path), .file(let path): NSWorkspace.shared.open(URL(fileURLWithPath: path))
         case .calculation(let value):
             NSPasteboard.general.clearContents()
             if NSPasteboard.general.setString(value, forType: .string) {
                 FinderCutPasteManager.shared.handleCopy()
+            }
+        }
+    }
+
+    /// Finder's selection comes from AppleScript, which can block and must stay on one thread.
+    private func convertFinderSelection() {
+        let point = NSEvent.mouseLocation
+        FinderScriptThread.shared.async {
+            let urls = FinderBridge.getSelectedFiles().map { URL(fileURLWithPath: $0) }
+            Task { @MainActor in
+                if urls.isEmpty {
+                    AppState.shared.selectedTab = .converter
+                    AppDelegate.shared.createMainWindow()
+                } else {
+                    ConverterTargetPanel.shared.show(urls: urls, near: point)
+                }
             }
         }
     }

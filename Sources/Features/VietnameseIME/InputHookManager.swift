@@ -136,6 +136,11 @@ public class InputHookManager: ObservableObject {
 
         // Xử lý phím tắt chuyển nhanh E/V (Control + Shift)
         if type == .flagsChanged {
+            // ⌃ pressed mid-drag opens the file donut; a following ⇧ must not flip E/V.
+            if DonutActivity.isVisible.withLock({ $0 }) {
+                languageSwitch.reset()
+                return Unmanaged.passUnretained(event)
+            }
             let flags = event.flags
             let shouldToggle = languageSwitch.handleFlagsChanged(
                 control: flags.contains(.maskControl),

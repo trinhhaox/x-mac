@@ -97,6 +97,15 @@ Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
 
 Chi tiết: [`docs/DEDUPLICATOR.md`](docs/DEDUPLICATOR.md).
 
+### 8. 🔄 Chuyển Đổi Tệp
+- **Không cần cài thêm**: ảnh (JPG, PNG, HEIC, TIFF, GIF, BMP, ICNS), ảnh → PDF, PDF → ảnh/gộp/nén, văn bản (DOCX, RTF, ODT, HTML, TXT), video/âm thanh (MP4, MOV, HEVC, 720p, M4A), nén ZIP và giải nén ZIP/TAR/7Z/ISO, phụ đề (SRT, VTT, ASS).
+- **Khi máy đã cài sẵn**: `ffmpeg` (`brew install ffmpeg`) mở thêm MKV, WEBM, AVI, GIF, MP3, FLAC, OGG, OPUS…; LibreOffice mở thêm Word/Excel/PowerPoint/Pages/Numbers/Keynote → PDF và DOC ↔ DOCX, XLS ↔ XLSX, PPT ↔ PPTX. Xmac chỉ gọi các công cụ này, không đóng gói kèm.
+- **Lưu cạnh tệp gốc**, không ghi đè (tự thêm hậu tố ` 1`, ` 2`); lỗi hoặc hủy thì không để lại tệp hỏng.
+- **Lối vào**: tab "Chuyển đổi tệp", menu chuột phải Finder › Dịch vụ › "Chuyển đổi bằng Xmac", Mở nhanh "Chuyển đổi tệp đang chọn trong Finder", thả tệp lên icon Menu Bar.
+- **Donut ⌃ + kéo (thử nghiệm, mặc định tắt)**: đang kéo tệp thì nhấn ⌃, vòng định dạng hiện ngay tại con trỏ; thả lên một ô để chuyển đổi.
+
+Chi tiết: [`docs/CONVERTER.md`](docs/CONVERTER.md).
+
 ---
 
 ## 🖥 Giao Diện Người Dùng Hiện Đại (macOS Native)
@@ -192,6 +201,8 @@ Xmac/
 │   │   ├── PermissionsManager.swift   # Kiểm tra và cấp quyền hệ thống
 │   │   └── SoundEffectManager.swift   # Hiệu ứng âm thanh tương tác
 │   ├── Features/
+│   │   ├── Converter/                     # Chuyển đổi tệp: registry, hàng đợi, 9 bộ chuyển đổi
+│   │   │   └── Donut/                     # Vòng định dạng ⌃ + kéo tại con trỏ
 │   │   ├── Downloads/
 │   │   │   └── DownloadManager.swift      # HTTP/HTTPS download engine, lịch sử & an toàn tên tệp
 │   │   ├── FileSearch/

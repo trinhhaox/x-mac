@@ -33,6 +33,26 @@
 	<string>Xmac cần quyền Accessibility để nhận diện phím tắt di chuyển file trong Finder và gõ Tiếng Việt.</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Xmac cần quyền điều khiển Finder để hỗ trợ tính năng Cắt và Dán file (⌘X, ⌘V), và hiển thị hộp thoại yêu cầu quyền quản trị khi gắn kết ổ NTFS ở chế độ ghi.</string>
+	<key>NSServices</key>
+	<array>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>Chuyển đổi bằng Xmac</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>convertFiles</string>
+			<key>NSPortName</key>
+			<string>Xmac</string>
+			<key>NSRequiredContext</key>
+			<dict/>
+			<key>NSSendFileTypes</key>
+			<array>
+				<string>public.item</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 </dict>

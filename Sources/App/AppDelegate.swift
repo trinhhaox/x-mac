@@ -25,7 +25,15 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             EnglishLexicon.warmUp()
         }
         
-        // 3. Yêu cầu quyền thông báo
+        DispatchQueue.global(qos: .utility).async {
+            ConverterWorkspace.sweepStaleTempDirectories()
+            BrowserDropCoordinator.sweepStaleScratch()
+        }
+
+        // 3. Yêu cầu quyền thông báo và định tuyến thao tác bấm thông báo
+        NotificationRouter.shared.register()
+        NSApp.servicesProvider = ConverterServiceProvider.shared
+        NSUpdateDynamicServices()
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if let error = error {
                 NSLog("Xmac Notification Auth error: \(error)")
@@ -39,6 +47,8 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         SmartProfilesManager.shared.start()
         ClipboardHistory.shared.start()
         DeduplicatorScheduler.shared.start()
+        DonutController.shared.start()
+        WatchFolderMonitor.shared.start()
     }
 
     public func applicationDidBecomeActive(_ notification: Notification) {
@@ -104,8 +114,11 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         QuickLauncher.shared.stop()
         SmartProfilesManager.shared.stop()
         ClipboardHistory.shared.stop()
+        DonutController.shared.stop()
+        WatchFolderMonitor.shared.stop()
         DownloadsOrganizer.shared.stopWatching()
         DownloadManager.shared.shutdown()
         DownloadEnvironment.shared.stop()
+        ConverterManager.shared.shutdown()
     }
 }

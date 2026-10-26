@@ -709,3 +709,134 @@
 "Bản gốc giữ lại (Keeper):" = "Keeper file (Original):";
 "Các bản sao sẽ được hợp nhất CoW:" = "Duplicates to be CoW merged:";
 "%d bản sao trùng lặp" = "%d duplicate copies";
+
+
+/* Converter */
+"Ảnh PNG theo trang" = "PNG images per page";
+"Ảnh JPG theo trang" = "JPG images per page";
+"Gộp các PDF" = "Merge PDFs";
+"Nén PDF" = "Compress PDF";
+"Gộp ảnh thành một PDF" = "Combine images into one PDF";
+"Phụ đề SRT" = "SRT subtitles";
+"Phụ đề VTT" = "VTT subtitles";
+"Phụ đề ASS" = "ASS subtitles";
+"Không đọc được tệp" = "Could not read the file";
+"Không ghi được tệp đầu ra" = "Could not write the output file";
+"PDF được khóa bằng mật khẩu" = "The PDF is password protected";
+"Cần ít nhất 2 tệp PDF" = "At least 2 PDF files are required";
+"Không tìm thấy dòng phụ đề" = "No subtitle lines found";
+"Đã chuyển đổi %d tệp" = "Converted %d files";
+"Đã chuyển đổi %d tệp, lỗi %d tệp" = "Converted %d files, %d failed";
+"Thiếu công cụ %@" = "Missing tool: %@";
+
+/* Converter formats */
+"PDF" = "PDF";
+"Word (DOCX)" = "Word (DOCX)";
+"Word 97-2003 (DOC)" = "Word 97-2003 (DOC)";
+"Excel (XLSX)" = "Excel (XLSX)";
+"Excel 97-2003 (XLS)" = "Excel 97-2003 (XLS)";
+"PowerPoint (PPTX)" = "PowerPoint (PPTX)";
+"PowerPoint 97-2003 (PPT)" = "PowerPoint 97-2003 (PPT)";
+"RTF" = "RTF";
+"OpenDocument (ODT)" = "OpenDocument (ODT)";
+"HTML" = "HTML";
+"Văn bản thuần (TXT)" = "Plain text (TXT)";
+"MP4 (H.264)" = "MP4 (H.264)";
+"MP4 (HEVC)" = "MP4 (HEVC)";
+"MP4 720p" = "MP4 720p";
+"MOV" = "MOV";
+"M4A (AAC)" = "M4A (AAC)";
+"WebM (VP9)" = "WebM (VP9)";
+"MKV" = "MKV";
+"GIF động" = "Animated GIF";
+"MP3" = "MP3";
+"FLAC" = "FLAC";
+"OGG (Vorbis)" = "OGG (Vorbis)";
+"OPUS" = "OPUS";
+"WAV" = "WAV";
+"Nén ZIP" = "Compress to ZIP";
+"Giải nén" = "Extract";
+
+/* Converter UI */
+"Chuyển đổi tệp" = "Convert files";
+"Thả tệp, chọn định dạng đích. Mọi thứ chạy ngay trên máy của bạn." = "Drop files and pick a target format. Everything runs on your Mac.";
+"Thả tệp vào đây để chuyển đổi" = "Drop files here to convert";
+"Chọn tệp…" = "Choose files…";
+"Chọn" = "Choose";
+"Chuyển %@ thành" = "Convert %@ to";
+"Bỏ chọn" = "Clear selection";
+"%d tệp" = "%d files";
+"Không có định dạng đích phù hợp cho các tệp này." = "No target format fits these files.";
+"Ảnh" = "Images";
+"Nén & giải nén" = "Archives";
+"Âm thanh & video" = "Audio & video";
+"Phụ đề" = "Subtitles";
+"Cài ffmpeg: brew install ffmpeg" = "Install ffmpeg: brew install ffmpeg";
+"Cài LibreOffice để chuyển đổi thêm định dạng Office" = "Install LibreOffice to convert more Office formats";
+"Tác vụ chuyển đổi" = "Conversion jobs";
+"Đang chờ" = "Waiting";
+"Hủy tất cả" = "Cancel all";
+"Xóa mục đã xong" = "Clear finished";
+"Gần đây" = "Recent";
+"Công cụ ngoài" = "External tools";
+"Cần cho video, âm thanh nâng cao và tệp Office. Xmac tự tìm; bạn cũng có thể chọn đường dẫn riêng." = "Needed for video, advanced audio and Office files. Xmac finds them automatically; you can also pick a custom path.";
+"Chưa cài" = "Not installed";
+"Đường dẫn đã chọn không dùng được" = "The chosen path is not usable";
+"Chọn…" = "Choose…";
+"Đặt lại" = "Reset";
+"Tệp này không phải chương trình chạy được" = "This file is not an executable program";
+"Mặc định áp dụng cho mọi lần chuyển đổi." = "Defaults for every conversion.";
+"Thông báo khi chuyển đổi xong" = "Notify when conversion finishes";
+"Chất lượng ảnh JPG/HEIC: %d%%" = "JPG/HEIC image quality: %d%%";
+"Cạnh dài tối đa của ảnh" = "Maximum image long edge";
+"Độ phân giải khi xuất PDF ra ảnh (DPI)" = "PDF to image resolution (DPI)";
+"Chiều cao video tối đa" = "Maximum video height";
+"Gốc" = "Original";
+"Chuyển đổi tệp đang chọn trong Finder" = "Convert the file selected in Finder";
+"Chọn định dạng đích cho tệp đang chọn" = "Pick a target format for the selected files";
+
+/* Converter donut */
+"Vòng chọn khi kéo tệp + ⌃ (thử nghiệm)" = "Drag-and-⌃ format ring (experimental)";
+"Đang kéo tệp, nhấn ⌃ để hiện vòng định dạng quanh con trỏ rồi thả vào ô muốn chuyển." = "While dragging files, press ⌃ to show a format ring around the pointer, then drop on the target you want.";
+"Khác…" = "More…";
+
+/* Converter extensions */
+"Chưa chọn" = "Not selected";
+"Thêm quy tắc…" = "Add rule…";
+"Tên thư mục con không hợp lệ" = "Invalid subfolder name";
+"Xoá" = "Delete";
+"lưu vào “%@”" = "saves to “%@”";
+"Để trống: lưu cạnh tệp gốc" = "Leave empty: save next to the original";
+"Thư mục theo dõi" = "Watched folders";
+"Chỉ xử lý tệp mới xuất hiện sau khi bật. Tệp gốc luôn được giữ lại." = "Only new files that appear after turning this on are processed. Originals are always kept.";
+"Tự chuyển đổi tệp mới trong thư mục theo dõi" = "Automatically convert new files in watched folders";
+"Thêm quy tắc" = "Add rule";
+"Tệp mới thuộc loại đã chọn sẽ được chuyển sang định dạng đích." = "New files of the chosen type are converted to the target format.";
+"Loại tệp vào" = "Input file type";
+"Chuyển thành" = "Convert to";
+"Thư mục con chứa kết quả (tuỳ chọn)" = "Output subfolder (optional)";
+"Chưa nhập khoảng trang" = "No page range entered";
+"Khoảng trang (vd. 1-3, 5)" = "Page range (e.g. 1-3, 5)";
+"Khoảng trang không hợp lệ: %@" = "Invalid page range: %@";
+"Khoảng trang vượt quá số trang của tệp" = "Page range is beyond the file's page count";
+"[OCR: macOS này chưa hỗ trợ tiếng Việt, chỉ nhận dạng tiếng Anh]" = "[OCR: this macOS does not support Vietnamese; recognizing English only]";
+"Tách từng trang" = "Split into single pages";
+"Trích trang đã chọn" = "Extract selected pages";
+"Văn bản (OCR)" = "Text (OCR)";
+"Unicode (từ TCVN3)" = "Unicode (from TCVN3)";
+"Unicode (từ VNI)" = "Unicode (from VNI)";
+"DOCX Unicode (sửa phông VNI/TCVN3)" = "Unicode DOCX (fix VNI/TCVN3 fonts)";
+"Không tìm thấy phông VNI/TCVN3 trong tệp" = "No VNI/TCVN3 fonts found in the file";
+
+/* Converter browser drops */
+"Đang tải…" = "Downloading…";
+"Tệp kéo từ trình duyệt" = "Files dragged from a browser";
+"Lưu vào Tải về" = "Save to Downloads";
+"Chỉ giữ tệp đã chuyển" = "Keep only converted files";
+"Không tải được tệp từ trình duyệt: %@" = "Could not fetch the file from the browser: %@";
+"Không đọc được nội dung đã thả" = "Could not read the dropped content";
+"Máy chủ trả về lỗi %d" = "The server returned error %d";
+"Tệp lớn hơn 2 GB" = "The file is larger than 2 GB";
+"Liên kết chuyển hướng sang địa chỉ không hợp lệ" = "The link redirects to an unsupported address";
+"Trình duyệt không cung cấp tệp nào" = "The browser provided no file";
+"Chỉ hỗ trợ liên kết https" = "Only https links are supported";

@@ -31,6 +31,7 @@ public class StatusBarController: NSObject, NSMenuDelegate, NSPopoverDelegate {
         statusItem?.button?.target = self
         statusItem?.button?.action = #selector(toggleDashboard)
         statusItem?.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        installFileDropTarget()
         
         updateStatusBarTitle()
         
@@ -40,6 +41,21 @@ public class StatusBarController: NSObject, NSMenuDelegate, NSPopoverDelegate {
     }
 
     func closeDashboard() { dashboard.performClose(nil) }
+
+    private func installFileDropTarget() {
+        guard let button = statusItem?.button else { return }
+        let dropView = StatusBarDropView(frame: button.bounds)
+        dropView.autoresizingMask = [.width, .height]
+        dropView.onDrop = { [weak self] payload, point in
+            self?.closeDashboard()
+            Task { @MainActor in
+                let drops = BrowserDropCoordinator.shared
+                guard let inputs = await drops.fetch(payload) else { return }
+                drops.deliver(inputs) { ConverterTargetPanel.shared.show(inputs: $0, near: point) }
+            }
+        }
+        button.addSubview(dropView)
+    }
 
     @objc private func toggleDashboard() {
         guard let button = statusItem?.button else { return }
