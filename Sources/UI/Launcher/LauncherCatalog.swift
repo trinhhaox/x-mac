@@ -5,6 +5,7 @@ struct LauncherEntry: Identifiable, Equatable {
         case tab(NavigationTab)
         case toggleLanguage
         case convertFinderSelection
+        case captureScreenText
         case application(String)
         case file(String)
         case calculation(String)
@@ -24,7 +25,10 @@ struct LauncherEntry: Identifiable, Equatable {
                            icon: "character.bubble", destination: .toggleLanguage),
                 LauncherEntry(id: "convert-finder-selection", title: L10n.text("Chuyển đổi tệp đang chọn trong Finder"),
                               subtitle: L10n.text("Chọn định dạng đích cho tệp đang chọn"),
-                              icon: NavigationTab.converter.iconName, destination: .convertFinderSelection)]
+                              icon: NavigationTab.converter.iconName, destination: .convertFinderSelection),
+                LauncherEntry(id: "capture-screen-text", title: L10n.text("Nhận chữ từ vùng màn hình"),
+                              subtitle: L10n.text("Chọn vùng, nhận dạng chữ (OCR) và chép vào bộ nhớ tạm"),
+                              icon: "text.viewfinder", destination: .captureScreenText)]
     }
 
     static func matching(_ entries: [LauncherEntry], query: String, limit: Int = 30) -> [LauncherEntry] {

@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import UniformTypeIdentifiers
 
@@ -36,6 +37,9 @@ public struct ConversionPreset: Codable, Equatable {
     public var maxVideoHeight: Int?
     /// Page range for "Trích trang đã chọn", e.g. "1-3, 5, 8-"; nil/blank means not set.
     public var pdfPageRange: String?
+    /// Normalized (0...1, top-left origin, in EXIF-oriented space) crop applied before resizing.
+    /// Set per job by the manager; never persisted with the saved presets.
+    public var cropRect: CGRect?
 
     public init() {}
 }

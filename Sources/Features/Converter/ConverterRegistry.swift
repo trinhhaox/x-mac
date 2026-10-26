@@ -28,8 +28,14 @@ public struct ConverterRegistry {
             DocumentConverter(),
             MediaConverter(),
             ArchiveConverter(),
+            EPUBConverter(),
+            FontConverter(),
+            Model3DConverter(),
+            GeoConverter(),
+            IWorkConverter(),
             OfficeConverter(locator: locator),
-            FFmpegConverter(locator: locator)
+            FFmpegConverter(locator: locator),
+            CalibreConverter(locator: locator)
         ]
         return ConverterRegistry(converters: converters, locator: locator)
     }

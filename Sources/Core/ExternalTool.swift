@@ -4,9 +4,16 @@ public enum ExternalTool: String, CaseIterable {
     case ffmpeg
     case ffprobe
     case soffice
+    case ebookConvert = "ebook-convert"
 
     var defaultCandidates: [String] {
         switch self {
+        case .ebookConvert:
+            return [
+                "/Applications/calibre.app/Contents/MacOS/ebook-convert",
+                "/opt/homebrew/bin/ebook-convert",
+                "/usr/local/bin/ebook-convert"
+            ]
         case .ffmpeg, .ffprobe:
             return ["/opt/homebrew/bin/\(rawValue)", "/usr/local/bin/\(rawValue)"]
         case .soffice:

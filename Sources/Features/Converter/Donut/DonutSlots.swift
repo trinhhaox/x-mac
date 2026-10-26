@@ -12,9 +12,8 @@ enum DonutSlot: Equatable {
         }
     }
 
-    /// At most `maxSlots` slices; with more targets the last slice is "Khác…".
-    static func make(targets: [ConversionTarget], recentIDs: [String]) -> [DonutSlot] {
-        let ordered = DonutRecentTargets.ordered(targets, recentIDs: recentIDs)
+    /// One face of an already ordered list: at most `maxSlots` slices; with more targets the last slice is "Khác…".
+    static func face(_ ordered: [ConversionTarget]) -> [DonutSlot] {
         guard ordered.count > DonutGeometry.maxSlots else { return ordered.map(DonutSlot.target) }
         return ordered.prefix(DonutGeometry.maxSlots - 1).map(DonutSlot.target) + [.more]
     }

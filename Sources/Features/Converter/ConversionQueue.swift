@@ -29,6 +29,7 @@ public actor ConversionQueue {
 
     private let registry: ConverterRegistry
     private let reserver: OutputPathReserver
+    private let journal: PartialFileJournal
     private let maxConcurrent: Int
     private let onEvent: EventHandler
     private var pending: [Job] = []
@@ -37,11 +38,13 @@ public actor ConversionQueue {
     public init(
         registry: ConverterRegistry,
         reserver: OutputPathReserver = .shared,
+        journal: PartialFileJournal = .shared,
         maxConcurrent: Int = min(4, ProcessInfo.processInfo.activeProcessorCount),
         onEvent: @escaping EventHandler
     ) {
         self.registry = registry
         self.reserver = reserver
+        self.journal = journal
         self.maxConcurrent = max(1, maxConcurrent)
         self.onEvent = onEvent
     }
@@ -93,11 +96,12 @@ public actor ConversionQueue {
 
     private func start(_ job: Job) {
         let reserver = reserver
+        let journal = journal
         let onEvent = onEvent
         // Detached: converters may do blocking work and must not occupy this actor.
         let task = Task.detached { [weak self] in
             onEvent(job.id, .started)
-            let result = await Self.execute(job, reserver: reserver) { onEvent(job.id, .progress($0)) }
+            let result = await Self.execute(job, reserver: reserver, journal: journal) { onEvent(job.id, .progress($0)) }
             await self?.didFinish(job.id, result)
         }
         running[job.id] = (task, job.isSerial)
@@ -114,7 +118,7 @@ public actor ConversionQueue {
     }
 
     private static func execute(
-        _ job: Job, reserver: OutputPathReserver, progress: @escaping (Double) -> Void
+        _ job: Job, reserver: OutputPathReserver, journal: PartialFileJournal, progress: @escaping (Double) -> Void
     ) async -> Result<URL, Error> {
         let first = job.inputs[0]
         let fileExtension = job.target.fileExtension
@@ -130,6 +134,8 @@ public actor ConversionQueue {
             in: directory
         )
         let partialURL = partialURL(for: finalURL, fileExtension: fileExtension)
+        journal.record(partialURL)
+        defer { journal.remove(partialURL) }
         do {
             try? FileManager.default.removeItem(at: partialURL)
             let request = ConversionRequest(inputs: job.inputs, target: job.target, preset: job.preset, outputURL: partialURL)

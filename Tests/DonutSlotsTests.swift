@@ -10,13 +10,13 @@ import Testing
     private func titles(_ slots: [DonutSlot]) -> [String] { slots.map(\.title) }
 
     @Test func upToEightTargetsGetOneSliceEach() {
-        let slots = DonutSlot.make(targets: targets(8), recentIDs: [])
+        let slots = DonutFaces(targets: targets(8), recentIDs: []).faces[0]
         #expect(slots.count == 8)
         #expect(!slots.contains(.more))
     }
 
     @Test func moreThanEightTurnsLastSliceIntoMore() {
-        let slots = DonutSlot.make(targets: targets(12), recentIDs: [])
+        let slots = DonutFaces(targets: targets(12), recentIDs: []).faces[0]
         #expect(slots.count == DonutGeometry.maxSlots)
         #expect(slots.last == .more)
         #expect(titles(slots).last == "Khác…")
@@ -24,12 +24,12 @@ import Testing
     }
 
     @Test func recentTargetsComeFirstNewestFirst() {
-        let slots = DonutSlot.make(targets: targets(5), recentIDs: ["image.t3", "image.t1", "unknown.x"])
+        let slots = DonutFaces(targets: targets(5), recentIDs: ["image.t3", "image.t1", "unknown.x"]).faces[0]
         #expect(titles(slots) == ["T3", "T1", "T0", "T2", "T4"])
     }
 
     @Test func recentTargetBeyondEighthIsPromotedIntoVisibleSlices() {
-        let slots = DonutSlot.make(targets: targets(12), recentIDs: ["image.t11"])
+        let slots = DonutFaces(targets: targets(12), recentIDs: ["image.t11"]).faces[0]
         #expect(titles(slots).first == "T11")
     }
 

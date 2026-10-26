@@ -221,6 +221,10 @@ public class StatusBarController: NSObject, NSMenuDelegate, NSPopoverDelegate {
         searchItem.target = self
         menu.addItem(searchItem)
 
+        let captureItem = NSMenuItem(title: L10n.text("Nhận chữ từ vùng màn hình"), action: #selector(captureScreenText), keyEquivalent: "")
+        captureItem.target = self
+        menu.addItem(captureItem)
+
         menu.addItem(NSMenuItem.separator())
         
         // 2. Finder Cut & Paste
@@ -349,6 +353,10 @@ public class StatusBarController: NSObject, NSMenuDelegate, NSPopoverDelegate {
     @objc private func openDownloads() {
         AppState.shared.selectedTab = .downloads
         openMainWindow()
+    }
+
+    @objc private func captureScreenText() {
+        Task { @MainActor in ScreenTextCapture.shared.captureAfterDelay() }
     }
 
     @objc private func openFileSearch() {

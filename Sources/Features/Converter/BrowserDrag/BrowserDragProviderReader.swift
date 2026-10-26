@@ -4,13 +4,16 @@ import UniformTypeIdentifiers
 /// Builds a `BrowserDragPayload` from the NSItemProvider SwiftUI hands to `onDrop`.
 /// Representations are loaded lazily in the same precedence as `BrowserDragPayload.parse`: image > link > TIFF > any image.
 enum BrowserDragProviderReader {
+    /// Dragged address-bar text arrives as plain text; only a lone http(s) link in it becomes a download.
+    private static let linkIdentifiers = BrowserDragPayload.linkTypes + [UTType.plainText.identifier]
+
     static func payload(from provider: NSItemProvider) async -> BrowserDragPayload? {
         let registered = Set(provider.registeredTypeIdentifiers)
         let name = await suggestedName(of: provider, registered: registered)
         for type in BrowserDragPayload.imageTypes where type != .tiff && registered.contains(type.identifier) {
             if let data = await data(of: provider, type.identifier) { return .imageData(data, type, suggestedName: name) }
         }
-        for identifier in BrowserDragPayload.linkTypes where registered.contains(identifier) {
+        for identifier in linkIdentifiers where registered.contains(identifier) {
             guard let text = await data(of: provider, identifier).flatMap({ String(data: $0, encoding: .utf8) }),
                   let link = BrowserDragPayload.link(from: text, name: name) else { continue }
             return link

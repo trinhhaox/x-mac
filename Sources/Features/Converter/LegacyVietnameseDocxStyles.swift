@@ -1,19 +1,28 @@
 import Foundation
 
+/// Transitional and Strict OOXML differ only by namespace URI, so every lookup accepts both and new elements
+/// reuse the namespace of a sibling.
 enum WordML {
-    static let namespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    static let namespaces: Set<String> = [
+        "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+        "http://purl.oclc.org/ooxml/wordprocessingml/main",
+    ]
 }
 
 extension XMLElement {
-    func isWord(_ name: String) -> Bool { localName == name && uri == WordML.namespace }
+    func isWord(_ name: String) -> Bool { localName == name && uri.map(WordML.namespaces.contains) == true }
 
-    func wordChild(_ name: String) -> XMLElement? {
-        elements(forLocalName: name, uri: WordML.namespace).first
+    func wordChildren(_ name: String) -> [XMLElement] {
+        (children ?? []).compactMap { $0 as? XMLElement }.filter { $0.isWord(name) }
     }
 
-    func wordAttribute(_ name: String) -> String? {
-        attribute(forLocalName: name, uri: WordML.namespace)?.stringValue
+    func wordChild(_ name: String) -> XMLElement? { wordChildren(name).first }
+
+    func wordAttributeNode(_ name: String) -> XMLNode? {
+        attributes?.first { $0.localName == name && $0.uri.map(WordML.namespaces.contains) == true }
     }
+
+    func wordAttribute(_ name: String) -> String? { wordAttributeNode(name)?.stringValue }
 }
 
 /// Which font a run inherits when it has no `<w:rFonts>` of its own: character style, paragraph style,
@@ -28,7 +37,7 @@ struct LegacyVietnameseDocxStyles {
         guard let styles else { return }
         documentDefaultFont = styles.wordChild("docDefaults")?.wordChild("rPrDefault")?.wordChild("rPr")
             .flatMap(Self.fontName)
-        for style in styles.elements(forLocalName: "style", uri: WordML.namespace) {
+        for style in styles.wordChildren("style") {
             guard let id = style.wordAttribute("styleId") else { continue }
             if let font = style.wordChild("rPr").flatMap(Self.fontName) { fontByStyle[id] = font }
             if let parent = style.wordChild("basedOn")?.wordAttribute("val") { parentByStyle[id] = parent }

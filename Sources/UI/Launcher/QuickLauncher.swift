@@ -296,6 +296,7 @@ final class QuickLauncher: NSObject, ObservableObject, NSSearchFieldDelegate, NS
                 AppDelegate.shared.createMainWindow()
             }
         case .convertFinderSelection: convertFinderSelection()
+        case .captureScreenText: Task { @MainActor in ScreenTextCapture.shared.captureAfterDelay() }
         case .application(let path), .file(let path): NSWorkspace.shared.open(URL(fileURLWithPath: path))
         case .calculation(let value):
             NSPasteboard.general.clearContents()

@@ -17,6 +17,18 @@ import Foundation
         #expect(converter.requiredTool == .soffice)
     }
 
+    @Test func missingHwpOutputExplainsTheFormatLimit() {
+        let hwp = OfficeConverter.noOutputError(for: URL(fileURLWithPath: "/x/a.HWP"))
+        #expect(hwp == .failed(L10n.text("LibreOffice chỉ đọc được HWP đời cũ (HWP 97); tệp HWP 5.x chưa hỗ trợ")))
+        #expect(OfficeConverter.noOutputError(for: URL(fileURLWithPath: "/x/a.doc")) == .failed("LibreOffice produced no output"))
+    }
+
+    @Test func offersHwpAndDxfTargets() {
+        func ids(_ name: String) -> [String] { converter.targets(for: URL(fileURLWithPath: "/x/\(name)")).map(\.id) }
+        #expect(ids("a.hwp") == ["office.pdf", "office.docx", "office.odt"])
+        #expect(ids("a.DXF") == ["office.pdf", "office.svg", "office.png"])
+    }
+
     @Test func missingBinaryThrowsToolMissing() async throws {
         let suite = "OfficeConverterTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))

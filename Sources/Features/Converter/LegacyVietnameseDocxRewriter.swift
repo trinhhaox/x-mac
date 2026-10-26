@@ -12,22 +12,40 @@ final class LegacyVietnameseDocxRewriter {
 
     /// Returns how many runs and font declarations were changed; 0 means the document had no legacy fonts.
     static func rewrite(package: URL, checkCancellation: () throws -> Void) throws -> Int {
-        let wordFolder = package.appendingPathComponent("word", isDirectory: true)
-        let stylesURL = wordFolder.appendingPathComponent("styles.xml")
+        let word = package.appendingPathComponent("word", isDirectory: true)
+        var total = try rewriteFolder(word, checkCancellation: checkCancellation)
+        let glossary = word.appendingPathComponent("glossary", isDirectory: true)
+        if FileManager.default.fileExists(atPath: glossary.path) {
+            total += try rewriteFolder(glossary, checkCancellation: checkCancellation)
+        }
+        return total
+    }
+
+    /// One part folder (`word/` or `word/glossary/`): body parts get their text converted, the style, numbering
+    /// and font-table parts only their font declarations.
+    private static func rewriteFolder(_ folder: URL, checkCancellation: () throws -> Void) throws -> Int {
+        let stylesURL = folder.appendingPathComponent("styles.xml")
         let stylesDocument = try? load(stylesURL)
         let rewriter = LegacyVietnameseDocxRewriter(styles: LegacyVietnameseDocxStyles(styles: stylesDocument?.rootElement()))
         var total = 0
-        for name in try FileManager.default.contentsOfDirectory(atPath: wordFolder.path).sorted() where isContentPart(name) {
+        for name in try FileManager.default.contentsOfDirectory(atPath: folder.path).sorted() where isContentPart(name) {
             try checkCancellation()
-            total += try rewriter.rewrite(wordFolder.appendingPathComponent(name), convertingText: true)
+            total += try rewriter.rewrite(folder.appendingPathComponent(name), convertingText: true)
         }
         if stylesDocument != nil { total += try rewriter.rewrite(stylesURL, convertingText: false) }
+        let numbering = folder.appendingPathComponent("numbering.xml")
+        if FileManager.default.fileExists(atPath: numbering.path) { total += try rewriter.rewrite(numbering, convertingText: false) }
+        let fontTable = folder.appendingPathComponent("fontTable.xml")
+        if FileManager.default.fileExists(atPath: fontTable.path) {
+            // Not counted: a font table alone declaring a legacy font does not mean any text uses it.
+            _ = try edit(fontTable, LegacyVietnameseDocxFontTable.rewrite)
+        }
         return total
     }
 
     private static func isContentPart(_ name: String) -> Bool {
         guard name.hasSuffix(".xml") else { return false }
-        return name == "document.xml" || name == "footnotes.xml" || name == "endnotes.xml"
+        return name == "document.xml" || name == "footnotes.xml" || name == "endnotes.xml" || name == "comments.xml"
             || name.hasPrefix("header") || name.hasPrefix("footer")
     }
 
@@ -35,18 +53,27 @@ final class LegacyVietnameseDocxRewriter {
         try XMLDocument(data: Data(contentsOf: url), options: [.nodePreserveAll])
     }
 
-    private func rewrite(_ url: URL, convertingText: Bool) throws -> Int {
-        let document = try Self.load(url)
+    private static func edit(_ url: URL, _ transform: (XMLElement) -> Int) throws -> Int {
+        let document = try load(url)
         guard let root = document.rootElement() else { return 0 }
-        changes = 0
-        walk(root, paragraphStyle: nil, convertingText: convertingText)
-        if changes > 0 { try document.xmlData(options: [.nodePreserveAll]).write(to: url, options: .atomic) }
-        return changes
+        let count = transform(root)
+        if count > 0 { try document.xmlData(options: [.nodePreserveAll]).write(to: url, options: .atomic) }
+        return count
+    }
+
+    private func rewrite(_ url: URL, convertingText: Bool) throws -> Int {
+        try Self.edit(url) { root in
+            changes = 0
+            walk(root, paragraphStyle: nil, convertingText: convertingText)
+            return changes
+        }
     }
 
     private func walk(_ element: XMLElement, paragraphStyle: String?, convertingText: Bool) {
         var paragraphStyle = paragraphStyle
-        if element.isWord("p") {
+        if element.isWord("lvl") {
+            if LegacyVietnameseDocxNumbering.convertLevelText(element, styles: styles) { changes += 1 }
+        } else if element.isWord("p") {
             paragraphStyle = element.wordChild("pPr")?.wordChild("pStyle")?.wordAttribute("val")
             if convertingText { convertParagraph(element, paragraphStyle: paragraphStyle) }
         } else if element.isWord("rFonts") {
@@ -98,7 +125,7 @@ final class LegacyVietnameseDocxRewriter {
     private static func textNodes(of run: XMLElement, charset: LegacyVietnameseCharset) -> [XMLElement] {
         if charset == .tcvn3 {
             for case let hyphen as XMLElement in run.children ?? [] where hyphen.isWord("softHyphen") {
-                let text = XMLElement(name: hyphen.prefix.map { "\($0):t" } ?? "t", uri: WordML.namespace)
+                let text = XMLElement(name: hyphen.prefix.map { "\($0):t" } ?? "t", uri: hyphen.uri)
                 text.stringValue = "\u{AD}"
                 run.replaceChild(at: hyphen.index, with: text)
             }
@@ -130,7 +157,7 @@ final class LegacyVietnameseDocxRewriter {
 
     private func replaceLegacyFonts(in fonts: XMLElement) {
         for slot in Self.fontSlots {
-            guard let attribute = fonts.attribute(forLocalName: slot, uri: WordML.namespace),
+            guard let attribute = fonts.wordAttributeNode(slot),
                   let name = attribute.stringValue, let font = LegacyVietnameseFont(name: name) else { continue }
             attribute.stringValue = font.replacement
             changes += 1

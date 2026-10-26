@@ -34,7 +34,7 @@ struct ConverterDropZone: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(XmacTheme.blue.opacity(isTargeted ? 0.7 : 0.3), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
         )
-        .onDrop(of: [.fileURL, .url, .image], isTargeted: $isTargeted, perform: handleDrop)
+        .onDrop(of: [.fileURL, .url, .image, .plainText, .utf8PlainText], isTargeted: $isTargeted, perform: handleDrop)
     }
 
     private func chooseFiles() {

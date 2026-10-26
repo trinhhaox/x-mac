@@ -38,7 +38,16 @@ struct ImageConverter: FileConverter {
         }
         try await BlockingWork.run { check in
             try check()
-            var image = try ImageIOSupport.loadImage(input, maxPixel: request.preset.maxImageDimension)
+            var image: CGImage
+            if let crop = request.preset.cropRect {
+                // Crop needs the full-size oriented image; resizing comes after it.
+                let full = try ImageIOSupport.loadImage(input, maxPixel: nil)
+                image = try ImageIOSupport.downscaled(
+                    ImageIOSupport.cropped(full, to: crop), maxPixel: request.preset.maxImageDimension
+                )
+            } else {
+                image = try ImageIOSupport.loadImage(input, maxPixel: request.preset.maxImageDimension)
+            }
             if !format.hasAlpha { image = ImageIOSupport.flattenedOnWhite(image) }
             progress(0.5)
             try check()

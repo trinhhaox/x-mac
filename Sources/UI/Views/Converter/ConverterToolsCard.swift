@@ -10,7 +10,13 @@ private struct ConverterToolRow: View {
         _overridePath = AppStorage(wrappedValue: "", tool.overrideDefaultsKey)
     }
 
-    private var displayName: String { tool == .soffice ? "LibreOffice (soffice)" : tool.rawValue }
+    private var displayName: String {
+        switch tool {
+        case .soffice: return "LibreOffice (soffice)"
+        case .ebookConvert: return "calibre (ebook-convert)"
+        default: return tool.rawValue
+        }
+    }
 
     var body: some View {
         let located = BinaryLocator().locate(tool)

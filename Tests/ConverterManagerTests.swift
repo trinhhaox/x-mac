@@ -89,10 +89,10 @@ import Testing
     @Test func presetAndRecentLimitPersist() {
         let defaults = UserDefaults(suiteName: "manager-\(UUID().uuidString)")!
         let manager = makeManager(FakeConverter(), defaults: defaults, alerts: Alerts())
-        manager.preset.maxImageDimension = 1024
-        manager.preset.imageQuality = 0.5
+        manager.updatePreset(for: .image) { $0.maxImageDimension = 1024; $0.imageQuality = 0.5 }
         let reloaded = makeManager(FakeConverter(), defaults: defaults, alerts: Alerts())
-        #expect(reloaded.preset.maxImageDimension == 1024 && reloaded.preset.imageQuality == 0.5)
+        let image = reloaded.preset(for: .image)
+        #expect(image.maxImageDimension == 1024 && image.imageQuality == 0.5)
         #expect(reloaded.notifyOnFinish)
     }
 }

@@ -28,6 +28,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         DispatchQueue.global(qos: .utility).async {
             ConverterWorkspace.sweepStaleTempDirectories()
             BrowserDropCoordinator.sweepStaleScratch()
+            PartialFileJournal.shared.sweep()
         }
 
         // 3. Yêu cầu quyền thông báo và định tuyến thao tác bấm thông báo

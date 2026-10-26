@@ -11,7 +11,6 @@ enum DonutActivity {
 final class DonutController: ObservableObject {
     static let shared = DonutController()
     static let enabledKey = "Converter.DonutEnabled"
-    private static let escapeKeyCode: UInt16 = 53
     private static let dragEndGrace: UInt64 = 300_000_000
 
     @Published var isEnabled: Bool {
@@ -24,7 +23,11 @@ final class DonutController: ObservableObject {
     private let defaults: UserDefaults
     private let recents: DonutRecentTargets
     private var panel: DonutPanel?
-    private var escapeMonitor: Any?
+    private var donutView: DonutView?
+    private lazy var eventMonitors = DonutEventMonitors(
+        onEscape: { [weak self] in self?.close() },
+        onFlip: { [weak self] in self?.donutView?.flip() }
+    )
     private lazy var monitor = DragMonitor(
         onArm: { [weak self] urls, point in MainActor.assumeIsolated { self?.show(urls: urls, at: point) } },
         onDisarm: { [weak self] in MainActor.assumeIsolated { self?.close() } },
@@ -49,23 +52,21 @@ final class DonutController: ObservableObject {
     private func show(urls: [URL], at point: NSPoint) {
         close()
         let model = ConverterSelectionModel(inputs: urls, registry: ConverterManager.shared.registry)
-        let slots = DonutSlot.make(targets: model.sections.flatMap(\.targets), recentIDs: recents.ids)
-        guard !slots.isEmpty else { return }
-        let geometry = DonutGeometry(slotCount: slots.count)
+        let faces = DonutFaces(targets: model.sections.flatMap(\.targets), recentIDs: recents.ids).faces
+        guard faces.first?.isEmpty == false else { return }
+        let geometry = DonutGeometry(slotCount: DonutGeometry.maxSlots)
         let screen = NSScreen.screens.first { $0.frame.contains(point) } ?? NSScreen.main
         let centre = DonutGeometry.clampedCentre(point, in: screen?.visibleFrame ?? .zero, radius: geometry.windowSide / 2)
         let view = DonutView(
-            slots: slots, geometry: geometry, summary: model.summary,
+            faces: faces, side: geometry.windowSide, summary: model.summary,
             onPick: { [weak self] slot, payload in self?.pick(slot, payload: payload) }, onLeave: { [weak self] in self?.close() }
         )
         let panel = DonutPanel(centre: centre, side: geometry.windowSide, view: view)
         self.panel = panel
+        donutView = view
         DonutActivity.isVisible.withLock { $0 = true }
         panel.orderFrontRegardless()
-        escapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard event.keyCode == Self.escapeKeyCode else { return }
-            MainActor.assumeIsolated { self?.close() }
-        }
+        eventMonitors.start()
     }
 
     /// Browser drops are fetched only now; the ring was built from the type the browser announced.
@@ -99,8 +100,8 @@ final class DonutController: ObservableObject {
     }
 
     private func close() {
-        if let escapeMonitor { NSEvent.removeMonitor(escapeMonitor) }
-        escapeMonitor = nil
+        eventMonitors.stop()
+        donutView = nil
         panel?.orderOut(nil)
         panel = nil
         DonutActivity.isVisible.withLock { $0 = false }

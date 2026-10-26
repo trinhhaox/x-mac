@@ -41,15 +41,19 @@ public final class ConverterManager: ObservableObject {
     public static let shared = ConverterManager()
 
     static let recentKey = "Converter.Recent.v1"
-    static let presetKey = "Converter.Preset.v1"
+    static let legacyPresetKey = "Converter.Preset.v1"
+    static let presetsKey = "Converter.Presets.v2"
     static let notifyKey = "Converter.NotifyOnFinish"
     static let recentLimit = 20
 
     @Published public private(set) var jobs: [ConversionJob] = []
     @Published public private(set) var recent: [RecentConversion]
-    @Published public var preset: ConversionPreset {
-        didSet { persist(preset, key: Self.presetKey) }
+    /// Per-group settings, keyed by `ConversionGroup.rawValue` (a String key keeps the JSON a plain object).
+    @Published private var presets: [String: ConversionPreset] {
+        didSet { persist(presets, key: Self.presetsKey) }
     }
+    /// Pending crops (normalized rects) for the current selection, keyed by standardized input URL. Not persisted.
+    @Published public private(set) var cropRects: [URL: CGRect] = [:]
 
     public let registry: ConverterRegistry
     private let defaults: UserDefaults
@@ -80,7 +84,31 @@ public final class ConverterManager: ObservableObject {
         self.notify = notify
         self.playSound = playSound
         recent = Self.load([RecentConversion].self, key: Self.recentKey, from: defaults) ?? []
-        preset = Self.load(ConversionPreset.self, key: Self.presetKey, from: defaults) ?? ConversionPreset()
+        presets = Self.loadPresets(from: defaults)
+    }
+
+    public func preset(for group: ConversionGroup) -> ConversionPreset {
+        presets[group.rawValue] ?? ConversionPreset()
+    }
+
+    public func updatePreset(for group: ConversionGroup, _ change: (inout ConversionPreset) -> Void) {
+        var value = preset(for: group)
+        change(&value)
+        presets[group.rawValue] = value
+    }
+
+    /// The PDF-group preset; only the page-range field edits it (`pdfPageRange` is per-selection UI state).
+    public var preset: ConversionPreset {
+        get { preset(for: .pdf) }
+        set { presets[ConversionGroup.pdf.rawValue] = newValue }
+    }
+
+    public func setCrop(_ rect: CGRect?, for input: URL) {
+        cropRects[input.standardizedFileURL] = rect
+    }
+
+    public func clearCrops() {
+        if !cropRects.isEmpty { cropRects = [:] }
     }
 
     public var notifyOnFinish: Bool {
@@ -90,9 +118,11 @@ public final class ConverterManager: ObservableObject {
 
     /// One job per input, or a single job when the target combines inputs. Returns the new job ids.
     /// `disposeInputs` deletes the inputs (only if they are browser-drop scratch copies) once each job ends.
+    /// `crops` is explicit (standardized input URL to rect): only the converter UI passes it.
     @discardableResult
     public func enqueue(
-        inputs: [URL], target: ConversionTarget, outputDirectory: URL? = nil, disposeInputs: Bool = false
+        inputs: [URL], target: ConversionTarget, outputDirectory: URL? = nil, disposeInputs: Bool = false,
+        crops: [URL: CGRect] = [:]
     ) -> [UUID] {
         guard !inputs.isEmpty else { return [] }
         let groups = target.combinesInputs ? [inputs] : inputs.map { [$0] }
@@ -102,16 +132,35 @@ public final class ConverterManager: ObservableObject {
         newJobs.forEach { batchOfJob[$0.id] = batch }
         if disposeInputs { disposableJobs.formUnion(newJobs.map(\.id)) }
         jobs.append(contentsOf: newJobs)
-        let snapshot = preset
+        let presets = newJobs.map { jobPreset(for: $0, crops: crops) }
         // Forwarded in order so a cancel can never overtake the enqueue it refers to.
         forward { queue in
-            for job in newJobs {
+            for (job, preset) in zip(newJobs, presets) {
                 await queue.enqueue(
-                    id: job.id, inputs: job.inputs, target: job.target, preset: snapshot, outputDirectory: outputDirectory
+                    id: job.id, inputs: job.inputs, target: job.target, preset: preset, outputDirectory: outputDirectory
                 )
             }
         }
         return newJobs.map(\.id)
+    }
+
+    /// The settings section a group reads: OCR (document) renders PDF pages, so it shares the PDF tab;
+    /// groups without a tab of their own (office, archive, subtitle, ...) use the image defaults.
+    static func settingsGroup(for group: ConversionGroup) -> ConversionGroup {
+        switch group {
+        case .pdf, .document: return .pdf
+        case .media: return .media
+        default: return .image
+        }
+    }
+
+    /// The group's settings, plus the pending crop when the job converts one image to an image format.
+    func jobPreset(for job: ConversionJob, crops: [URL: CGRect]) -> ConversionPreset {
+        var value = preset(for: Self.settingsGroup(for: job.target.group))
+        if job.target.group == .image, !job.target.combinesInputs, let input = job.inputs.first {
+            value.cropRect = crops[input.standardizedFileURL]
+        }
+        return value
     }
 
     public func cancel(_ id: UUID) {
@@ -207,6 +256,13 @@ public final class ConverterManager: ObservableObject {
     }
 
     // MARK: Persistence
+
+    /// v2 if present; otherwise the old single preset becomes every group's starting point.
+    private static func loadPresets(from defaults: UserDefaults) -> [String: ConversionPreset] {
+        if let saved = load([String: ConversionPreset].self, key: presetsKey, from: defaults) { return saved }
+        let legacy = load(ConversionPreset.self, key: legacyPresetKey, from: defaults) ?? ConversionPreset()
+        return Dictionary(uniqueKeysWithValues: ConversionGroup.allCases.map { ($0.rawValue, legacy) })
+    }
 
     private static func load<T: Decodable>(_ type: T.Type, key: String, from defaults: UserDefaults) -> T? {
         guard let data = defaults.data(forKey: key) else { return nil }

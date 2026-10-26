@@ -98,11 +98,13 @@ Chi tiết: [`docs/FILE_SEARCH.md`](docs/FILE_SEARCH.md).
 Chi tiết: [`docs/DEDUPLICATOR.md`](docs/DEDUPLICATOR.md).
 
 ### 8. 🔄 Chuyển Đổi Tệp
-- **Không cần cài thêm**: ảnh (JPG, PNG, HEIC, TIFF, GIF, BMP, ICNS), ảnh → PDF, PDF → ảnh/gộp/nén, văn bản (DOCX, RTF, ODT, HTML, TXT), video/âm thanh (MP4, MOV, HEVC, 720p, M4A), nén ZIP và giải nén ZIP/TAR/7Z/ISO, phụ đề (SRT, VTT, ASS).
-- **Khi máy đã cài sẵn**: `ffmpeg` (`brew install ffmpeg`) mở thêm MKV, WEBM, AVI, GIF, MP3, FLAC, OGG, OPUS…; LibreOffice mở thêm Word/Excel/PowerPoint/Pages/Numbers/Keynote → PDF và DOC ↔ DOCX, XLS ↔ XLSX, PPT ↔ PPTX. Xmac chỉ gọi các công cụ này, không đóng gói kèm.
+- **Không cần cài thêm**: ảnh (JPG, PNG, HEIC, TIFF, GIF, BMP, ICNS) kèm cắt ảnh, ảnh → PDF, PDF → ảnh/gộp/nén/tách trang/trích khoảng trang, OCR ảnh & PDF → văn bản, văn bản (DOCX, RTF, ODT, HTML, TXT), EPUB → TXT/HTML/DOCX/RTF, video/âm thanh (MP4, MOV, HEVC, 720p, M4A), nén ZIP và giải nén ZIP/TAR/7Z/ISO, phụ đề (SRT, VTT, ASS), phông TTF/OTF ↔ WOFF, mô hình 3D (OBJ, STL, PLY, USD + ảnh xem trước), dữ liệu bản đồ (GeoJSON, KML/KMZ, GPX, CSV).
+- **Chuyển mã TCVN3/VNI → Unicode** cho TXT, SRT, HTML… và DOCX dùng phông `.VnTime`/`VNI-Times`.
+- **Khi máy đã cài sẵn**: `ffmpeg` (`brew install ffmpeg`) mở thêm MKV, WEBM, AVI, GIF, MP3, FLAC, OGG, OPUS…; LibreOffice mở thêm Word/Excel/PowerPoint → PDF, DOC ↔ DOCX, XLS ↔ XLSX, PPT ↔ PPTX, HWP (đời cũ), DXF; app Pages/Numbers/Keynote xuất ra PDF, DOCX, XLSX, PPTX…; calibre mở thêm MOBI, AZW3, FB2… Xmac chỉ gọi các công cụ này, không đóng gói kèm.
 - **Lưu cạnh tệp gốc**, không ghi đè (tự thêm hậu tố ` 1`, ` 2`); lỗi hoặc hủy thì không để lại tệp hỏng.
-- **Lối vào**: tab "Chuyển đổi tệp", menu chuột phải Finder › Dịch vụ › "Chuyển đổi bằng Xmac", Mở nhanh "Chuyển đổi tệp đang chọn trong Finder", thả tệp lên icon Menu Bar.
-- **Donut ⌃ + kéo (thử nghiệm, mặc định tắt)**: đang kéo tệp thì nhấn ⌃, vòng định dạng hiện ngay tại con trỏ; thả lên một ô để chuyển đổi.
+- **Lối vào**: tab "Chuyển đổi tệp", menu chuột phải Finder › Dịch vụ › "Chuyển đổi bằng Xmac", Mở nhanh "Chuyển đổi tệp đang chọn trong Finder", thả tệp lên icon Menu Bar, kéo ảnh/liên kết https từ trình duyệt, thư mục theo dõi (mặc định tắt), lệnh `xmac convert` (cài bằng `Xmac.app/Contents/MacOS/Xmac install-cli`).
+- **Donut ⌃ + kéo (thử nghiệm, mặc định tắt)**: đang kéo tệp thì nhấn ⌃, vòng định dạng hiện ngay tại con trỏ; Tab hoặc cuộn chuột để lật mặt sau; thả lên một ô để chuyển đổi.
+- **Nhận chữ từ vùng màn hình**: Mở nhanh hoặc chuột phải icon Menu Bar › "Nhận chữ từ vùng màn hình", chữ tiếng Việt/Anh được chép vào bộ nhớ tạm (cần quyền Ghi màn hình).
 
 Chi tiết: [`docs/CONVERTER.md`](docs/CONVERTER.md).
 
@@ -178,8 +180,9 @@ Khi push tag `v*`, workflow `release.yml` ký Developer ID, notarize và đăng 
 
 Để tất cả tính năng của Xmac hoạt động trơn tru:
 1. **Trợ năng (Accessibility)**: Mở `Cài đặt hệ thống` ➔ `Quyền riêng tư & Bảo mật` ➔ `Trợ năng`, bật `Xmac`.
-2. **Tự động hoá Finder (Automation)**: Cho phép `Xmac` điều khiển `Finder` khi xuất hiện thông báo cấp quyền lần đầu.
-3. **Quyền truy cập toàn bộ ổ đĩa (Full Disk Access - Khuyên dùng)**: Cho phép Xmac quét sạch bộ nhớ đệm sâu và file thừa khi gỡ ứng dụng.
+2. **Tự động hoá (Automation)**: Cho phép `Xmac` điều khiển `Finder` khi xuất hiện thông báo cấp quyền lần đầu; tương tự với Pages/Numbers/Keynote khi chuyển đổi tệp iWork.
+3. **Ghi màn hình (Screen Recording)**: Chỉ cần cho "Nhận chữ từ vùng màn hình".
+4. **Quyền truy cập toàn bộ ổ đĩa (Full Disk Access - Khuyên dùng)**: Cho phép Xmac quét sạch bộ nhớ đệm sâu và file thừa khi gỡ ứng dụng.
 
 ---
 

@@ -20,6 +20,7 @@ extension ExternalTool {
         switch self {
         case .ffmpeg, .ffprobe: return "Cài ffmpeg: brew install ffmpeg"
         case .soffice: return "Cài LibreOffice để chuyển đổi thêm định dạng Office"
+        case .ebookConvert: return "Cài calibre: brew install --cask calibre"
         }
     }
 }

@@ -10,14 +10,16 @@ struct OfficeConverter: FileConverter {
         "pdf": "PDF",
         "docx": "Word (DOCX)", "doc": "Word 97-2003 (DOC)",
         "xlsx": "Excel (XLSX)", "xls": "Excel 97-2003 (XLS)",
-        "pptx": "PowerPoint (PPTX)", "ppt": "PowerPoint 97-2003 (PPT)"
+        "pptx": "PowerPoint (PPTX)", "ppt": "PowerPoint 97-2003 (PPT)",
+        "odt": "OpenDocument (ODT)", "svg": "SVG", "png": "PNG"
     ]
     /// Extra targets per input; every input also gets PDF.
     private static let extraTargets: [String: [String]] = [
         "doc": ["docx"], "docx": ["doc"], "odt": ["docx"], "rtf": ["docx"],
         "xls": ["xlsx"], "xlsx": ["xls"], "ods": ["xlsx"], "csv": ["xlsx"],
         "ppt": ["pptx"], "pptx": ["ppt"], "odp": ["pptx"],
-        "pages": [], "numbers": [], "key": []
+        "pages": [], "numbers": [], "key": [],
+        "hwp": ["docx", "odt"], "dxf": ["svg", "png"]
     ]
     private static let conversionTimeout: TimeInterval = 180
 
@@ -30,6 +32,12 @@ struct OfficeConverter: FileConverter {
         return (["pdf"] + extras).compactMap { ext in
             Self.titles[ext].map { ConversionTarget(id: "\(id).\(ext)", title: $0, fileExtension: ext, group: .office) }
         }
+    }
+
+    static func noOutputError(for input: URL) -> ConversionError {
+        input.lowercasedExtension == "hwp"
+            ? .failed(L10n.text("LibreOffice chỉ đọc được HWP đời cũ (HWP 97); tệp HWP 5.x chưa hỗ trợ"))
+            : .failed("LibreOffice produced no output")
     }
 
     func convert(_ request: ConversionRequest, progress: @escaping (Double) -> Void) async throws {
@@ -54,7 +62,7 @@ struct OfficeConverter: FileConverter {
             ], timeout: Self.conversionTimeout)
             let produced = try FileManager.default.contentsOfDirectory(at: outDirectory, includingPropertiesForKeys: nil)
                 .first { $0.lowercasedExtension == format }
-            guard let produced else { throw ConversionError.failed("LibreOffice produced no output") }
+            guard let produced else { throw Self.noOutputError(for: input) }
             try ConverterWorkspace.publish(produced, to: request.outputURL)
         }
         progress(1)

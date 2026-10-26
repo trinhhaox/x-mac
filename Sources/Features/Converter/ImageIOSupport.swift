@@ -39,6 +39,34 @@ enum ImageIOSupport {
         return image
     }
 
+    /// Crops to a normalized rect of the (already oriented) image; a degenerate crop returns the image unchanged.
+    static func cropped(_ image: CGImage, to normalized: CGRect) -> CGImage {
+        let rect = ImageCropMath.pixelRect(normalized, width: image.width, height: image.height)
+        return image.cropping(to: rect) ?? image
+    }
+
+    /// Shrinks so the longest edge is at most `maxPixel`; never enlarges. Spaces that cannot back an
+    /// 8-bit context (HDR / extended range) fall back to sRGB rather than skipping the resize.
+    static func downscaled(_ image: CGImage, maxPixel: Int?) throws -> CGImage {
+        let longest = max(image.width, image.height)
+        guard let maxPixel, maxPixel > 0, longest > maxPixel else { return image }
+        let scale = Double(maxPixel) / Double(longest)
+        let width = max(Int((Double(image.width) * scale).rounded()), 1)
+        let height = max(Int((Double(image.height) * scale).rounded()), 1)
+        let own = image.colorSpace.flatMap { $0.model == .rgb ? $0 : nil }
+        let spaces = [own, CGColorSpace(name: CGColorSpace.sRGB), CGColorSpaceCreateDeviceRGB()].compactMap { $0 }
+        for space in spaces {
+            guard let context = CGContext(
+                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else { continue }
+            context.interpolationQuality = .high
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            if let scaled = context.makeImage() { return scaled }
+        }
+        throw ConversionError.failed(L10n.text("Không đổi được kích thước ảnh"))
+    }
+
     static func write(_ image: CGImage, to url: URL, type: UTType, quality: Double?) throws {
         guard let destination = CGImageDestinationCreateWithURL(url as CFURL, type.identifier as CFString, 1, nil) else {
             throw ConversionError.failed(L10n.text("Không ghi được tệp đầu ra"))

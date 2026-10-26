@@ -54,3 +54,10 @@ import Testing
         main.cancelSearch()
     }
 }
+
+@Suite struct LauncherScreenTextEntryTests {
+    @Test func screenTextCaptureIsDiscoverable() {
+        let matches = LauncherEntry.matching(LauncherEntry.commands, query: "nhan chu vung man hinh")
+        #expect(matches.first?.destination == .captureScreenText)
+    }
+}

@@ -35,14 +35,19 @@ public struct ConverterView: View {
             Button(L10n.text("Bỏ chọn")) { select(BrowserDropInputs(urls: [])) }.buttonStyle(BrandSecondaryButtonStyle())
         }
         if selection.inputs.allSatisfy({ $0.conversionType == .pdf }) { PDFPageRangeField(manager: manager) }
+        if ImageCropSection.applies(to: selection.inputs) { ImageCropSection(manager: manager, inputs: selection.inputs) }
         if selection.hasTargets {
             ConverterTargetGrid(model: selection, columnCount: 5) { target in
                 manager.enqueue(
                     inputs: selection.inputs, target: target,
-                    outputDirectory: origin.outputDirectory, disposeInputs: origin.disposable
+                    outputDirectory: origin.outputDirectory, disposeInputs: origin.disposable,
+                    crops: ImageCropSection.applies(to: selection.inputs) ? manager.cropRects : [:]
                 )
                 // The scratch copy goes away with its job, so it cannot be converted a second time.
-                if origin.disposable { selection = .empty }
+                if origin.disposable {
+                    selection = .empty
+                    manager.clearCrops()
+                }
             }
         } else {
             Text(L10n.text("Không có định dạng đích phù hợp cho các tệp này."))
@@ -56,6 +61,7 @@ public struct ConverterView: View {
     private func select(_ inputs: BrowserDropInputs) {
         if origin.disposable { BrowserDropCoordinator.dispose(selection.inputs) }
         origin = inputs
+        manager.clearCrops()
         selection = ConverterSelectionModel(inputs: inputs.urls, registry: manager.registry)
     }
 }
