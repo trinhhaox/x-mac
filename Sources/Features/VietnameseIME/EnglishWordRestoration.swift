@@ -82,9 +82,17 @@ enum EnglishLexicon {
     /// thread must not stall typing; reduced to 10ms to keep tap thread responsive.
     static let tapThreadTimeout: DispatchTimeInterval = .milliseconds(10)
 
+    /// Lowercase words from the macOS word list, loaded off the typing path.
+    /// Answers without the main thread, so most results no longer depend on
+    /// how busy the UI is. Modern words it lacks (email, online) still fall
+    /// back to the spell checker.
+    private static let systemWords = OSAllocatedUnfairLock<Set<String>?>(initialState: nil)
+    static let systemWordListURL = URL(fileURLWithPath: "/usr/share/dict/words")
+
     static func contains(_ word: String) -> Bool {
         let key = word.lowercased()
         if commonWords.contains(key) { return true }
+        if systemWords.withLock({ $0?.contains(key) }) == true { return true }
         if let cached = cache.withLock({ $0[key] }) { return cached }
         if Thread.isMainThread { return lookUp(key) }
 
@@ -121,8 +129,28 @@ enum EnglishLexicon {
         return known
     }
 
-    /// Loads the dictionary off the typing path so the first lookup is fast.
+    /// Keeps lowercase alphabetic entries of 2-15 letters: proper nouns are
+    /// capitalised there, and short strings are stored inline, which keeps
+    /// the ~200k-word set small.
+    static func parseWordList(_ text: String) -> Set<String> {
+        var words = Set<String>()
+        for line in text.split(separator: "\n") where (2...15).contains(line.utf8.count)
+            && line.utf8.allSatisfy({ (97...122).contains($0) }) {
+            words.insert(String(line))
+        }
+        return words
+    }
+
+    /// Loads the dictionaries off the typing path so the first lookup is fast.
     static func warmUp() {
         _ = contains("warm")
+        DispatchQueue.global(qos: .utility).async {
+            do {
+                let words = parseWordList(try String(contentsOf: systemWordListURL, encoding: .utf8))
+                systemWords.withLock { $0 = words }
+            } catch {
+                NSLog("Xmac: không đọc được danh sách từ tiếng Anh: \(error.localizedDescription)")
+            }
+        }
     }
 }

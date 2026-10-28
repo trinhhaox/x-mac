@@ -11,6 +11,9 @@ public final class GlobalEventTap {
 
     private let lock = NSLock()
     private var eventTap: CFMachPort?
+    /// Listen-only, so the mouse pipeline never waits on Xmac. It only tells
+    /// the IME on the tap thread that the caret moved.
+    private var mouseTap: CFMachPort?
     private var tapRunLoop: CFRunLoop?
 
     private init() {}
@@ -26,8 +29,8 @@ public final class GlobalEventTap {
 
         IMEConfigurationStore.shared.start()
 
-        // Only hook keyboard events in the active CGEventTap.
-        // Mouse events are monitored passively via NSEvent to prevent system-wide mouse freezes.
+        // Only keyboard events go through the active tap. Clicks use a separate
+        // listen-only tap, so a slow callback can never freeze the mouse.
         let mask =
             (1 << CGEventType.keyDown.rawValue) |
             (1 << CGEventType.flagsChanged.rawValue)
@@ -71,6 +74,37 @@ public final class GlobalEventTap {
             return false
         }
 
+        let mouseMask =
+            (1 << CGEventType.leftMouseDown.rawValue) |
+            (1 << CGEventType.rightMouseDown.rawValue) |
+            (1 << CGEventType.otherMouseDown.rawValue)
+        let mouseCallback: CGEventTapCallBack = { _, type, event, refcon in
+            if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                if let refcon {
+                    Unmanaged<GlobalEventTap>.fromOpaque(refcon).takeUnretainedValue().reenableTap()
+                }
+                InputHookManager.shared.handleTapReenabled()
+            } else {
+                _ = InputHookManager.shared.handleEvent(type: type, event: event)
+            }
+            return Unmanaged.passUnretained(event)
+        }
+        let mouseTap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .tailAppendEventTap,
+            options: .listenOnly,
+            eventsOfInterest: CGEventMask(mouseMask),
+            callback: mouseCallback,
+            userInfo: selfPtr
+        )
+        if mouseTap == nil {
+            NSLog("Xmac: Không thể tạo mouse tap; gõ sau khi click có thể dùng nhầm từ cũ.")
+        }
+        let mouseSource = mouseTap.flatMap { CFMachPortCreateRunLoopSource(kCFAllocatorDefault, $0, 0) }
+        if let mouseTap, mouseSource == nil {
+            CFMachPortInvalidate(mouseTap)
+        }
+
         final class RunLoopBox { var runLoop: CFRunLoop? }
         let box = RunLoopBox()
         let ready = DispatchSemaphore(value: 0)
@@ -79,6 +113,10 @@ public final class GlobalEventTap {
             box.runLoop = runLoop
             CFRunLoopAddSource(runLoop, source, .commonModes)
             CGEvent.tapEnable(tap: tap, enable: true)
+            if let mouseTap, let mouseSource {
+                CFRunLoopAddSource(runLoop, mouseSource, .commonModes)
+                CGEvent.tapEnable(tap: mouseTap, enable: true)
+            }
             ready.signal()
             CFRunLoopRun()
         }
@@ -88,6 +126,7 @@ public final class GlobalEventTap {
         _ = ready.wait(timeout: .now() + .milliseconds(500))
 
         eventTap = tap
+        self.mouseTap = mouseSource == nil ? nil : mouseTap
         tapRunLoop = box.runLoop
         return true
     }
@@ -98,10 +137,15 @@ public final class GlobalEventTap {
         guard let tap = eventTap else { return }
         CGEvent.tapEnable(tap: tap, enable: false)
         CFMachPortInvalidate(tap)
+        if let mouseTap {
+            CGEvent.tapEnable(tap: mouseTap, enable: false)
+            CFMachPortInvalidate(mouseTap)
+        }
         if let tapRunLoop {
             CFRunLoopStop(tapRunLoop)
         }
         eventTap = nil
+        mouseTap = nil
         tapRunLoop = nil
     }
 
@@ -129,6 +173,9 @@ public final class GlobalEventTap {
         lock.withLock {
             if let eventTap {
                 CGEvent.tapEnable(tap: eventTap, enable: true)
+            }
+            if let mouseTap {
+                CGEvent.tapEnable(tap: mouseTap, enable: true)
             }
         }
     }

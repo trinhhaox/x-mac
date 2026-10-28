@@ -10,6 +10,28 @@ import Testing
         #expect(type("tieengs", method: .telex) == "tiếng")
     }
 
+    @Test func englishOnsetsAreNeverTransformed() {
+        #expect(type("process", method: .telex) == "process")
+        #expect(type("class", method: .telex) == "class")
+        #expect(type("string", method: .telex) == "string")
+        #expect(type("free", method: .telex) == "free")
+        #expect(type("bloor", method: .telex) == "bloor")
+        #expect(type("pro5", method: .vni) == "pro5")
+    }
+
+    @Test func vietnameseOnsetsStillTransform() {
+        #expect(type("nghieeng", method: .telex) == "nghiêng")
+        #expect(type("quoocs", method: .telex) == "quốc")
+        #expect(type("giaf", method: .telex) == "già")
+        #expect(type("truowngf", method: .telex) == "trường")
+        #expect(type("khoong", method: .telex) == "không")
+        #expect(type("ddaau", method: .telex) == "đâu")
+        #expect(type("Ddoongf", method: .telex) == "Đồng")
+        #expect(type("zoo", method: .telex) == "zô")
+        #expect(type("dzoo", method: .telex) == "dzô")
+        #expect(type("fair", method: .telex) == "fải")
+    }
+
     @Test func telexRemovesTone() {
         #expect(type("asz", method: .telex) == "a")
     }

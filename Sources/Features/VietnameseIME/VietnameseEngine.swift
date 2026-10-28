@@ -65,7 +65,14 @@ public class VietnameseEngine {
         guard let ascii = newChar.asciiValue, (ascii >= 65 && ascii <= 90) || (ascii >= 97 && ascii <= 122) || (ascii >= 48 && ascii <= 57) else {
             return (currentWord + String(newChar), false)
         }
-        
+        // "process", "class", "string": no Vietnamese syllable starts with
+        // pr/cl/str, so leave the keys alone instead of adding and removing
+        // marks mid-word. Every avoided replacement is one less burst of
+        // synthetic keys an app can drop while typing fast.
+        guard hasVietnameseOnset(currentWord) else {
+            return (currentWord + String(newChar), false)
+        }
+
         switch method {
         case .telex, .simpleTelex:
             return processTelex(currentWord: currentWord, newChar: newChar, modern: modernOrthography)
@@ -454,6 +461,20 @@ public class VietnameseEngine {
         return vowelIndices[1]
     }
     
+    /// Consonants a Vietnamese syllable may start with. "q" and "g" stand for
+    /// "qu" and "gi", whose second letter is read as a vowel here. f/j/w/z/dz
+    /// keep chat spellings working: zô, dzô, fải, jờ, wá.
+    private static let onsetPrefixes: Set<String> = [
+        "", "b", "c", "ch", "d", "đ", "g", "gh", "h", "k", "kh", "l", "m", "n", "ng", "ngh",
+        "nh", "p", "ph", "q", "r", "s", "t", "th", "tr", "v", "x",
+        "f", "j", "w", "z", "dz"
+    ]
+
+    private func hasVietnameseOnset(_ word: String) -> Bool {
+        let onset = word.prefix { !isVowel(stripTone($0)) }.lowercased()
+        return Self.onsetPrefixes.contains(onset)
+    }
+
     private func isVowel(_ ch: Character) -> Bool {
         let v: Set<Character> = ["a", "ă", "â", "e", "ê", "i", "o", "ô", "ơ", "u", "ư", "y",
                                  "A", "Ă", "Â", "E", "Ê", "I", "O", "Ô", "Ơ", "U", "Ư", "Y"]

@@ -2,6 +2,19 @@ import Testing
 @testable import Xmac
 
 @Suite struct EnglishWordRestorationTests {
+    @Test func wordListKeepsOnlyLowercaseAlphabeticWords() {
+        let words = EnglishLexicon.parseWordList("a\nas\nclass\nBoston\nco-op\nserver\nabcdefghijklmnop\n\n")
+        #expect(words == ["as", "class", "server"])
+    }
+
+    @Test func systemWordListIsReadableAndCoversTelexEscapes() throws {
+        let text = try String(contentsOf: EnglishLexicon.systemWordListURL, encoding: .utf8)
+        let words = EnglishLexicon.parseWordList(text)
+        #expect(words.count > 100_000)
+        #expect(words.contains("class"))
+        #expect(words.contains("process"))
+    }
+
     @Test func smartRestorationRestoresEnglishAndPreservesVietnamese() {
         #expect(EnglishWordRestoration.shouldRestore(raw: "push", composed: "púh"))
         #expect(EnglishWordRestoration.shouldRestore(raw: "PUSH", composed: "PÚH"))

@@ -18,14 +18,18 @@ struct SyntheticReplacementPlan: Equatable {
         newText: String,
         isBrowser: Bool,
         isElectronOrChatApp: Bool = false,
+        isBulkText: Bool = false,
         useAutocompleteBreaker: Bool = false
     ) -> SyntheticReplacementPlan {
         let needsSingleChars = isBrowser || isElectronOrChatApp
         guard needsSingleChars else {
+            // Qt, Java and other non-Cocoa apps read only the first character
+            // of a synthetic key event, so word edits ("êng") go one character
+            // per event everywhere. Only long macro text keeps chunks.
             return SyntheticReplacementPlan(
                 leadingText: nil,
                 backspaceCount: backspaceCount,
-                textChunks: Utf16Chunker.chunks(newText)
+                textChunks: isBulkText ? Utf16Chunker.chunks(newText) : newText.map { Array($0.utf16) }
             )
         }
         // Web and Electron editors (Chrome, Zalo, VS Code, Slack) map one key event

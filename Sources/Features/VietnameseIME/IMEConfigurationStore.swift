@@ -39,7 +39,8 @@ struct IMETapSnapshot: Equatable {
     ]
 
     /// Electron, Chromium-based and chat desktop apps that require single-char events
-    /// and micro-pacing for clean Backspace and text rendering.
+    /// and micro-pacing for clean Backspace and text rendering. Apps missing
+    /// here are still caught by `ChromiumAppDetector` (`usesChromiumEngine`).
     static let electronAndChatBundleIdentifiers: Set<String> = [
         "com.vng.zalo", "com.vng.zalo-pc", "com.zing.zalo", "com.vng.zaloapp",
         "com.tinyspeck.slackmacgap", "com.microsoft.VSCode", "com.microsoft.VSCodeInsiders",
@@ -54,6 +55,7 @@ struct IMETapSnapshot: Equatable {
         profiles: SmartProfilesManager,
         macroManager: MacroManager,
         finderCutPasteEnabled: Bool = false,
+        usesChromiumEngine: Bool = false,
         previous: IMETapSnapshot
     ) -> IMETapSnapshot {
         var snapshot = IMETapSnapshot()
@@ -69,7 +71,8 @@ struct IMETapSnapshot: Equatable {
             let hasExplicitProfile = profiles.isEnabled && profiles.profile(for: bundleIdentifier) != nil
             snapshot.isExcluded = hook.excludedApps.contains(bundleIdentifier) && !hasExplicitProfile
             snapshot.isBrowser = browserBundleIdentifiers.contains(bundleIdentifier)
-            snapshot.isElectronOrChatApp = electronAndChatBundleIdentifiers.contains(bundleIdentifier)
+            snapshot.isElectronOrChatApp = !snapshot.isBrowser
+                && (electronAndChatBundleIdentifiers.contains(bundleIdentifier) || usesChromiumEngine)
         }
         snapshot.handlesFinderShortcuts = finderCutPasteEnabled && bundleIdentifier == "com.apple.finder"
         snapshot.modernOrthography = hook.modernOrthography
@@ -92,6 +95,8 @@ final class IMEConfigurationStore {
     private let state = OSAllocatedUnfairLock(initialState: IMETapSnapshot())
     private var subscriptions: Set<AnyCancellable> = []
     private var activationObserver: NSObjectProtocol?
+    /// Main thread. Bundle ID -> Chromium engine, so the bundle is read once.
+    private var chromiumEngineCache: [String: Bool] = [:]
 
     private init() {}
 
@@ -125,6 +130,7 @@ final class IMEConfigurationStore {
     func refresh() {
         dispatchPrecondition(condition: .onQueue(.main))
         let app = NSWorkspace.shared.frontmostApplication
+        let usesChromium = app.map(usesChromiumEngine) ?? false
         state.withLock { current in
             current = IMETapSnapshot.make(
                 bundleIdentifier: app?.bundleIdentifier,
@@ -133,9 +139,19 @@ final class IMEConfigurationStore {
                 profiles: SmartProfilesManager.shared,
                 macroManager: MacroManager.shared,
                 finderCutPasteEnabled: FinderCutPasteManager.shared.isEnabled,
+                usesChromiumEngine: usesChromium,
                 previous: current
             )
         }
+    }
+
+    private func usesChromiumEngine(_ app: NSRunningApplication) -> Bool {
+        guard let bundleIdentifier = app.bundleIdentifier else { return false }
+        if let cached = chromiumEngineCache[bundleIdentifier] { return cached }
+        let detected = ChromiumAppDetector.isProgressiveWebApp(bundleIdentifier: bundleIdentifier)
+            || app.bundleURL.map { ChromiumAppDetector.bundleUsesChromium(at: $0) } == true
+        chromiumEngineCache[bundleIdentifier] = detected
+        return detected
     }
 
     /// Asks the tap thread to drop its composition before the next keystroke.
