@@ -15,11 +15,15 @@ enum FocusedFieldInspector {
         kAXRoleAttribute, kAXSubroleAttribute, "AXEditableAncestor"
     ] as CFArray
 
-    /// Firefox starts its whole accessibility service as soon as an outside
-    /// client queries it, which slows it down for the rest of the session.
+    /// Only WebKit browsers, which always keep their accessibility tree. The
+    /// first query to Chrome switched on its renderer accessibility (a 57 ms
+    /// stall in a real trace, then slower pages), and Firefox starts its whole
+    /// accessibility service the same way.
+    static let probedBundlePrefixes = ["com.apple.Safari", "com.kagi.kagimacOS"]
+
     static func canProbe(bundleIdentifier: String?) -> Bool {
         guard let bundleIdentifier else { return false }
-        return !bundleIdentifier.hasPrefix("org.mozilla.")
+        return probedBundlePrefixes.contains { bundleIdentifier.hasPrefix($0) }
     }
 
     /// Rich editors exposed as ARIA textbox/combobox also report AXTextField

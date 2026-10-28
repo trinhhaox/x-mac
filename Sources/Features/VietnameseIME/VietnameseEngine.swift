@@ -73,12 +73,30 @@ public class VietnameseEngine {
             return (currentWord + String(newChar), false)
         }
 
+        let result: (String, Bool)
         switch method {
         case .telex, .simpleTelex:
-            return processTelex(currentWord: currentWord, newChar: newChar, modern: modernOrthography)
+            result = processTelex(currentWord: currentWord, newChar: newChar, modern: modernOrthography)
         case .vni:
-            return processVNI(currentWord: currentWord, newChar: newChar, modern: modernOrthography)
+            result = processVNI(currentWord: currentWord, newChar: newChar, modern: modernOrthography)
         }
+        return repositioningTone(result, modern: modernOrthography)
+    }
+
+    /// Puts back a tone that was on letters a transformation rebuilt.
+    private func keepingTone(of original: String, in word: String, modern: Bool) -> String {
+        guard let tone = original.lazy.compactMap({ self.reverseToneMap[$0]?.tone }).first else { return word }
+        return applyTone(to: word, tone: tone, modern: modern).0
+    }
+
+    /// A tone typed early sits on the vowel that was right at the time; a
+    /// later horn or final consonant can move it: "dduwojw" gives đựơ, which
+    /// must become đượ, and hoà + n becomes hoàn.
+    private func repositioningTone(_ result: (String, Bool), modern: Bool) -> (String, Bool) {
+        let (word, didTransform) = result
+        guard let tone = word.lazy.compactMap({ self.reverseToneMap[$0]?.tone }).first else { return result }
+        let placed = applyTone(to: word, tone: tone, modern: modern).0
+        return placed == word ? result : (placed, true)
     }
     
     private func processTelex(currentWord: String, newChar: Character, modern: Bool) -> (String, Bool) {
@@ -114,7 +132,7 @@ public class VietnameseEngine {
                 word.append(horned.uIsUpper ? "U" : "u")
                 word.append(lastIsUpper ? "O" : "o")
                 word.append(newChar)
-                return (word, true)
+                return (keepingTone(of: currentWord, in: word, modern: modern), true)
             }
             let wCancellationBases: [Character: Character] = ["ă": "a", "ơ": "o", "ư": "u"]
             if lower == "w", let base = wCancellationBases[lastLower] {
@@ -156,7 +174,15 @@ public class VietnameseEngine {
             
             // w: aw -> ă, ow -> ơ, uw -> ư, uow -> ươ
             if lower == "w" {
-                if lastLower == "a" {
+                let chars = Array(currentWord)
+                if lastLower == "a", chars.count >= 2, chars[chars.count - 2].lowercased() == "u",
+                   chars.count < 3 || chars[chars.count - 3].lowercased() != "q" {
+                    // "uă" only follows q (quăng); otherwise w means ưa: vuaw -> vưa.
+                    var word = String(currentWord.dropLast(2))
+                    word.append(chars[chars.count - 2].isUppercase ? "Ư" : "ư")
+                    word.append(lastChar)
+                    return (word, true)
+                } else if lastLower == "a" {
                     var word = currentWord
                     word.removeLast()
                     word.append(lastIsUpper ? "Ă" : "ă")
@@ -166,7 +192,7 @@ public class VietnameseEngine {
                     var word = String(currentWord.dropLast(2))
                     word.append(pair.uIsUpper ? "Ư" : "ư")
                     word.append(lastIsUpper ? "Ơ" : "ơ")
-                    return (word, true)
+                    return (keepingTone(of: currentWord, in: word, modern: modern), true)
                 } else if lastLower == "o" {
                     var word = currentWord
                     word.removeLast()
@@ -284,8 +310,9 @@ public class VietnameseEngine {
     private func hornedUOPair(in word: String) -> (isHorned: Bool, uIsUpper: Bool)? {
         let chars = Array(word)
         guard chars.count >= 2 else { return nil }
-        let u = chars[chars.count - 2]
-        let o = Character(chars[chars.count - 1].lowercased())
+        // Compare without tones: "muoj" + w is still the uo cluster.
+        let u = stripTone(chars[chars.count - 2])
+        let o = Character(stripTone(chars[chars.count - 1]).lowercased())
         let uLower = Character(u.lowercased())
         guard uLower == "u" || uLower == "ư", o == "o" || o == "ơ" else { return nil }
         if chars.count >= 3, chars[chars.count - 3].lowercased() == "q" { return nil }

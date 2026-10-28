@@ -32,6 +32,22 @@ import Testing
         #expect(type("fair", method: .telex) == "fải")
     }
 
+    @Test func toneMovesWhenALaterKeyReshapesTheSyllable() {
+        #expect(type("dduwojwc", method: .telex) == "được")
+        #expect(type("dduowjc", method: .telex) == "được")
+        #expect(type("muojwt", method: .telex) == "mượt")
+        #expect(type("vieejt", method: .telex) == "việt")
+        #expect(type("hoafn", method: .telex) == "hoàn")
+        #expect(type("tooi", method: .telex) == "tôi")
+    }
+
+    @Test func wAfterUAHornsTheU() {
+        #expect(type("vuawf", method: .telex) == "vừa")
+        #expect(type("muaw", method: .telex) == "mưa")
+        #expect(type("quawng", method: .telex) == "quăng")
+        #expect(type("Muaw", method: .telex) == "Mưa")
+    }
+
     @Test func telexRemovesTone() {
         #expect(type("asz", method: .telex) == "a")
     }

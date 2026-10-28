@@ -237,9 +237,10 @@ import Testing
         #expect(!single("AXComboBox", "AXContentEditable"))
     }
 
-    @Test func focusProbeSkipsFirefox() {
-        #expect(FocusedFieldInspector.canProbe(bundleIdentifier: "com.google.Chrome"))
+    @Test func focusProbeOnlyRunsInWebKitBrowsers() {
+        #expect(!FocusedFieldInspector.canProbe(bundleIdentifier: "com.google.Chrome"))
         #expect(FocusedFieldInspector.canProbe(bundleIdentifier: "com.apple.Safari"))
+        #expect(FocusedFieldInspector.canProbe(bundleIdentifier: "com.apple.SafariTechnologyPreview"))
         #expect(!FocusedFieldInspector.canProbe(bundleIdentifier: "org.mozilla.firefox"))
         #expect(!FocusedFieldInspector.canProbe(bundleIdentifier: nil))
     }
