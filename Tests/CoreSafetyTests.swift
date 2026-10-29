@@ -69,6 +69,34 @@ import Testing
         #expect(!unmounted.hasReliableCapacity)
     }
 
+    @Test func diskScanSkipsSystemPartitionsAndListsAPFSVolumes() {
+        let disks: [[String: Any]] = [
+            ["DeviceIdentifier": "disk4", "Partitions": [
+                ["DeviceIdentifier": "disk4s1", "Content": "EFI"],
+                ["DeviceIdentifier": "disk4s2", "Content": "Microsoft Basic Data"]
+            ]],
+            ["DeviceIdentifier": "disk6", "Partitions": [
+                ["DeviceIdentifier": "disk6s1", "Content": "EFI"],
+                ["DeviceIdentifier": "disk6s2", "Content": "Apple_APFS"]
+            ]],
+            ["DeviceIdentifier": "disk7", "APFSPhysicalStores": [["DeviceIdentifier": "disk6s2"]],
+             "Partitions": [[String: Any]](), "APFSVolumes": [["DeviceIdentifier": "disk7s1"]]],
+            ["DeviceIdentifier": "disk8", "Content": "Windows_NTFS"]
+        ]
+        #expect(DiskManager.userVolumeIdentifiers(from: disks) == ["disk4s2", "disk7s1", "disk8"])
+    }
+
+    @Test func apfsFreeSpaceComesFromTheContainer() {
+        #expect(DiskManager.freeSpace(from: ["FreeSpace": Int64(0), "APFSContainerFree": Int64(384_660_668_416)]) == 384_660_668_416)
+        #expect(DiskManager.freeSpace(from: ["FreeSpace": Int64(42)]) == 42)
+        #expect(DiskManager.freeSpace(from: [:]) == 0)
+    }
+
+    @Test func emptyVolumeNameFallsBackToDeviceName() {
+        #expect(DiskManager.displayName(from: ["VolumeName": "", "MediaName": " "], bsdName: "disk6s2") == "disk6s2")
+        #expect(DiskManager.displayName(from: ["VolumeName": "Hao 1TB"], bsdName: "disk4s2") == "Hao 1TB")
+    }
+
     @Test func emptyMountPointIsNotTreatedAsMounted() {
         let unmountedPlist: [String: Any] = [
             "MountPoint": "",

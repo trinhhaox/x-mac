@@ -75,22 +75,7 @@ public class DiskManager: ObservableObject {
             let data = try diskutilOutput(["list", "-plist", "external"])
             if let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
                let allDisksAndPartitions = plist["AllDisksAndPartitions"] as? [[String: Any]] {
-                
-                for disk in allDisksAndPartitions {
-                    if let partitions = disk["Partitions"] as? [[String: Any]] {
-                        for partition in partitions {
-                            if let bsd = partition["DeviceIdentifier"] as? String {
-                                if let vol = getVolumeInfo(bsdName: bsd) {
-                                    results.append(vol)
-                                }
-                            }
-                        }
-                    } else if let bsd = disk["DeviceIdentifier"] as? String {
-                        if let vol = getVolumeInfo(bsdName: bsd) {
-                            results.append(vol)
-                        }
-                    }
-                }
+                results = Self.userVolumeIdentifiers(from: allDisksAndPartitions).compactMap(getVolumeInfo(bsdName:))
             }
         } catch {
             NSLog("Xmac scan external disks error: \(error)")
@@ -99,18 +84,57 @@ public class DiskManager: ObservableObject {
         return results
     }
 
+    /// Partition contents that hold no user data: boot/EFI slices and APFS physical stores,
+    /// whose real volumes appear separately under the synthesized container's "APFSVolumes".
+    private static let hiddenPartitionContents: Set<String> = [
+        "EFI", "Apple_APFS", "Apple_APFS_ISC", "Apple_APFS_Recovery", "Apple_Boot", "Apple_partition_map"
+    ]
+
+    static func userVolumeIdentifiers(from allDisksAndPartitions: [[String: Any]]) -> [String] {
+        var identifiers: [String] = []
+        for disk in allDisksAndPartitions {
+            let partitions = (disk["Partitions"] as? [[String: Any]]) ?? []
+            let apfsVolumes = (disk["APFSVolumes"] as? [[String: Any]]) ?? []
+            if partitions.isEmpty && apfsVolumes.isEmpty {
+                // Unpartitioned media formatted directly as a volume (common for USB sticks).
+                if disk["APFSPhysicalStores"] == nil, let bsd = disk["DeviceIdentifier"] as? String {
+                    identifiers.append(bsd)
+                }
+                continue
+            }
+            for partition in partitions {
+                guard let bsd = partition["DeviceIdentifier"] as? String,
+                      !hiddenPartitionContents.contains((partition["Content"] as? String) ?? "") else { continue }
+                identifiers.append(bsd)
+            }
+            identifiers += apfsVolumes.compactMap { $0["DeviceIdentifier"] as? String }
+        }
+        return identifiers
+    }
+
+    static func displayName(from plist: [String: Any], bsdName: String) -> String {
+        for key in ["VolumeName", "MediaName"] {
+            if let value = (plist[key] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty {
+                return value
+            }
+        }
+        return bsdName
+    }
+
     public func getVolumeInfo(bsdName: String) -> DiskVolume? {
         do {
             let data = try diskutilOutput(["info", "-plist", bsdName])
             guard let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] else {
                 return nil
             }
-            
-            let name = (plist["VolumeName"] as? String) ?? (plist["MediaName"] as? String) ?? bsdName
+            // `list external` also reports mounted .dmg/.sparseimage files; they are not drives to manage here.
+            guard (plist["BusProtocol"] as? String) != "Disk Image" else { return nil }
+
+            let name = Self.displayName(from: plist, bsdName: bsdName)
             let mountPoint = Self.mountPoint(from: plist)
             let fs = (plist["FilesystemType"] as? String) ?? (plist["FilesystemName"] as? String) ?? "Unknown"
             let totalSize = (plist["TotalSize"] as? Int64) ?? 0
-            let freeSize = (plist["FreeSpace"] as? Int64) ?? 0
+            let freeSize = Self.freeSpace(from: plist)
             let isWritable = (plist["WritableVolume"] as? Bool) ?? false
             let isMounted = Self.isMounted(from: plist)
             let isInternal = (plist["Internal"] as? Bool) ?? false
@@ -124,11 +148,19 @@ public class DiskManager: ObservableObject {
                 freeSize: freeSize,
                 isExternal: !isInternal,
                 isWritable: isWritable,
-                isMounted: isMounted
+                isMounted: isMounted,
+                volumeUUID: plist["VolumeUUID"] as? String,
+                wholeDisk: DiskEraseGuard.physicalDisks(of: plist).onlyElement
             )
         } catch {
             return nil
         }
+    }
+
+    /// diskutil reports `FreeSpace` as 0 for APFS volumes; their free space is the container's.
+    static func freeSpace(from plist: [String: Any]) -> Int64 {
+        if let free = plist["FreeSpace"] as? Int64, free > 0 { return free }
+        return (plist["APFSContainerFree"] as? Int64) ?? 0
     }
 
     static func mountPoint(from plist: [String: Any]) -> String? {
@@ -145,4 +177,8 @@ public class DiskManager: ObservableObject {
         }
         return mountPoint(from: plist) != nil
     }
+}
+
+private extension Set {
+    var onlyElement: Element? { count == 1 ? first : nil }
 }

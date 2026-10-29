@@ -50,6 +50,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         DeduplicatorScheduler.shared.start()
         DonutController.shared.start()
         WatchFolderMonitor.shared.start()
+        DiskEventMonitor.shared.start()
     }
 
     public func applicationDidBecomeActive(_ notification: Notification) {

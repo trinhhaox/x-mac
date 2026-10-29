@@ -11,6 +11,10 @@ public struct DiskVolume: Identifiable, Hashable {
     public let isExternal: Bool
     public let isWritable: Bool
     public let isMounted: Bool
+    /// Stable across re-plugs, unlike `bsdName`; used to remember per-drive preferences.
+    public var volumeUUID: String? = nil
+    /// The whole device (e.g. disk4) this partition lives on.
+    public var wholeDisk: String? = nil
     
     public var usedSize: Int64 {
         return max(0, totalSize - freeSize)
