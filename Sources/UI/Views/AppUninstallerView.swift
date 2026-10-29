@@ -52,8 +52,8 @@ public struct AppUninstallerView: View {
             
             if let result = vm.uninstallResultText {
                 HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
+                    Image(systemName: vm.uninstallSucceeded ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundColor(vm.uninstallSucceeded ? .green : .orange)
                     Text(result)
                         .font(.system(size: 12))
                     Spacer()
@@ -63,7 +63,7 @@ public struct AppUninstallerView: View {
                     .buttonStyle(.link)
                 }
                 .padding(10)
-                .background(Color.green.opacity(0.1))
+                .background((vm.uninstallSucceeded ? Color.green : Color.orange).opacity(0.1))
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
             
@@ -125,6 +125,7 @@ public struct AppUninstallerView: View {
                 primaryButton: .destructive(Text("Chuyển vào Thùng rác")) {
                     if let app = vm.selectedApp {
                         uninstaller.uninstallApp(app) { result in
+                            self.vm.uninstallSucceeded = result.success
                             self.vm.uninstallResultText = result.success
                                 ? L10n.format("Đã chuyển các mục đã chọn của %@ vào Thùng rác.", app.name)
                                 : result.errorMessage ?? L10n.format("Không thể gỡ bỏ đầy đủ %@.", app.name)

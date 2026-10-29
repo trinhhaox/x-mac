@@ -41,6 +41,7 @@ public class AppUninstallerViewModel: ObservableObject {
     @Published public var searchText: String = ""
     @Published public var selectedApp: InstalledAppItem? = nil
     @Published public var uninstallResultText: String? = nil
+    @Published public var uninstallSucceeded: Bool = true
     @Published public var showConfirmAlert: Bool = false
     private init() {}
 }

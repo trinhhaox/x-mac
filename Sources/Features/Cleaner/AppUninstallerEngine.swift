@@ -118,8 +118,7 @@ public class AppUninstallerEngine: ObservableObject {
             let result = Self.performUninstall(
                 app,
                 trash: { url in
-                    // Chuyển vào Thùng rác để đảm bảo an toàn
-                    try self.fileManager.trashItem(at: url, resultingItemURL: nil)
+                    try AppTrashMover.trash(url, fileManager: self.fileManager)
                 },
                 record: { file, outcome, reason in
                     journal.append(CleanupLogEntry(date: Date(), action: .uninstall, path: file.path, bytes: file.size, outcome: outcome, reason: reason))
